@@ -1,0 +1,110 @@
+#!/bin/sh
+set -e
+
+OPTIONS_SPEC="\
+$(basename $0) [options]
+
+updates patches from upstream vim
+--
+u,only-upstream    Only update the upstream branch.  Useful to make sure all patches are synced before updating to a new major release.
+"
+SUBDIRECTORY_OK=
+. "$(git --exec-path)/git-sh-setup"
+require_work_tree
+
+git rev-parse --verify HEAD > /dev/null && \
+    git update-index --refresh && \
+    git diff-files --quiet && \
+    git diff-index --cached --quiet HEAD -- \
+    || die "Your tree is unclean, can't do that..."
+
+which lftp >/dev/null 2>&1 || die "You need lftp installed for this script..."
+
+onlyupstream=0
+case "$1" in
+    -u)
+        onlyupstream=1
+        ;;
+    --)
+        ;;
+    *)
+        usage
+        ;;
+esac
+
+checkout_and_merge() {
+    git checkout $1
+    if ! git merge $2; then
+        echo "Merge conflict -- fix the problem and then exit the subshell to continue"
+        if ! $SHELL; then
+            echo "Non-zero exit status from merge conflict.  Exiting update script."
+            exit
+        fi
+    fi
+}
+
+host='ftp.vim.org'
+version='7.2'
+snapshot=''
+dir="pub/vim/${snapshot}patches/$version"
+
+curpatch=$(git show debian:debian/README 2>/dev/null| tail -n1 | awk /$version\\./'{print $2}' | sed s/^$version\.0\*//)
+newpatch=$(lftp -c "open $host; cd $dir; ls $version.*" | tail -n1 | awk -F. '{print $3}')
+
+if [ -z "$curpatch" ]; then
+    curpatch=0
+fi
+
+if [ $curpatch -ge ${newpatch##0} ]; then
+    echo "Nothing to do."
+    exit
+fi
+
+curpatch=$(($curpatch + 1))
+
+git checkout debian
+
+echo 'updating debian/README to latest upstream ...'
+lftp -c "open $host; cd $dir; get README -o debian/README"
+
+# Specifically using "git add" instead of "git commit -- debian/README" since
+# debian/README may not always be tracked
+git add debian/README
+git commit -m "Update README for patches $curpatch - $newpatch"
+
+git checkout upstream
+
+lftp -c "open $host; cd $dir; get $(seq -f $version.%03g -s' ' $curpatch $newpatch)"
+for p in $(seq -f $version.%03g $curpatch $newpatch); do
+    patch -Np0 < $p
+    git add $(lsdiff $p)
+    author="$(sed -n -e 's/^From: *//;t done;d;: done;p' $p)"
+    date="$(awk '/^--- src\/version.c/ {print}' $p | cut -f 2-)"
+    subject="s/^ *[0-9]* *$p *//;t done;d;: done;p"
+    msg='/^Patch /,/^Files:/{s/^Files:.*//;t;p}'
+    (echo -n "[$p] "; git show debian:debian/README -- | sed -n "$subject"; \
+     echo; sed -n "$msg" $p) | env GIT_AUTHOR_DATE="$date" git commit --author "$author" -F -
+    rm $p
+done
+
+if [ $onlyupstream -eq 0 ]; then
+    for b in $(git for-each-ref --format="%(refname)" "refs/heads/deb/*" | sed 's@refs/heads/@@') upstream-runtime; do
+        # Handle deb/runtime afterward to keep consistent with it being branched
+        # off upstream-runtime
+        if [ "$b" = "deb/runtime" ]; then
+            continue
+        fi
+        checkout_and_merge $b upstream
+    done
+
+    for b in deb/runtime debian; do
+        checkout_and_merge $b upstream-runtime
+    done
+else
+    # Switch back to the debian branch and leave the updated README in place.
+    # It's useful as a place-holder and to help document no new patches have
+    # been added.
+    git checkout debian
+fi
+
+echo "Patches $curpatch - $newpatch comitted and merged."

@@ -1,0 +1,5 @@
+usr/share/vim/@VIMCUR@/macros/matchit.txt   usr/share/vim/addons/doc/matchit.txt
+usr/share/vim/@VIMCUR@/macros/matchit.vim   usr/share/vim/addons/plugin/matchit.vim
+usr/share/vim/@VIMCUR@/macros/justify.vim   usr/share/vim/addons/plugin/justify.vim
+usr/share/vim/@VIMCUR@/macros/editexisting.vim   usr/share/vim/addons/plugin/editexisting.vim
+usr/share/man/man1/vimtutor.1               usr/share/man/man1/gvimtutor.1

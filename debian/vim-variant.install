@@ -1,0 +1,3 @@
+debian/lintian/@PKG@		usr/share/lintian/overrides/
+debian/presubj			usr/share/bug/@PKG@/
+src/vim-@VARIANT@/vim.@VARIANT@	usr/bin/

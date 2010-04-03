@@ -1,0 +1,1 @@
+@PKG@ binary: binary-without-manpage usr/bin/vim.@VARIANT@

@@ -1,0 +1,8 @@
+?package(vim-lesstif):needs="x11"		\
+	section="Applications/Editors" 			\
+	title="GVIM"					\
+	longtitle="GVIM, graphical Vi IMproved (lesstif GUI)" \
+	command="/usr/bin/vim.lesstif -g -f"		\
+	icon="/usr/share/pixmaps/vim-32.xpm"		\
+	icon32x32="/usr/share/pixmaps/vim-32.xpm"	\
+	icon16x16="/usr/share/pixmaps/vim-16.xpm"
