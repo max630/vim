@@ -107,9 +107,9 @@
       <ulink
 	url="http://packages.debian.org/unstable/editors/vim"><application>vim</application></ulink>,
       <ulink
-	url="http://packages.debian.org/unstable/editors/vim-perl"><application>vim-perl</application></ulink>,
+	url="http://packages.debian.org/unstable/editors/vim-nox"><application>vim-nox</application></ulink>,
       <ulink
-	url="http://packages.debian.org/unstable/editors/vim-full"><application>vim-full</application></ulink>.
+	url="http://packages.debian.org/unstable/editors/vim-gtk"><application>vim-gtk</application></ulink>.
       Have a look at their full descriptions for their characteristics.
       The actual <filename>/usr/bin/vim</filename> file is managed via
       the alternative mechanism and point to one of the variants.
@@ -295,7 +295,7 @@ doc/vcscommand.txt</programlisting>
 	are packaging does not provide a way to be disabled you should
 	patch it to support disabling and forward your patch upstream.
 	Have a look at the <ulink
-	  url="http://svn.debian.org/wsvn/pkg-vim/trunk/packages/vim-scripts/debian/patches/?rev=0&amp;sc=0">&debian;-specific
+	  url="http://git.debian.org/?p=pkg-vim/vim-scripts.git;a=tree;f=debian/patches;hb=HEAD">&debian;-specific
 	  patches</ulink> in the <ulink
 	  url="http://packages.qa.debian.org/vim-scripts"><application>vim-scripts</application></ulink>
 	package for an idea about how to do it. </para>

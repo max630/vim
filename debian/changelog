@@ -1,6 +1,7 @@
 vim (2:7.2.330-2) UNRELEASED; urgency=low
 
   * debian/control: Update Vcs-* to point to the Mercurial repository.
+  * vim-policy: Update links to package descriptions and repository.
 
  -- James Vega <jamessan@debian.org>  Sun, 11 Apr 2010 22:40:46 -0400
 
