@@ -1,3 +1,9 @@
+vim (2:7.2.330-2) UNRELEASED; urgency=low
+
+  * debian/control: Update Vcs-* to point to the Mercurial repository.
+
+ -- James Vega <jamessan@debian.org>  Sun, 11 Apr 2010 22:40:46 -0400
+
 vim (2:7.2.330-1) unstable; urgency=low
 
   * [34a85b6] Update README for patches 285 - 330

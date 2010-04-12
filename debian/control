@@ -10,8 +10,8 @@ Build-Depends: debhelper (>= 5), bzip2, libperl-dev, tcl-dev, libacl1-dev,
  libgnomeui-dev, lesstif2-dev, libxt-dev,
  libselinux1-dev [!hurd-i386] | not+linux-gnu
 Build-Depends-Indep: docbook-xml, docbook-utils
-Vcs-Git: git://git.debian.org/git/pkg-vim/vim.git
-Vcs-Browser: http://git.debian.org/?p=pkg-vim/vim.git
+Vcs-Hg: http://hg.debian.org/hg/pkg-vim/vim
+Vcs-Browser: http://hg.debian.org/hg/pkg-vim/vim
 Homepage: http://www.vim.org/
 
 Package: vim-common
