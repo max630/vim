@@ -22,9 +22,8 @@ ifeq ($(DEB_HOST_GNU_TYPE),$(DEB_BUILD_GNU_TYPE))
   endif
 endif
 
-INSTALL := install
 ifeq (,$(filter nostrip,$(DEB_BUILD_OPTIONS)))
-  INSTALL += -s
+  STRIP := :
 endif
 
 ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
@@ -32,7 +31,9 @@ ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
     MAKEFLAGS += -j$(NUMJOBS)
 endif
 
-CFGFLAGS:=--prefix=/usr --mandir='$${prefix}'/share/man --with-compiledby="$(BUILDER)" --without-local-dir
+CFGFLAGS := --prefix=/usr --mandir='$${prefix}'/share/man --without-local-dir
+CFGFLAGS += --with-modified-by="pkg-vim-maintainers@lists.alioth.debian.org"
+CFGFLAGS += --with-compiledby="$(BUILDER)"
 
 TINYFLAGS+=--with-features=small
 TINYFLAGS+=--disable-gui
@@ -90,7 +91,7 @@ ALLINTERPFLAGS+=--enable-tclinterp
 # Each vim-xxx package is said to be a vim variant and contains only a vim
 # binary built with some compile-time options. Makefile VARIANTS below are
 # one-to-one with those packages with the exception of "vim-basic". In this
-# Makefile vim-basic is used to built 4 packages: "vim", "vim-runtime",
+# Makefile vim-basic is used to build 4 packages: "vim", "vim-runtime",
 # "vim-common", "vim-gui-common". "vim-tiny" is the only variant package not
 # depending on vim-runtime.
 
@@ -128,10 +129,6 @@ VERSION:=7.2
 SNAPSHOT:=
 VIMCUR:=$(NAME)$(subst .,,$(VERSION))$(SNAPSHOT)
 DEBVERSION:=$(shell dpkg-parsechangelog | sed -n '/^Version:/{s/Version: *\([^:]*:\)\?\([^-]*\)-.*/\2/;p;q}')
-FTP:=ftp://ftp.vim.org/pub/vim$(if $(SNAPSHOT),/unstable,)
-MAIN_TARBALL:=$(NAME)-$(VERSION)$(SNAPSHOT).tar.bz2
-LANG_TARBALL:=$(NAME)-$(VERSION)$(SNAPSHOT)-lang.tar.gz
-EXTRA_TARBALL:=$(NAME)-$(VERSION)$(SNAPSHOT)-extra.tar.gz
 ORIG_SOURCE := ../$(NAME)_$(DEBVERSION).orig.tar.gz
 PER_VARIANT_FILES := install postinst prerm links
 LANGS := fr it pl ru
@@ -151,37 +148,11 @@ DOT_IN_DEPS_TINY := debian/tiny/vimrc.tiny
 # nothing to do per default
 all: 
 
-# Should be run from master branch after the release has been prepared
+# Should be run from default branch after the release has been prepared
 update-orig:
-	if git rev-parse --git-dir >/dev/null 2>&1; then \
-	    if git diff --quiet upstream..upstream-runtime; then \
-	        export BRANCH="upstream"; \
-	    else \
-	        export BRANCH="upstream-runtime"; \
-	    fi; \
-	    git tag -s -m 'Upstream version $(DEBVERSION)' upstream/$(DEBVERSION) $$BRANCH; \
-	    git archive --format=tar --prefix=$(NAME)-$(DEBVERSION)/ $$BRANCH | gzip -c > $(ORIG_SOURCE); \
-	    pristine-tar commit $(ORIG_SOURCE); \
+	if hg root >/dev/null 2>&1; then \
+	    hg archive -t tgz --prefix=$(NAME)-$(DEBVERSION)/ -r $$(echo $(DEBVERSION) | sed 's/.*+hg//') $(ORIG_SOURCE); \
 	fi
-
-$(ORIG_SOURCE):
-	if git rev-parse --git-dir >/dev/null 2>&1; then \
-	  pristine-tar checkout $@; \
-	fi
-
-check-tarball: $(ORIG_SOURCE)
-
-get-orig-source:
-	wget -O $(MAIN_TARBALL) $(FTP)/unix/$(MAIN_TARBALL)
-	tar jx -f $(MAIN_TARBALL)
-	wget -O $(LANG_TARBALL) $(FTP)/extra/$(LANG_TARBALL)
-	tar zx -f $(LANG_TARBALL)
-	wget -O $(EXTRA_TARBALL) $(FTP)/extra/$(EXTRA_TARBALL)
-	tar zx -f $(EXTRA_TARBALL)
-	mv $(VIMCUR) $(NAME)-$(DEBVERSION)
-	tar zc -f $(ORIG_SOURCE) $(NAME)-$(DEBVERSION)
-	rm -rf $(NAME)-$(DEBVERSION)
-	rm -f $(MAIN_TARBALL) $(LANG_TARBALL) $(EXTRA_TARBALL)
 
 clean: $(foreach v,$(VARIANTS),clean-$(v))
 	dh_testdir
@@ -190,7 +161,7 @@ clean: $(foreach v,$(VARIANTS),clean-$(v))
 	rm -f debian/helpztags.1
 	rm -rf debian/policy/vim-policy.html
 	rm -f debian/policy/vim-policy.txt
-	if test -f src/auto/config.cache; then make distclean; fi
+	[ ! -f src/auto/config.cache ] || make distclean
 	rm -f runtime/doc/doctags runtime/doc/tags.ref
 	rm -f runtime/doc/*.html runtime/doc/*.log
 	rm -f src/pixmaps src/runtime

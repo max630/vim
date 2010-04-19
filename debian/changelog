@@ -1,9 +1,15 @@
-vim (2:7.2.330-2) UNRELEASED; urgency=low
+vim (2:7.2.441+hg2410065-1) UNRELEASED; urgency=low
 
   * debian/control: Update Vcs-* to point to the Mercurial repository.
   * vim-policy: Update links to package descriptions and repository.
   * Reword presubj to provide a few methods for narrowing down the bug's
     cause.
+  * debian/rules:
+    + Set STRIP to : when the nostrip DEB_BUILD_OPTIONS flag is seen.
+    + Pass the --with-modified-by to the Debian Vim maintainers list.
+    + Remove git helper targets.
+    + Remove get-orig-source target and related variables, since we're just
+      using the upstream Mercurial repository.
 
  -- James Vega <jamessan@debian.org>  Sun, 11 Apr 2010 22:40:46 -0400
 
