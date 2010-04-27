@@ -1,87 +1,39 @@
+The Vim package is maintained using [Mercurial Queues][mq].  The Debian
+packaging and Debian-maintained runtime files are modified directly in the
+[main repository][deb] and patches in the [queue repository][patches].
+
+You can check both out at once with an “hg qclone” of the [main
+repository][deb].  If the main repository is already checked out, “hg clone”
+the [queue repository][patches] into “.hg/patches”.
+
+Maintaining Patches
+-------------------
+Patches which aren't necessarily Debian-specific shall be named
+upstream/$feature.patch whereas patches which are purely Debian-specific shall
+be named debian/$feature.patch.  All upstream patches shall be earlier in the
+queue than Debian-specific patches so they aren't cluttered with changes that
+aren't relevant to upstream.
+
+For patches to runtime files, prefer the naming scheme of
+&filetype-{syntax,ftplugin,indent}-$feature.patch for the filename.
+
 Updating upstream source
 ------------------------
-If a new major version is released, this should be imported to the
-upstream branch and then merged into upstream-runtime, and deb/*
-branches.  The upstream-runtime branch should be merged into the
-deb/runtime and debian branches.  Be sure to handle file
-removals/additions properly by either using git_load_dirs or other known
-methods for importing source.
-
-It is also important to update vim-runtime.preinst.in to remove old
-diversions during upgrades to a new major version release.
-
-If new patches have been released, debian/update-patches should be run
-from the debian branch.  This will update debian/README in the debian
-branch, pull the new upstream patches into the upstream branch (with
-Bram as the author and useful commit messages), and merge the new
-upstream patches into the upstream-runtime, debian, and deb/* branches.
+It is important to update vim-runtime.preinst.in to remove old diversions
+during upgrades to a new major version release.
 
 Preparing uploads
 -----------------
 If you're building a package with new upstream patches, a new
-orig.tar.gz should be built.  This should be built from the upstream
-branch unless upstream runtime files have been synced to
-upstream-runtime.  Running "debian/rules update-orig" after preparing
-the new changelog on the master branch will handle tagging the
-appropriate branch and building the orig.tar.gz from it.
+orig.tar.gz needs to be built.  This can be built once debian/changelog has
+been updated with the appropriate version.  Running “debian/rules update-orig”
+will export a properly named tarball to the parent directory using the hash in
+the upstream version.
 
-If you simply need to build an orig.tar.gz for an upstream version
-that's already been uploaded, "debian/rules check-tarball" will build
-one for you.
+For example, a version of 2:7.2.411+hg2410065-1 in debian/changelog will cause
+commit 2410065 (which corresponds to the commit of patch 7.2.411 in upstream's
+repository) to be exported as vim_7.2.411+hg2410065.orig.tar.gz.
 
-Before building a new package which changes runtime/doc,
-master:runtime/doc/tags should be rebuilt.  This is simply done by
-running "vim -c 'helptags ++t runtime/doc' -c 'q'" and then checking the
-file in.
-
-Branch layout/purpose
----------------------
-upstream:
- - Branch where major releases and official patches are imported
- - Merged into upstream-runtime, deb/* branches
- - Parent branch for all other branches except deb/runtime and debian
-
-upstream-runtime:
- - Branch where updated runtime files (only from ftp.vim.org) are
-   imported
- - Merged into deb/runtime and debian branches
- - Parent branch for deb/runtime
-
-deb/runtime:
- - Branch where bugs against non-Debian maintained runtime files are
-   fixed.
-
-deb/*:
- - Branches created for specific features/fixes.
-
-debian:
- - Branch where packaging and maintenance of Debian's runtime files take
-   place.
-
-master:
- - Integration branch.  Releases are built from this branch.
- - debian/changelog only exists in this branch.  Tools like git-dch are
-   useful to build an initial version of the changelog.
-
-Simple (I hope) diagram providing a visual summary of the above
-information.
-'+' is the starting source from which the other branches are formed.
-'o' is a commit on that branch.
-'*' is a commit caused by merging a 'o' to that branch.
-
-master            ---------------------*----*----*----*----*------
-                  |                   /    /    /    /    /
-                  |                  /    /    /    /    /
-debian            ------------------*----*--------------o---------
-                  |                /    /    /    /
-                  |               /    /    /    /
-deb/*             ---------------*--------------o-----------------
-                  |             /    /    /
-                  |            /    /    /
-deb/runtime       |  ---------*----*----o-------------------------
-                  | /        /    /
-                  |/        /    /
-upstream-runtime  ---------*----o---------------------------------
-                  |       /
-                  |      /
-upstream          +-----o-----------------------------------------
+[mq]: http://mercurial.selenic.com/wiki/MqExtension
+[deb]: http://hg.debian.org/hg/pkg-vim/vim
+[patches]: http://hg.debian.org/hg/pkg-vim/vim/.hg/patches
