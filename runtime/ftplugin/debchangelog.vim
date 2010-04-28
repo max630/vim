@@ -329,17 +329,26 @@ fun! DebCompleteBugs(findstart, base)
       python << EOF
 import vim
 try:
-    from launchpadbugs import connector
-    buglist = connector.ConnectBugList()
-    bl = list(buglist('https://bugs.launchpad.net/ubuntu/+source/%s' % vim.eval('pkgsrc')))
-    bl.sort(None, int)
-    liststr = '['
-    for bug in bl:
-        liststr += "'#%d - %s'," % (int(bug), bug.summary.replace('\'', '\'\''))
-    liststr += ']'
-    vim.command('silent let bug_lines = %s' % liststr)
+    from launchpadlib.launchpad import Launchpad
+    from lazr.restfulclient.errors import HTTPError
+    # login anonymously
+    lp = Launchpad.login_anonymously('debchangelog.vim', 'production')
+    ubuntu = lp.distributions['ubuntu']
+    try:
+        sp = ubuntu.getSourcePackage(name=vim.eval('pkgsrc'))
+        status = ('New', 'Incomplete', 'Confirmed', 'Triaged',
+                  'In Progress', 'Fix Committed')
+        tasklist = sp.searchTasks(status=status, order_by='id')
+        liststr = '['
+        for task in tasklist:
+            bug = task.bug
+            liststr += "'#%d - %s'," % (bug.id, bug.title.replace('\'', '\'\''))
+        liststr += ']'
+        vim.command('silent let bug_lines = %s' % liststr.encode('utf-8'))
+    except HTTPError:
+        pass
 except ImportError:
-    vim.command('echoerr \'python-launchpad-bugs needs to be installed to use Launchpad bug completion\'')
+    vim.command('echoerr \'python-launchpadlib >= 1.5.4 needs to be installed to use Launchpad bug completion\'')
 EOF
     else
       if ! filereadable('/usr/sbin/apt-listbugs')

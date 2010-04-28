@@ -23,6 +23,8 @@ vim (2:7.2.411+hg2410065-1) UNRELEASED; urgency=low
   * debian/README.source: Update description according to the change to
     Mercurial.
   * debian/source/options: Use tar-ignore and diff-ignore by default.
+  * runtime/ftplugin/debchangelog.vim: Update completion of Ubuntu bugs based
+    on a patch from Michael Bienia.  (Closes: #566841)
 
  -- James Vega <jamessan@debian.org>  Sun, 11 Apr 2010 22:40:46 -0400
 
