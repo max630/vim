@@ -1,6 +1,8 @@
 vim (2:7.2.441+hg2410065-1) UNRELEASED; urgency=low
 
-  * debian/control: Update Vcs-* to point to the Mercurial repository.
+  * debian/control:
+    + Update Vcs-* to point to the Mercurial repository.
+    + Add quilt to Build-Depends.
   * vim-policy: Update links to package descriptions and repository.
   * Reword presubj to provide a few methods for narrowing down the bug's
     cause.
@@ -10,6 +12,7 @@ vim (2:7.2.441+hg2410065-1) UNRELEASED; urgency=low
     + Remove git helper targets.
     + Remove get-orig-source target and related variables, since we're just
       using the upstream Mercurial repository.
+    + Include quilt makefile and setup handling of patches.
   * debian/source/format: Explicitly note that we're using 1.0.
   * debian/README.source: Update description according to the change to
     Mercurial.

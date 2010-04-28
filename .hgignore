@@ -39,3 +39,6 @@ gvimext.lib
 *.orig
 *.mo
 *~
+
+# Debian patches
+debian/patches
