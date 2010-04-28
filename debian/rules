@@ -151,13 +151,14 @@ all:
 
 update-orig:
 	if hg root >/dev/null 2>&1; then \
-	    hg archive -t tgz --prefix=$(NAME)-$(DEBVERSION)/ -r $$(echo $(DEBVERSION) | sed 's/.*+hg//') $(ORIG_SOURCE); \
+	    hg archive -t tgz -X .hg\* --prefix=$(NAME)-$(DEBVERSION)/ -r $$(echo $(DEBVERSION) | sed 's/.*+hg//') $(ORIG_SOURCE); \
 	fi
 
 export-patches:
 	if hg root >/dev/null 2>&1; then \
 	    rm -rf $$(hg root)/debian/patches; \
 	    hg archive --mq $$(hg root)/debian/patches; \
+	    rm -f $$(hg root)/debian/patches/.hg*; \
 	fi
 
 clean: $(foreach v,$(VARIANTS),clean-$(v)) unpatch
