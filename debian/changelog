@@ -3,6 +3,7 @@ vim (2:7.2.441+hg2410065-1) UNRELEASED; urgency=low
   * debian/control:
     + Update Vcs-* to point to the Mercurial repository.
     + Add quilt to Build-Depends.
+    + Bump Standards-Version to 3.8.4, no changes needed.
   * vim-policy: Update links to package descriptions and repository.
   * Reword presubj to provide a few methods for narrowing down the bug's
     cause.
