@@ -215,7 +215,7 @@ build-stamp-arch: $(foreach v,$(VARIANTS),build-stamp-$(v))
 	touch $@
 
 configure-stamp-%: SHADOWDIR=$*
-configure-stamp-%: patch
+configure-stamp-%: $(QUILT_STAMPFN)
 	dh_testdir
 	@echo "*** DEBIAN *** CONFIGURING VARIANT $*"
 	$(MAKE) -C src shadow SHADOWDIR=$(SHADOWDIR)
