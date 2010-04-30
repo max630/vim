@@ -241,7 +241,7 @@ install-stamp-indep: build-stamp-indep
 	dh_testroot
 	dh_installdirs
 	dh_install
-	dh_installchangelogs -k debian/README
+	dh_installchangelogs
 	dh_installdocs
 	touch $@
 
@@ -363,7 +363,7 @@ install-stamp-vim-basic: build-stamp-vim-basic $(DOT_IN_DEPS)
 	dh_link
 	
 	 # all excepts vim
-	dh_installchangelogs -k -Nvim -pvim-dbg debian/README
+	dh_installchangelogs -Nvim -pvim-dbg
 	dh_installdocs -pvim-dbg
 	dh_installmime
 	
