@@ -3,7 +3,7 @@
 " Maintainer:   Debian Vim Maintainers <pkg-vim-maintainers@lists.alioth.debian.org>
 " Former Maintainer: Matthijs Mohlmann <matthijs@cacholong.nl>
 " Last Change: 2009 Nov 07
-" URL: http://git.debian.org/?p=pkg-vim/vim.git;a=blob_plain;f=runtime/syntax/debsources.vim;hb=debian
+" URL: http://hg.debian.org/hg/pkg-vim/vim/raw-file/tip/runtime/syntax/debsources.vim
 
 " Standard syntax initialization
 if version < 600

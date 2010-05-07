@@ -4,7 +4,7 @@
 " Former Maintainers: Gerfried Fuchs <alfie@ist.org>
 "                     Wichert Akkerman <wakkerma@debian.org>
 " Last Change: 2009 Oct 28
-" URL: http://git.debian.org/?p=pkg-vim/vim.git;a=blob_plain;f=runtime/syntax/debchangelog.vim;hb=debian
+" URL: http://hg.debian.org/hg/pkg-vim/vim/raw-file/tip/runtime/syntax/debchangelog.vim
 
 " Standard syntax initialization
 if version < 600

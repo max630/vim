@@ -1,14 +1,14 @@
 " Vim filetype plugin file (GUI menu, folding and completion)
-" Language:	Debian Changelog
-" Maintainer:	Debian Vim Maintainers <pkg-vim-maintainers@lists.alioth.debian.org>
-" Former Maintainers:	Michael Piefel <piefel@informatik.hu-berlin.de>
-"			Stefano Zacchiroli <zack@debian.org>
-" Last Change:	2008-03-08
-" License:	GNU GPL, version 2.0 or later
-" URL:		http://git.debian.org/?p=pkg-vim/vim.git;a=blob_plain;f=runtime/ftplugin/debchangelog.vim;hb=debian
+" Language:     Debian Changelog
+" Maintainer:   Debian Vim Maintainers <pkg-vim-maintainers@lists.alioth.debian.org>
+" Former Maintainers:   Michael Piefel <piefel@informatik.hu-berlin.de>
+"                       Stefano Zacchiroli <zack@debian.org>
+" Last Change:  2010-04-29
+" License:      GNU GPL, version 2.0 or later
+" URL:          http://hg.debian.org/hg/pkg-vim/vim/raw-file/tip/runtime/ftplugin/debchangelog.vim
 
 " Bug completion requires apt-listbugs installed for Debian packages or
-" python-launchpad-bugs installed for Ubuntu packages
+" python-launchpadlib installed for Ubuntu packages
 
 if exists("b:did_ftplugin")
   finish
