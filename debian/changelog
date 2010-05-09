@@ -1,10 +1,11 @@
-vim (2:7.2.411+hg2410065-1) UNRELEASED; urgency=low
+vim (2:7.2.416+hg.e9c9f37-1) UNRELEASED; urgency=low
 
-  * Pull patches 331 - 411.
+  * Pull patches 331 - 416.
     + 7.2.367: Make xxd follow documented behavior when using “-r -p”.
       (Closes: #567041)
     + 7.2.405: Re-enable default value for IncSearch to allow highlighting of
       matched text when using :substitute's c flag.  (Closes: #572994)
+    + 7.2.413: Largefile support for all Vim packages.  (LP: #128494)
   * debian/control:
     + Update Vcs-* to point to the Mercurial repository.
     + Add quilt to Build-Depends.
