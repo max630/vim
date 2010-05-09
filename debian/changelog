@@ -27,6 +27,8 @@ vim (2:7.2.411+hg2410065-1) UNRELEASED; urgency=low
     on a patch from Michael Bienia.  (Closes: #566841)
   * runtime/syntax/{debchangelog,debsources}.vim: Remove intrepid and add
     maverick to the set of Ubuntu releases.
+  * Use case-insensitive matching for month and day of week names in crontab's
+    syntax file.  Thanks to Chris Butler for the patch.  (Closes: #568378)
 
  -- James Vega <jamessan@debian.org>  Sun, 11 Apr 2010 22:40:46 -0400
 
