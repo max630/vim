@@ -23,10 +23,6 @@ ifeq ($(DEB_HOST_GNU_TYPE),$(DEB_BUILD_GNU_TYPE))
   endif
 endif
 
-ifeq (,$(filter nostrip,$(DEB_BUILD_OPTIONS)))
-  STRIP := :
-endif
-
 ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
     NUMJOBS = $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
     MAKEFLAGS += -j$(NUMJOBS)
@@ -255,13 +251,14 @@ install-stamp-vim-basic: build-stamp-vim-basic $(DOT_IN_DEPS)
 	
 	# UPSTREAM INSTALLATION
 	
-	$(MAKE) -C src/vim-basic DESTDIR=$(DESTDIR) installvimbin \
-	                                            installtutorbin \
-	                                            installgtutorbin \
-	                                            installruntime \
-	                                            installtools \
-	                                            install-icons \
-	                                            install-languages
+	$(MAKE) -C src/vim-basic STRIP=: DESTDIR=$(DESTDIR) \
+	    installvimbin \
+	    installtutorbin \
+	    installgtutorbin \
+	    installruntime \
+	    installtools \
+	    install-icons \
+	    install-languages
 	
 # Tests need to be run in series, otherwise the terminal requests may not see
 # proper responses

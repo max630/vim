@@ -14,7 +14,8 @@ vim (2:7.2.416+hg~e9c9f37-1) UNRELEASED; urgency=low
   * Reword presubj to provide a few methods for narrowing down the bug's
     cause.
   * debian/rules:
-    + Set STRIP to : when the nostrip DEB_BUILD_OPTIONS flag is seen.
+    + Specify STRIP=: when running upstream's install targets to prevent
+      upstream's automatic stripping.
     + Pass the --with-modified-by to the Debian Vim maintainers list.
     + Remove git helper targets.
     + Remove get-orig-source target and related variables, since we're just
