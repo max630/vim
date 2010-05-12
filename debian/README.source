@@ -30,9 +30,9 @@ been updated with the appropriate version.  Running â€œdebian/rules update-origâ
 will export a properly named tarball to the parent directory using the hash in
 the upstream version.
 
-For example, a version of 2:7.2.411+hg2410065-1 in debian/changelog will cause
+For example, a version of 2:7.2.411+hg~2410065-1 in debian/changelog will cause
 commit 2410065 (which corresponds to the commit of patch 7.2.411 in upstream's
-repository) to be exported as vim_7.2.411+hg2410065.orig.tar.gz.
+repository) to be exported as vim_7.2.411+hg~2410065.orig.tar.gz.
 
 [mq]: http://mercurial.selenic.com/wiki/MqExtension
 [deb]: http://hg.debian.org/hg/pkg-vim/vim

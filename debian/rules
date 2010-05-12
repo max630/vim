@@ -151,7 +151,7 @@ all:
 
 update-orig:
 	if hg root >/dev/null 2>&1; then \
-	    hg archive -t tgz -X .hg\* --prefix=$(NAME)-$(DEBVERSION)/ -r $$(echo $(DEBVERSION) | sed 's/.*+hg//') $(ORIG_SOURCE); \
+	    hg archive -t tgz -X .hg\* --prefix=$(NAME)-$(DEBVERSION)/ -r $$(echo $(DEBVERSION) | sed 's/.*+hg~//') $(ORIG_SOURCE); \
 	fi
 
 export-patches:
