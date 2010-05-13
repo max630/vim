@@ -1,6 +1,6 @@
-vim (2:7.2.416+hg~e9c9f37-1) UNRELEASED; urgency=low
+vim (2:7.2.422+hg~12aba62fa7c6-1) UNRELEASED; urgency=low
 
-  * Pull patches 331 - 416.
+  * Pull patches 331 - 422.
     + 7.2.367: Make xxd follow documented behavior when using “-r -p”.
       (Closes: #567041)
     + 7.2.405: Re-enable default value for IncSearch to allow highlighting of
