@@ -74,7 +74,7 @@ typedef struct exarg exarg_T;
 # undef EX	    /* just in case */
 #endif
 #ifdef DO_DECLARE_EXCMD
-# define EX(a, b, c, d)  {(char_u *)b, c, d}
+# define EX(a, b, c, d)  {(char_u *)b, c, (long_u)(d)}
 
 typedef void (*ex_func_T) __ARGS((exarg_T *eap));
 
@@ -256,7 +256,7 @@ EX(CMD_copy,		"copy",		ex_copymove,
 EX(CMD_colder,		"colder",	qf_age,
 			RANGE|NOTADR|COUNT|TRLBAR),
 EX(CMD_colorscheme,	"colorscheme",	ex_colorscheme,
-			NEEDARG|WORD1|TRLBAR|CMDWIN),
+			WORD1|TRLBAR|CMDWIN),
 EX(CMD_command,		"command",	ex_command,
 			EXTRA|BANG|NOTRLCOM|USECTRLV|CMDWIN),
 EX(CMD_comclear,	"comclear",	ex_comclear,
@@ -1152,7 +1152,8 @@ struct exarg
     int		force_ff;	/* ++ff= argument (index in cmd[]) */
 #ifdef FEAT_MBYTE
     int		force_enc;	/* ++enc= argument (index in cmd[]) */
-    int		bad_char;	/* ++bad= argument (index in cmd[]) */
+    int		bad_char_idx;	/* ++bad= argument (index in cmd[]) */
+    int		bad_char;	/* BAD_KEEP, BAD_DROP or replacement char */
 #endif
 #ifdef FEAT_USR_CMDS
     int		useridx;	/* user command index */

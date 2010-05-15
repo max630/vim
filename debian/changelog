@@ -1,11 +1,18 @@
-vim (2:7.2.422+hg~12aba62fa7c6-1) UNRELEASED; urgency=low
+vim (2:7.2.433+hg~733f0dc510c3-1) UNRELEASED; urgency=low
 
-  * Pull patches 331 - 422.
+  * Pull patches 331 - 433.
     + 7.2.367: Make xxd follow documented behavior when using “-r -p”.
       (Closes: #567041)
     + 7.2.405: Re-enable default value for IncSearch to allow highlighting of
       matched text when using :substitute's c flag.  (Closes: #572994)
     + 7.2.413: Largefile support for all Vim packages.  (LP: #128494)
+    + 7.2.426: Require literal commas be escaped in 'langmap'.  (Fixes
+      #233008, obviating upstream/langmap-comma-parsing.patch)
+    + 7.2.429: Specifically check for ENOENT to decide a file doesn't exist.
+      (Closes: #430205)
+    + Updated runtime files:
+      - Fix sqlcomplete's <Left>/<Right> maps so they don't interfere with
+        normal usage.  (Closes: #560083)
   * debian/control:
     + Update Vcs-* to point to the Mercurial repository.
     + Add quilt to Build-Depends.

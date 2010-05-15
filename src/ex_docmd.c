@@ -4739,7 +4739,7 @@ getargopt(eap)
     else if (STRNCMP(arg, "bad", 3) == 0)
     {
 	arg += 3;
-	pp = &eap->bad_char;
+	pp = &eap->bad_char_idx;
     }
 #endif
 
@@ -4770,7 +4770,7 @@ getargopt(eap)
     {
 	/* Check ++bad= argument.  Must be a single-byte character, "keep" or
 	 * "drop". */
-	p = eap->cmd + eap->bad_char;
+	p = eap->cmd + eap->bad_char_idx;
 	if (STRICMP(p, "keep") == 0)
 	    eap->bad_char = BAD_KEEP;
 	else if (STRICMP(p, "drop") == 0)
@@ -6226,7 +6226,31 @@ parse_compl_arg(value, vallen, complp, argt, compl_arg)
 ex_colorscheme(eap)
     exarg_T	*eap;
 {
-    if (load_colors(eap->arg) == FAIL)
+    if (*eap->arg == NUL)
+    {
+#ifdef FEAT_EVAL
+	char_u *expr = vim_strsave((char_u *)"g:colors_name");
+	char_u *p = NULL;
+
+	if (expr != NULL)
+	{
+	    ++emsg_off;
+	    p = eval_to_string(expr, NULL, FALSE);
+	    --emsg_off;
+	    vim_free(expr);
+	}
+	if (p != NULL)
+	{
+	    MSG(p);
+	    vim_free(p);
+	}
+	else
+	    MSG("default");
+#else
+	MSG(_("unknown"));
+#endif
+    }
+    else if (load_colors(eap->arg) == FAIL)
 	EMSG2(_("E185: Cannot find color scheme %s"), eap->arg);
 }
 
