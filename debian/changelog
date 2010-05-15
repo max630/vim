@@ -13,6 +13,9 @@ vim (2:7.2.433+hg~733f0dc510c3-1) UNRELEASED; urgency=low
     + Updated runtime files:
       - Fix sqlcomplete's <Left>/<Right> maps so they don't interfere with
         normal usage.  (Closes: #560083)
+      - Recognize Perl 5.10's “state” keyword.  (Closes: #499644)
+      - Handle a wider variety of quoting operators in Perl.  (Closes:
+        #561080)
   * debian/control:
     + Update Vcs-* to point to the Mercurial repository.
     + Add quilt to Build-Depends.
