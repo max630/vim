@@ -126,7 +126,8 @@ VERSION:=7.2
 SNAPSHOT:=
 VIMCUR:=$(NAME)$(subst .,,$(VERSION))$(SNAPSHOT)
 DEBVERSION:=$(shell dpkg-parsechangelog | sed -n '/^Version:/{s/Version: *\([^:]*:\)\?\([^-]*\)-.*/\2/;p;q}')
-ORIG_SOURCE := ../$(NAME)_$(DEBVERSION).orig.tar.gz
+EXPORT_DIR ?= ..
+ORIG_SOURCE := $(EXPORT_DIR)/$(NAME)_$(DEBVERSION).orig.tar.gz
 PER_VARIANT_FILES := install postinst prerm links
 LANGS := fr it pl ru
 
@@ -145,10 +146,12 @@ DOT_IN_DEPS_TINY := debian/tiny/vimrc.tiny
 # nothing to do per default
 all: 
 
-update-orig:
+$(ORIG_SOURCE):
 	if hg root >/dev/null 2>&1; then \
 	    hg archive -t tgz -X .hg\* --prefix=$(NAME)-$(DEBVERSION)/ -r $$(echo $(DEBVERSION) | sed 's/.*+hg~//') $(ORIG_SOURCE); \
 	fi
+
+update-orig: $(ORIG_SOURCE)
 
 export-patches:
 	if hg root >/dev/null 2>&1; then \
