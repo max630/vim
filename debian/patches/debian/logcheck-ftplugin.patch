@@ -1,0 +1,19 @@
+Subject: Recognize logcheck files as the logcheck filetype
+Author: James Vega <jamessan@debian.org>
+Bug-Debian: http://bugs.debian.org/382986
+Forwarded: no
+
+Index: b/runtime/filetype.vim
+===================================================================
+--- a/runtime/filetype.vim
++++ b/runtime/filetype.vim
+@@ -987,6 +987,9 @@
+ " LiteStep RC files
+ au BufNewFile,BufRead */LiteStep/*/*.rc		setf litestep
+ 
++" Logcheck files
++au BufNewFile,BufRead /etc/logcheck/*.d/*	setf logcheck
++
+ " Login access
+ au BufNewFile,BufRead /etc/login.access		setf loginaccess
+ 

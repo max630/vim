@@ -4626,7 +4626,7 @@ A jump table for the options with a short description can be found at |Q_op|.
 
 				   *'modeline'* *'ml'* *'nomodeline'* *'noml'*
 'modeline' 'ml'		boolean	(Vim default: on (off for root),
-				 Vi default: off)
+				 Debian: off, Vi default: off)
 			local to buffer
 						*'modelines'* *'mls'*
 'modelines' 'mls'	number	(default 5)

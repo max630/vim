@@ -1,0 +1,27 @@
+Subject: Disable spell checking of verbatim sections of tex files
+Author: James Vega <jamessan@debian.org>
+Bug-Debian: http://bugs.debian.org/445295
+Forwarded: 2008-07-28
+
+Index: b/runtime/syntax/tex.vim
+===================================================================
+--- a/runtime/syntax/tex.vim
++++ b/runtime/syntax/tex.vim
+@@ -400,13 +400,13 @@
+ " Separate lines used for verb` and verb# so that the end conditions {{{1
+ " will appropriately terminate.  Ideally vim would let me save a
+ " character from the start pattern and re-use it in the end-pattern.
+-syn region texZone		start="\\begin{[vV]erbatim}"		end="\\end{[vV]erbatim}\|%stopzone\>"	contains=@Spell
++syn region texZone		start="\\begin{[vV]erbatim}"		end="\\end{[vV]erbatim}\|%stopzone\>"
+ " listings package:
+ syn region texZone		start="\\begin{lstlisting}"		end="\\end{lstlisting}\|%stopzone\>"	contains=@Spell
+ " moreverb package:
+-syn region texZone		start="\\begin{verbatimtab}"		end="\\end{verbatimtab}\|%stopzone\>"	contains=@Spell
+-syn region texZone		start="\\begin{verbatimwrite}"		end="\\end{verbatimwrite}\|%stopzone\>"	contains=@Spell
+-syn region texZone		start="\\begin{boxedverbatim}"		end="\\end{boxedverbatim}\|%stopzone\>"	contains=@Spell
++syn region texZone		start="\\begin{verbatimtab}"		end="\\end{verbatimtab}\|%stopzone\>"
++syn region texZone		start="\\begin{verbatimwrite}"		end="\\end{verbatimwrite}\|%stopzone\>"
++syn region texZone		start="\\begin{boxedverbatim}"		end="\\end{boxedverbatim}\|%stopzone\>"
+ if version < 600
+  syn region texZone		start="\\verb\*\=`"			end="`\|%stopzone\>"
+  syn region texZone		start="\\verb\*\=#"			end="#\|%stopzone\>"

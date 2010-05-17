@@ -18,7 +18,6 @@ vim (2:7.2.433+hg~733f0dc510c3-1) UNRELEASED; urgency=low
         #561080)
   * debian/control:
     + Update Vcs-* to point to the Mercurial repository.
-    + Add quilt to Build-Depends.
     + Bump Standards-Version to 3.8.4, no changes needed.
   * vim-policy: Update links to package descriptions and repository.
   * Reword presubj to provide a few methods for narrowing down the bug's
@@ -30,11 +29,9 @@ vim (2:7.2.433+hg~733f0dc510c3-1) UNRELEASED; urgency=low
     + Remove git helper targets.
     + Remove get-orig-source target and related variables, since we're just
       using the upstream Mercurial repository.
-    + Include quilt makefile and setup handling of patches.
-  * debian/source/format: Explicitly note that we're using 1.0.
+  * debian/source/format: Switch to “3.0 (quilt)”.
   * debian/README.source: Update description according to the change to
     Mercurial.
-  * debian/source/options: Use tar-ignore and diff-ignore by default.
   * runtime/ftplugin/debchangelog.vim: Update completion of Ubuntu bugs based
     on a patch from Michael Bienia.  (Closes: #566841)
   * runtime/syntax/{debchangelog,debsources}.vim: Remove intrepid and add

@@ -8,11 +8,13 @@ let b:did_ftplugin = 1
 
 setlocal cinkeys-=0#
 setlocal indentkeys-=0#
-setlocal include=\s*\\(from\\\|import\\)
+setlocal include=^\\s*\\(from\\\|import\\)
 setlocal includeexpr=substitute(v:fname,'\\.','/','g')
 setlocal suffixesadd=.py
 setlocal comments-=:%
 setlocal commentstring=#%s
+
+setlocal keywordprg=pydoc
 
 setlocal omnifunc=pythoncomplete#Complete
 

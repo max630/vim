@@ -1,0 +1,18 @@
+Subject: Recognize '#' as a comment leader for dosini filetype
+Author: Adeodato Simó <dato@net.com.org.es>
+Bug-Debian: http://bugs.debian.org/378952
+Forwarded: 2006-10-14
+
+Index: b/runtime/syntax/dosini.vim
+===================================================================
+--- a/runtime/syntax/dosini.vim
++++ b/runtime/syntax/dosini.vim
+@@ -19,7 +19,7 @@
+ 
+ syn match  dosiniLabel		"^.\{-}="
+ syn region dosiniHeader		start="^\[" end="\]"
+-syn match  dosiniComment	"^;.*$"
++syn match  dosiniComment	"^[;#].*$"
+ 
+ " Define the default highlighting.
+ " For version 5.7 and earlier: only when not done already

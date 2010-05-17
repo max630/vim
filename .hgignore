@@ -40,5 +40,5 @@ gvimext.lib
 *.mo
 *~
 
-# Debian patches
-debian/patches
+# Quilt
+.pc/

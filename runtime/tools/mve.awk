@@ -1,4 +1,4 @@
-#!/usr/bin/nawk -f
+#!/usr/bin/awk -f
 #
 # Change "nawk" to "awk" or "gawk" if you get errors.
 #

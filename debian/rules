@@ -1,6 +1,5 @@
 #!/usr/bin/make -f
 
-include /usr/share/quilt/quilt.make
 export DH_OPTIONS
 
 DEB_HOST_GNU_SYSTEM ?= $(shell dpkg-architecture -qDEB_HOST_GNU_SYSTEM)
@@ -153,14 +152,17 @@ $(ORIG_SOURCE):
 
 update-orig: $(ORIG_SOURCE)
 
-export-patches:
-	if hg root >/dev/null 2>&1; then \
-	    rm -rf $$(hg root)/debian/patches; \
-	    hg archive --mq $$(hg root)/debian/patches; \
-	    rm -f $$(hg root)/debian/patches/.hg*; \
-	fi
+# You only need to run this immediately after checking out the package from
+# version control.
+quilt-setup: export QUILT_PATCHES=debian/patches
+quilt-setup:
+	[ ! -d .pc ]
+	set -e; for patch in $$(quilt series | tac); do \
+		patch -Rp1 --no-backup-if-mismatch <"debian/patches/$$patch"; \
+	done
+	quilt push -a
 
-clean: $(foreach v,$(VARIANTS),clean-$(v)) unpatch
+clean: $(foreach v,$(VARIANTS),clean-$(v))
 	dh_testdir
 	dh_testroot
 	rm -f extract-stamp* build-stamp* install-stamp* configure-stamp* autoconf-stamp
@@ -214,7 +216,7 @@ build-stamp-arch: $(foreach v,$(VARIANTS),build-stamp-$(v))
 	touch $@
 
 configure-stamp-%: SHADOWDIR=$*
-configure-stamp-%: $(QUILT_STAMPFN)
+configure-stamp-%:
 	dh_testdir
 	@echo "*** DEBIAN *** CONFIGURING VARIANT $*"
 	$(MAKE) -C src shadow SHADOWDIR=$(SHADOWDIR)
@@ -494,7 +496,7 @@ binary-arch-%: install-stamp-%
 	dh_builddeb
 
 binary: beginlog binary-indep binary-arch endlog
-.PHONY: patch unpatch extract clean build install binary-indep binary-arch binary get-orig-source check-tarball update-orig
+.PHONY: patch unpatch extract clean build install binary-indep binary-arch binary update-orig quilt-setup
 
 .PHONY: beginlog endlog
 beginlog:

@@ -1,0 +1,35 @@
+Subject: Ignore case for month/day fields
+ The versions of cron which support specifying the month and day fields via
+ names instead of just numbers are case-insensitive when parsing the names.
+Author: Chris Butler <chrisb@debian.org>
+Bug-Debian: http://bugs.debian.org/568378
+Forwarded: 2010-05-06
+
+Index: b/runtime/syntax/crontab.vim
+===================================================================
+--- a/runtime/syntax/crontab.vim
++++ b/runtime/syntax/crontab.vim
+@@ -19,6 +19,12 @@
+   finish
+ endif
+ 
++syntax match crontabNick "^\s*@\(reboot\|yearly\|annually\|monthly\|weekly\|daily\|midnight\|hourly\)\>" nextgroup=crontabCmd skipwhite
++
++syntax match crontabVar "^\s*\k\w*\s*="me=e-1
++
++syntax case ignore
++
+ syntax match crontabMin "^\s*[-0-9/,.*]\+" nextgroup=crontabHr skipwhite
+ syntax match crontabHr "\s[-0-9/,.*]\+" nextgroup=crontabDay skipwhite contained
+ syntax match crontabDay "\s[-0-9/,.*]\+" nextgroup=crontabMnth skipwhite contained
+@@ -33,10 +39,6 @@
+ syntax match crontabCmnt "^\s*#.*"
+ syntax match crontabPercent "[^\\]%.*"lc=1 contained
+ 
+-syntax match crontabNick "^\s*@\(reboot\|yearly\|annually\|monthly\|weekly\|daily\|midnight\|hourly\)\>" nextgroup=crontabCmd skipwhite
+-
+-syntax match crontabVar "^\s*\k\w*\s*="me=e-1
+-
+ " Define the default highlighting.
+ " For version 5.7 and earlier: only when not done already
+ " For version 5.8 and later: only when an item doesn't have highlighting yet

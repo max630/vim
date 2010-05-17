@@ -14,6 +14,9 @@ elseif exists("b:current_syntax")
   finish
 endif
 
+let s:cpo_save = &cpo
+set cpo-=C  " Allow line continuations
+
 syn sync minlines=10
 
 " Identifiers
@@ -130,6 +133,7 @@ if version >= 508 || !exists("did_po_syn_inits")
   delcommand HiLink
 endif
 
+let &cpo = s:cpo_save
 let b:current_syntax = "po"
 
 " vim:set ts=8 sts=2 sw=2 noet:

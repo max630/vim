@@ -317,6 +317,14 @@ else
   elseif s:line1 =~ 'exec\s\+\S*scheme' || s:line2 =~ 'exec\s\+\S*scheme'
     set ft=scheme
 
+  " rst files
+  elseif s:line1 =~ '^\.\.\s\|^\s*restindex\s*$'
+	\ || s:line2 =~ '^\.\.\s\|^\s*restindex\s*$'
+	\ || s:line3 =~ '^\.\.\s\|^\s*restindex\s*$'
+	\ || s:line4 =~ '^\.\.\s\|^\s*restindex\s*$'
+	\ || s:line5 =~ '^\.\.\s\|^\s*restindex\s*$'
+    set ft=rst
+
   " Git output
   elseif s:line1 =~ '^\(commit\|tree\|object\) \x\{40\}\>\|^tag \S\+$'
     set ft=git

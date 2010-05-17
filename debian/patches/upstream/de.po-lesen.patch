@@ -1,0 +1,18 @@
+Subject: Correct German translation of 'Load File'
+Forwarded: no
+Author: Torsten Werner <twerner@debian.org>
+Bug-Debian: http://bugs.debian.org/443529
+
+Index: b/src/po/de.po
+===================================================================
+--- a/src/po/de.po
++++ b/src/po/de.po
+@@ -1700,7 +1700,7 @@
+ "&Load File"
+ msgstr ""
+ "&OK\n"
+-"&Lese Datei"
++"&Lies Datei"
+ 
+ #, c-format
+ msgid "E462: Could not prepare for reloading \"%s\""
