@@ -9,7 +9,7 @@ vim (2:7.2.436+hg~e12b9d992389-1) UNRELEASED; urgency=low
     + 7.2.426: Require literal commas be escaped in 'langmap'.  (Fixes
       #233008, obviating upstream/langmap-comma-parsing.patch)
     + 7.2.429: Specifically check for ENOENT to decide a file doesn't exist.
-      (Closes: #430205)
+      Also fixes the check for EFBIG/EOVERFLOW.  (Closes: #430205, #139510)
     + Updated runtime files:
       - Fix sqlcomplete's <Left>/<Right> maps so they don't interfere with
         normal usage.  (Closes: #560083)
