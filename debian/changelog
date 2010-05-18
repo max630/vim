@@ -31,7 +31,7 @@ vim (2:7.2.433+hg~733f0dc510c3-1) UNRELEASED; urgency=low
       using the upstream Mercurial repository.
   * debian/source/format: Switch to “3.0 (quilt)”.
   * debian/README.source: Update description according to the change to
-    Mercurial.
+    Mercurial and use of “3.0 (quilt)” source format.
   * runtime/ftplugin/debchangelog.vim: Update completion of Ubuntu bugs based
     on a patch from Michael Bienia.  (Closes: #566841)
   * runtime/syntax/{debchangelog,debsources}.vim: Remove intrepid and add
