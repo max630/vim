@@ -1,4 +1,4 @@
-vim (2:7.2.436+hg~e12b9d992389-1) UNRELEASED; urgency=low
+vim (2:7.2.436+hg~e12b9d992389-1) unstable; urgency=low
 
   * Pull patches 331 - 436.
     + 7.2.367: Make xxd follow documented behavior when using “-r -p”.
@@ -39,7 +39,7 @@ vim (2:7.2.436+hg~e12b9d992389-1) UNRELEASED; urgency=low
   * Use case-insensitive matching for month and day of week names in crontab's
     syntax file.  Thanks to Chris Butler for the patch.  (Closes: #568378)
 
- -- James Vega <jamessan@debian.org>  Sun, 11 Apr 2010 22:40:46 -0400
+ -- James Vega <jamessan@debian.org>  Tue, 18 May 2010 18:40:17 -0400
 
 vim (2:7.2.330-1) unstable; urgency=low
 
