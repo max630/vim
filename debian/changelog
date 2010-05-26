@@ -5,6 +5,10 @@ vim (2:7.2.438+hg~d44112feb815-1) UNRELEASED; urgency=low
   * Cherry-pick upstream/lang-breaks-floating-point.patch from upstream to
     prevent floating point functionality from breaking when the :lang command
     is issued.  (Closes: #582421)
+  * Fix building against Debian's Python 2.6 package.  (Closes: #566842)
+    + Cherry-pick upstream/python-modlibs.patch from upstream.
+    + debian/control: Add autoconf to Build-Depends.
+    + debian/rules: Re-generate configure at build time and remove on clean.
 
  -- James Vega <jamessan@debian.org>  Tue, 25 May 2010 21:19:28 -0400
 

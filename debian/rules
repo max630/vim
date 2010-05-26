@@ -170,6 +170,8 @@ clean: $(foreach v,$(VARIANTS),clean-$(v))
 	rm -rf debian/policy/vim-policy.html
 	rm -f debian/policy/vim-policy.txt
 	[ ! -f src/auto/config.cache ] || make distclean
+	[ ! -f debian/configure.dist ] || mv debian/configure.dist src/auto/configure
+	rm -f src/auto/config.h
 	rm -f runtime/doc/doctags runtime/doc/tags.ref
 	rm -f runtime/doc/*.html runtime/doc/*.log
 	rm -f src/pixmaps src/runtime
@@ -215,8 +217,14 @@ build-stamp-arch: $(foreach v,$(VARIANTS),build-stamp-$(v))
 	dh_testdir
 	touch $@
 
+autoconf-stamp:
+	dh_testdir
+	[ -f debian/configure.dist ] || cp src/auto/configure debian/configure.dist
+	$(MAKE) -C src autoconf
+	touch $@
+
 configure-stamp-%: SHADOWDIR=$*
-configure-stamp-%:
+configure-stamp-%: autoconf-stamp
 	dh_testdir
 	@echo "*** DEBIAN *** CONFIGURING VARIANT $*"
 	$(MAKE) -C src shadow SHADOWDIR=$(SHADOWDIR)

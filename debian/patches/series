@@ -11,6 +11,7 @@ upstream/tex-syntax-verbatim-spell.patch
 upstream/extra-rst-detection.patch
 upstream/crontab-syntax-case-ignore.patch
 upstream/lang-breaks-floating-point.patch
+upstream/python-modlibs.patch
 debian/vim-tiny.patch
 debian/disabled-modelines.patch
 debian/awk-shebang.patch

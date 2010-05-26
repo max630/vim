@@ -8,7 +8,9 @@ Build-Depends: debhelper (>= 5), bzip2, libperl-dev, tcl-dev, libacl1-dev,
  libgpmg1-dev [!hurd-i386] | not+linux-gnu, python-dev, libxpm-dev,
  libncurses5-dev, ruby, ruby1.8-dev, libgtk2.0-dev,
  libgnomeui-dev, lesstif2-dev, libxt-dev,
- libselinux1-dev [!hurd-i386] | not+linux-gnu
+ libselinux1-dev [!hurd-i386] | not+linux-gnu,
+# Need autoconf since we're patching config.mk.in and configure.in for #566842
+ autoconf
 Build-Depends-Indep: docbook-xml, docbook-utils
 Vcs-Hg: http://hg.debian.org/hg/pkg-vim/vim
 Vcs-Browser: http://hg.debian.org/hg/pkg-vim/vim
