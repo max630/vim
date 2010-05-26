@@ -1,0 +1,67 @@
+Subject: Prevent Gtk from re-setting the locale
+Origin: commit:4c6b4298852f
+Bug-Debian: http://bugs.debian.org/582421
+
+Index: b/src/ex_cmds2.c
+===================================================================
+--- a/src/ex_cmds2.c
++++ b/src/ex_cmds2.c
+@@ -4159,18 +4159,6 @@
+ 		    set_helplang_default(mname);
+ #endif
+ 		}
+-
+-		/* Set $LC_CTYPE, because it overrules $LANG, and
+-		 * gtk_set_locale() calls setlocale() again.  gnome_init()
+-		 * sets $LC_CTYPE to "en_US" (that's a bug!). */
+-		if (what != VIM_LC_MESSAGES)
+-		    vim_setenv((char_u *)"LC_CTYPE", name);
+-# ifdef FEAT_GUI_GTK
+-		/* Let GTK know what locale we're using.  Not sure this is
+-		 * really needed... */
+-		if (gui.in_use)
+-		    (void)gtk_set_locale();
+-# endif
+ 	    }
+ 
+ # ifdef FEAT_EVAL
+Index: b/src/main.c
+===================================================================
+--- a/src/main.c
++++ b/src/main.c
+@@ -377,10 +377,6 @@
+ 	    if (params.evim_mode)
+ 		mch_exit(1);
+ 	}
+-#  if defined(HAVE_LOCALE_H) || defined(X_LOCALE)
+-	/* Re-initialize locale, it may have been altered by gui_init_check() */
+-	init_locale();
+-#  endif
+     }
+ # endif
+ #endif
+@@ -1399,6 +1395,10 @@
+ {
+     setlocale(LC_ALL, "");
+ 
++# ifdef FEAT_GUI_GTK
++    /* Tell Gtk not to change our locale settings. */
++    gtk_disable_setlocale();
++# endif
+ # if defined(FEAT_FLOAT) && defined(LC_NUMERIC)
+     /* Make sure strtod() uses a decimal point, not a comma. */
+     setlocale(LC_NUMERIC, "C");
+Index: b/src/window.c
+===================================================================
+--- a/src/window.c
++++ b/src/window.c
+@@ -3775,6 +3775,9 @@
+ goto_tabpage_tp(tp)
+     tabpage_T	*tp;
+ {
++    /* Don't repeat a message in another tab page. */
++    set_keep_msg(NULL, 0);
++
+     if (tp != curtab && leave_tabpage(tp->tp_curwin->w_buffer) == OK)
+     {
+ 	if (valid_tabpage(tp))

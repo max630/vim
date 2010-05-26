@@ -10,6 +10,7 @@ upstream/dosini-syntax-hash.patch
 upstream/tex-syntax-verbatim-spell.patch
 upstream/extra-rst-detection.patch
 upstream/crontab-syntax-case-ignore.patch
+upstream/lang-breaks-floating-point.patch
 debian/vim-tiny.patch
 debian/disabled-modelines.patch
 debian/awk-shebang.patch

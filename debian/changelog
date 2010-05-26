@@ -2,6 +2,9 @@ vim (2:7.2.438+hg~d44112feb815-1) UNRELEASED; urgency=low
 
   * Pull patches 437 - 438.
     + 7.2.438: Fix crash when running “vim -r”.  (Closes: #583122)
+  * Cherry-pick upstream/lang-breaks-floating-point.patch from upstream to
+    prevent floating point functionality from breaking when the :lang command
+    is issued.  (Closes: #582421)
 
  -- James Vega <jamessan@debian.org>  Tue, 25 May 2010 21:19:28 -0400
 
