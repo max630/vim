@@ -1,4 +1,4 @@
-vim (2:7.2.438+hg~d44112feb815-1) UNRELEASED; urgency=low
+vim (2:7.2.438+hg~d44112feb815-1) unstable; urgency=low
 
   * Pull patches 437 - 438.
     + 7.2.438: Fix crash when running “vim -r”.  (Closes: #583122)
@@ -10,7 +10,7 @@ vim (2:7.2.438+hg~d44112feb815-1) UNRELEASED; urgency=low
     + debian/control: Add autoconf to Build-Depends.
     + debian/rules: Re-generate configure at build time and remove on clean.
 
- -- James Vega <jamessan@debian.org>  Tue, 25 May 2010 21:19:28 -0400
+ -- James Vega <jamessan@debian.org>  Wed, 26 May 2010 19:34:27 -0400
 
 vim (2:7.2.436+hg~e12b9d992389-1) unstable; urgency=low
 
