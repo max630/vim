@@ -220,7 +220,14 @@ build-stamp-arch: $(foreach v,$(VARIANTS),build-stamp-$(v))
 autoconf-stamp:
 	dh_testdir
 	[ -f debian/configure.dist ] || cp src/auto/configure debian/configure.dist
+# The autoconf target generates a new configure, and touches some other
+# configure-related things.  Need to run distclean afterward or timestamps
+# will be off and the next make that runs will think it needs to run
+# configure.  This breaks parallel builds since two configures are being run
+# in the same directory at the same time instead of in their own shadow
+# directories.
 	$(MAKE) -C src autoconf
+	$(MAKE) distclean
 	touch $@
 
 configure-stamp-%: SHADOWDIR=$*

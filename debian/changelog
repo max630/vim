@@ -1,3 +1,10 @@
+vim (2:7.2.438+hg~d44112feb815-2) unstable; urgency=low
+
+  * Fix FTBFS with parallel builds and using the autoconf target to update the
+    configure script.
+
+ -- James Vega <jamessan@debian.org>  Sat, 29 May 2010 00:14:01 -0400
+
 vim (2:7.2.438+hg~d44112feb815-1) unstable; urgency=low
 
   * Pull patches 437 - 438.
