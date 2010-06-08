@@ -8,10 +8,12 @@ rm_diversion() {
 }
 
 rm -f /usr/share/vim/addons/doc/tags
-if [ "$1" = "remove" ]; then
-  rm_diversion $basedir/help.txt
-  rm_diversion $basedir/tags
-fi
+case "$1" in
+  remove|abort-install|disappear)
+    rm_diversion $basedir/help.txt
+    rm_diversion $basedir/tags
+    ;;
+esac
 
 #DEBHELPER#
 

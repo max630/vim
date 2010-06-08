@@ -1,3 +1,12 @@
+vim (2:7.2.438+hg~d44112feb815-3) UNRELEASED; urgency=low
+
+  * vim-runtime.preinst:
+    + Remove code handling the Etch->Lenny diversion fixup.
+    + Add handling of diversions when upgrading across major versions.
+  * vim-runtime.postrm: Remove diversions on abort-install and disappear.
+
+ -- James Vega <jamessan@debian.org>  Mon, 07 Jun 2010 22:48:50 -0400
+
 vim (2:7.2.438+hg~d44112feb815-2) unstable; urgency=low
 
   * Fix FTBFS with parallel builds and using the autoconf target to update the
