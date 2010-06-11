@@ -52,7 +52,7 @@ Description: Vi IMproved - Common GUI files
 
 Package: vim-runtime
 Architecture: all
-Depends: dpkg (>= 1.14.20), ${misc:Depends}
+Depends: ${misc:Depends}
 Recommends: vim | vim-gnome | vim-gtk | vim-lesstif | vim-nox | vim-tiny
 Enhances: vim-tiny
 Description: Vi IMproved - Runtime files
@@ -85,8 +85,6 @@ Description: Vi IMproved - HTML documentation
 Package: vim-tiny
 Priority: important
 Architecture: any
-Conflicts: vim-runtime (<< 1:7.1-056+1), vim-common (<< 1:7.1.293-2)
-Replaces: vim-common (<< 1:7.1.293-2)
 Depends: vim-common (= ${binary:Version}), ${misc:Depends}, ${shlibs:Depends}
 # Vim automatically invokes the indent program if it isn't built with internal
 # indenting support (as is the case with vim-tiny) and the 'equalprg' option
@@ -110,8 +108,6 @@ Package: vim
 Architecture: any
 Depends: vim-common (= ${binary:Version}), vim-runtime (= ${source:Version}), ${misc:Depends}, ${shlibs:Depends}
 Suggests: ctags, vim-doc, vim-scripts
-Conflicts: vim-common (<< 1:7.1-175+1)
-Replaces: vim-common (<< 1:7.1-175+1)
 Provides: editor
 Description: Vi IMproved - enhanced vi editor
  Vim is an almost compatible version of the UNIX editor Vi.

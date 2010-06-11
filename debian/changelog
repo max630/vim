@@ -5,6 +5,8 @@ vim (2:7.2.438+hg~d44112feb815-3) UNRELEASED; urgency=low
     + Add handling of diversions when upgrading across major versions.
   * vim-runtime.postrm: Remove diversions on abort-install and disappear.
   * Move gvimtutor to vim-gui-common from vim-runtime. (LP: #484851)
+  * debian/control: Remove versioned relationships which are satisified in
+    Lenny.
 
  -- James Vega <jamessan@debian.org>  Mon, 07 Jun 2010 22:48:50 -0400
 
