@@ -55,22 +55,24 @@ NOXFLAGS+=--enable-gui=no
 
 GUIFLAGS+=--with-x
 GUIFLAGS+=--enable-xim
-GUIFLAGS+=--enable-fontset
 
 GTK2FLAGS+=--enable-gui=gtk2
 GTK2FLAGS+=--enable-gtk2-check
 GTK2FLAGS+=--disable-gnome-check
 GTK2FLAGS+=--disable-motif-check
+GTK2FLAGS+=--disable-fontset
 
 GNOMEFLAGS+=--enable-gui=gnome2
 GNOMEFLAGS+=--disable-gtk2-check
 GNOMEFLAGS+=--enable-gnome-check
 GNOMEFLAGS+=--disable-motif-check
+GNOMEFLAGS+=--disable-fontset
 
 LESSTIFFLAGS+=--enable-gui=motif
 LESSTIFFLAGS+=--disable-gtk2-check
 LESSTIFFLAGS+=--disable-gnome-check
 LESSTIFFLAGS+=--enable-motif-check
+LESSTIFFLAGS+=--enable-fontset
 
 NOINTERPFLAGS+=--disable-mzschemeinterp
 NOINTERPFLAGS+=--disable-tclinterp
@@ -354,18 +356,19 @@ install-stamp-vim-basic: build-stamp-vim-basic $(DOT_IN_DEPS)
 	   debian/vim-gui-common/usr/share/man/man1/gvim.1
 	cp debian/vim-common/usr/share/man/man1/vimdiff.1 \
 	   debian/vim-gui-common/usr/share/man/man1/gvimdiff.1
+	cp debian/vim-runtime/usr/share/man/man1/vimtutor.1 \
+	   debian/vim-gui-common/usr/share/man/man1/gvimtutor.1
 	for L in $(LANGS); do \
 	  cp debian/vim-common/usr/share/man/$$L/man1/vim.1 \
 	     debian/vim-gui-common/usr/share/man/$$L/man1/gvim.1; \
 	  cp debian/vim-common/usr/share/man/$$L/man1/vimdiff.1 \
 	     debian/vim-gui-common/usr/share/man/$$L/man1/gvimdiff.1; \
+	  cp debian/vim-runtime/usr/share/man/$$L/man1/vimtutor.1 \
+	     debian/vim-gui-common/usr/share/man/$$L/man1/gvimtutor.1; \
 	done
-	rmdir debian/vim-gui-common/usr/bin
 	# Generate language-specific sections of
 	# vim-{runtime,common,gui-common}.links files
 	for L in $(LANGS); do \
-	  echo usr/share/man/$$L/man1/vimtutor.1 \
-	    usr/share/man/$$L/man1/gvimtutor.1 >>debian/vim-runtime.links; \
 	  for p in rvim rview; do \
 	    echo usr/share/man/$$L/man1/vim.1  \
 	      usr/share/man/$$L/man1/$$p.1 >>debian/vim-common.links; \

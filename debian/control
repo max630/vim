@@ -37,6 +37,8 @@ Package: vim-gui-common
 Architecture: all
 Recommends: vim-gnome | vim-gtk | vim-lesstif
 Depends: ${misc:Depends}
+Conflicts: vim-runtime (<< 2:7.2.438+hg~d44112feb815-3)
+Replaces: vim-runtime (<< 2:7.2.438+hg~d44112feb815-3)
 Description: Vi IMproved - Common GUI files
  Vim is an almost compatible version of the UNIX editor Vi.
  .
@@ -46,7 +48,7 @@ Description: Vi IMproved - Common GUI files
  .
  This package contains files shared by all GUI-enabled vim
  variants available in Debian.  Examples of such shared files are:
- icons, desktop environments settings, and menu entries.
+ gvimtutor, icons, desktop environments settings, and menu entries.
 
 Package: vim-runtime
 Architecture: all
