@@ -17,8 +17,8 @@ major_upgrade() {
   oldver="${1#?:}"
   oldver="vim$(echo ${oldver%.*-*} | sed 's/\.//g')"
   if [ "$oldver" != "$vimcur" ]; then
-    remove_diversion "/usr/share/vim/$oldver/doc/help.txt"
-    remove_diversion "/usr/share/vim/$oldver/doc/tags"
+    rm_diversion "/usr/share/vim/$oldver/doc/help.txt"
+    rm_diversion "/usr/share/vim/$oldver/doc/tags"
     return 0
   fi
   return 1
