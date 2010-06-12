@@ -1,4 +1,4 @@
-vim (2:7.2.438+hg~d44112feb815-3) UNRELEASED; urgency=low
+vim (2:7.2.438+hg~d44112feb815-3) unstable; urgency=low
 
   * vim-runtime.preinst:
     + Remove code handling the Etch->Lenny diversion fixup.
@@ -8,7 +8,7 @@ vim (2:7.2.438+hg~d44112feb815-3) UNRELEASED; urgency=low
   * debian/control: Remove versioned relationships which are satisified in
     Lenny.
 
- -- James Vega <jamessan@debian.org>  Mon, 07 Jun 2010 22:48:50 -0400
+ -- James Vega <jamessan@debian.org>  Sat, 12 Jun 2010 10:09:56 -0400
 
 vim (2:7.2.438+hg~d44112feb815-2) unstable; urgency=low
 
