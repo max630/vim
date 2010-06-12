@@ -1,9 +1,9 @@
-vim (2:7.2.438+hg~d44112feb815-4) UNRELEASED; urgency=low
+vim (2:7.2.438+hg~d44112feb815-4) unstable; urgency=low
 
   * vim-runtime.preinst: Use the right function name for removing diversions
     when upgrading across major versions.
 
- -- James Vega <jamessan@debian.org>  Sat, 12 Jun 2010 17:42:59 -0400
+ -- James Vega <jamessan@debian.org>  Sat, 12 Jun 2010 17:46:32 -0400
 
 vim (2:7.2.438+hg~d44112feb815-3) unstable; urgency=low
 
