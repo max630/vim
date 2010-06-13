@@ -4,10 +4,6 @@ set -e
 vimcur="@VIMCUR@"
 basedir=/usr/share/vim/$vimcur/doc
 
-rm_diversion() {
-  dpkg-divert --package vim-runtime --rename --remove "$1"
-}
-
 add_diversion() {
   dpkg-divert --package vim-runtime --add --rename \
     --divert "$1.vim-tiny" "$1"
@@ -16,12 +12,7 @@ add_diversion() {
 major_upgrade() {
   oldver="${1#?:}"
   oldver="vim$(echo ${oldver%.*-*} | sed 's/\.//g')"
-  if [ "$oldver" != "$vimcur" ]; then
-    rm_diversion "/usr/share/vim/$oldver/doc/help.txt"
-    rm_diversion "/usr/share/vim/$oldver/doc/tags"
-    return 0
-  fi
-  return 1
+  [ "$oldver" != "$vimcur" ]
 }
 
 # Add diversions for any non-upgrade operation or when upgrading across major
