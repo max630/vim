@@ -53,6 +53,9 @@ Description: Vi IMproved - Common GUI files
 Package: vim-runtime
 Architecture: all
 Depends: ${misc:Depends}
+# Upgrades across major versions need to update vim-tiny first, otherwise
+# vim-runtime's removal of the old diversions will fail
+Breaks: vim-tiny (<< ${source:Version})
 Recommends: vim | vim-gnome | vim-gtk | vim-lesstif | vim-nox | vim-tiny
 Enhances: vim-tiny
 Description: Vi IMproved - Runtime files

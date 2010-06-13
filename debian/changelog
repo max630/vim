@@ -3,6 +3,7 @@ vim (2:7.2.438+hg~d44112feb815-5) UNRELEASED; urgency=low
   * Rework the diversion handling again.
     + vim-runtime.preinst: Add diversion on major version upgrades.
     + vim-runtime.postrm: Remove old diversion on major version upgrades.
+    + vim-runtime Breaks vim-tiny less than the current source version.
 
  -- James Vega <jamessan@debian.org>  Sun, 13 Jun 2010 15:19:11 -0400
 
