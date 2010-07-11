@@ -185,7 +185,7 @@ u_check_tree(u_header_T *uhp,
     }
 }
 
-    void
+    static void
 u_check(int newhead_may_be_NULL)
 {
     seen_b_u_newhead = 0;
@@ -242,7 +242,7 @@ u_save(top, bot)
 }
 
 /*
- * save the line "lnum" (used by ":s" and "~" command)
+ * Save the line "lnum" (used by ":s" and "~" command).
  * The line is replaced, so the new bottom line is lnum + 1.
  */
     int
@@ -256,7 +256,7 @@ u_savesub(lnum)
 }
 
 /*
- * a new line is inserted before line "lnum" (used by :s command)
+ * A new line is inserted before line "lnum" (used by :s command).
  * The line is inserted, so the new bottom line is lnum + 1.
  */
     int
@@ -270,7 +270,7 @@ u_inssub(lnum)
 }
 
 /*
- * save the lines "lnum" - "lnum" + nlines (used by delete command)
+ * Save the lines "lnum" - "lnum" + nlines (used by delete command).
  * The lines are deleted, so the new bottom line is lnum, unless the buffer
  * becomes empty.
  */
@@ -320,6 +320,9 @@ undo_allowed()
     return TRUE;
 }
 
+/*
+ * Common code for various ways to save text before a change.
+ */
     static int
 u_savecommon(top, bot, newbot)
     linenr_T	top, bot;
@@ -374,7 +377,7 @@ u_savecommon(top, bot, newbot)
     size = bot - top - 1;
 
     /*
-     * if curbuf->b_u_synced == TRUE make a new header
+     * If curbuf->b_u_synced == TRUE make a new header.
      */
     if (curbuf->b_u_synced)
     {
@@ -709,6 +712,12 @@ u_doit(startcount)
 	u_oldcount = -1;
     while (count--)
     {
+	/* Do the change warning now, so that it triggers FileChangedRO when
+	 * needed.  This may cause the file to be reloaded, that must happen
+	 * before we do anything, because it may change curbuf->b_u_curhead
+	 * and more. */
+	change_warning(0);
+
 	if (undo_undoes)
 	{
 	    if (curbuf->b_u_curhead == NULL)		/* first undo */
@@ -952,8 +961,11 @@ undo_time(step, sec, absolute)
 	/*
 	 * First go up the tree as much as needed.
 	 */
-	for (;;)
+	while (!got_int)
 	{
+	    /* Do the change warning now, for the same reason as above. */
+	    change_warning(0);
+
 	    uhp = curbuf->b_u_curhead;
 	    if (uhp == NULL)
 		uhp = curbuf->b_u_newhead;
@@ -970,9 +982,15 @@ undo_time(step, sec, absolute)
 	/*
 	 * And now go down the tree (redo), branching off where needed.
 	 */
-	uhp = curbuf->b_u_curhead;
-	while (uhp != NULL)
+	while (!got_int)
 	{
+	    /* Do the change warning now, for the same reason as above. */
+	    change_warning(0);
+
+	    uhp = curbuf->b_u_curhead;
+	    if (uhp == NULL)
+		break;
+
 	    /* Go back to the first branch with a mark. */
 	    while (uhp->uh_alt_prev != NULL
 					&& uhp->uh_alt_prev->uh_walk == mark)
@@ -996,6 +1014,8 @@ undo_time(step, sec, absolute)
 		last->uh_alt_next = uhp;
 		uhp->uh_alt_prev = last;
 
+		if (curbuf->b_u_oldhead == uhp)
+		    curbuf->b_u_oldhead = last;
 		uhp = last;
 		if (uhp->uh_next != NULL)
 		    uhp->uh_next->uh_prev = uhp;
@@ -1068,6 +1088,12 @@ u_undoredo(undo)
     int		empty_buffer;		    /* buffer became empty */
     u_header_T	*curhead = curbuf->b_u_curhead;
 
+#ifdef FEAT_AUTOCMD
+    /* Don't want autocommands using the undo structures here, they are
+     * invalid till the end. */
+    block_autocmds();
+#endif
+
 #ifdef U_DEBUG
     u_check(FALSE);
 #endif
@@ -1097,6 +1123,9 @@ u_undoredo(undo)
 	if (top > curbuf->b_ml.ml_line_count || top >= bot
 				      || bot > curbuf->b_ml.ml_line_count + 1)
 	{
+#ifdef FEAT_AUTOCMD
+	    unblock_autocmds();
+#endif
 	    EMSG(_("E438: u_undo: line numbers wrong"));
 	    changed();		/* don't want UNCHANGED now */
 	    return;
@@ -1302,6 +1331,10 @@ u_undoredo(undo)
     /* The timestamp can be the same for multiple changes, just use the one of
      * the undone/redone change. */
     curbuf->b_u_seq_time = curhead->uh_time;
+
+#ifdef FEAT_AUTOCMD
+    unblock_autocmds();
+#endif
 #ifdef U_DEBUG
     u_check(FALSE);
 #endif
@@ -1406,10 +1439,9 @@ u_sync(force)
 /*
  * ":undolist": List the leafs of the undo tree
  */
-/*ARGSUSED*/
     void
 ex_undolist(eap)
-    exarg_T *eap;
+    exarg_T *eap UNUSED;
 {
     garray_T	ga;
     u_header_T	*uhp;
@@ -1529,10 +1561,9 @@ u_add_time(buf, buflen, tt)
 /*
  * ":undojoin": continue adding to the last entry list
  */
-/*ARGSUSED*/
     void
 ex_undojoin(eap)
-    exarg_T *eap;
+    exarg_T *eap UNUSED;
 {
     if (curbuf->b_u_newhead == NULL)
 	return;		    /* nothing changed before */
