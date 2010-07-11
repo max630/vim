@@ -1,3 +1,13 @@
+vim (2:7.2.438+hg~d44112feb815-6) UNRELEASED; urgency=low
+
+  * debian/control:
+    + Use Breaks instead of Conflicts for the gvimtutor move.
+    + Use linux-any wildcards for linux-specific Build-Depends.  (Closes:
+      #587866)
+    + Bump Standards-Version to 3.9.0.0.
+
+ -- James Vega <jamessan@debian.org>  Sun, 11 Jul 2010 16:20:27 -0400
+
 vim (2:7.2.438+hg~d44112feb815-5) unstable; urgency=low
 
   * Rework the diversion handling again.

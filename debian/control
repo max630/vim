@@ -3,12 +3,11 @@ Section: editors
 Priority: optional
 Maintainer: Debian Vim Maintainers <pkg-vim-maintainers@lists.alioth.debian.org>
 Uploaders: James Vega <jamessan@debian.org>
-Standards-Version: 3.8.4.0
+Standards-Version: 3.9.0.0
 Build-Depends: debhelper (>= 5), bzip2, libperl-dev, tcl-dev, libacl1-dev,
- libgpmg1-dev [!hurd-i386] | not+linux-gnu, python-dev, libxpm-dev,
- libncurses5-dev, ruby, ruby1.8-dev, libgtk2.0-dev,
- libgnomeui-dev, lesstif2-dev, libxt-dev,
- libselinux1-dev [!hurd-i386] | not+linux-gnu,
+ libgpmg1-dev [linux-any], python-dev, libxpm-dev, libncurses5-dev, ruby,
+ ruby1.8-dev, libgtk2.0-dev, libgnomeui-dev, lesstif2-dev, libxt-dev,
+ libselinux1-dev [linux-any],
 # Need autoconf since we're patching config.mk.in and configure.in for #566842
  autoconf
 Build-Depends-Indep: docbook-xml, docbook-utils
@@ -37,7 +36,7 @@ Package: vim-gui-common
 Architecture: all
 Recommends: vim-gnome | vim-gtk | vim-lesstif
 Depends: ${misc:Depends}
-Conflicts: vim-runtime (<< 2:7.2.438+hg~d44112feb815-3)
+Breaks: vim-runtime (<< 2:7.2.438+hg~d44112feb815-3)
 Replaces: vim-runtime (<< 2:7.2.438+hg~d44112feb815-3)
 Description: Vi IMproved - Common GUI files
  Vim is an almost compatible version of the UNIX editor Vi.
