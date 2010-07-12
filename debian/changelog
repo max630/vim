@@ -9,7 +9,7 @@ vim (2:7.2.445+hg~cb94c42c0e1a-1) unstable; urgency=low
   * runtime/ftplugin/debchangelog.vim: Use “silent!” to avoid errors when
     disabling the menu.  Thanks to Jan Christoph Ebersbach for the patch.
 
- -- James Vega <jamessan@debian.org>  Sun, 11 Jul 2010 20:46:44 -0400
+ -- James Vega <jamessan@debian.org>  Sun, 11 Jul 2010 22:14:53 -0400
 
 vim (2:7.2.438+hg~d44112feb815-5) unstable; urgency=low
 
