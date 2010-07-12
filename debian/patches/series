@@ -12,6 +12,7 @@ upstream/extra-rst-detection.patch
 upstream/crontab-syntax-case-ignore.patch
 upstream/lang-breaks-floating-point.patch
 upstream/python-modlibs.patch
+upstream/debchangelog-ftplugin-menu.patch
 debian/vim-tiny.patch
 debian/disabled-modelines.patch
 debian/awk-shebang.patch
