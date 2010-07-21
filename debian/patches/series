@@ -1,4 +1,3 @@
-upstream/it-manpage-fixes.patch
 upstream/fr-manpage-fixes.patch
 upstream/python-ftplugin-include.patch
 upstream/python-ftplugin-keywordprg.patch
@@ -10,8 +9,6 @@ upstream/dosini-syntax-hash.patch
 upstream/tex-syntax-verbatim-spell.patch
 upstream/extra-rst-detection.patch
 upstream/crontab-syntax-case-ignore.patch
-upstream/lang-breaks-floating-point.patch
-upstream/python-modlibs.patch
 upstream/debchangelog-ftplugin-menu.patch
 debian/vim-tiny.patch
 debian/disabled-modelines.patch

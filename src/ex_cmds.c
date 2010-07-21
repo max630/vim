@@ -3099,8 +3099,8 @@ theend:
  *	ECMD_FORCEIT: ! used for Ex command
  *	 ECMD_ADDBUF: don't edit, just add to buffer list
  *   oldwin: Should be "curwin" when editing a new buffer in the current
- *           window, NULL when splitting the window first.  When not NULL info
- *           of the previous buffer for "oldwin" is stored.
+ *	     window, NULL when splitting the window first.  When not NULL info
+ *	     of the previous buffer for "oldwin" is stored.
  *
  * return FAIL for failure, OK otherwise
  */
@@ -3411,6 +3411,14 @@ do_ecmd(fnum, ffname, sfname, eap, newlnum, flags, oldwin)
 		else
 #endif
 		{
+#ifdef FEAT_SYN_HL
+		    /*
+		     * <VN> We could instead free the synblock
+		     * and re-attach to buffer, perhaps.
+		     */
+		    if (curwin->w_s == &(curwin->w_buffer->b_s))
+			    curwin->w_s = &(buf->b_s);
+#endif
 		    curwin->w_buffer = buf;
 		    curbuf = buf;
 		    ++curbuf->b_nwindows;
@@ -3488,6 +3496,7 @@ do_ecmd(fnum, ffname, sfname, eap, newlnum, flags, oldwin)
 	curbuf->b_p_ma = FALSE;		/* not modifiable */
 	curbuf->b_p_bin = FALSE;	/* reset 'bin' before reading file */
 	curwin->w_p_nu = 0;		/* no line numbers */
+	curwin->w_p_rnu = 0;		/* no relative line numbers */
 #ifdef FEAT_SCROLLBIND
 	curwin->w_p_scb = FALSE;	/* no scroll binding */
 #endif
@@ -3606,6 +3615,10 @@ do_ecmd(fnum, ffname, sfname, eap, newlnum, flags, oldwin)
      */
     check_arg_idx(curwin);
 
+#ifdef FEAT_SYN_HL
+    reset_synblock(curwin);	    /* remove any ownsyntax */
+#endif
+
 #ifdef FEAT_AUTOCMD
     if (!auto_buf)
 #endif
@@ -3716,8 +3729,8 @@ do_ecmd(fnum, ffname, sfname, eap, newlnum, flags, oldwin)
 #ifdef FEAT_SPELL
     /* If the window options were changed may need to set the spell language.
      * Can only do this after the buffer has been properly setup. */
-    if (did_get_winopts && curwin->w_p_spell && *curbuf->b_p_spl != NUL)
-	(void)did_set_spelllang(curbuf);
+    if (did_get_winopts && curwin->w_p_spell && *curwin->w_s->b_p_spl != NUL)
+	(void)did_set_spelllang(curwin);
 #endif
 
     if (command == NULL)
@@ -3814,14 +3827,14 @@ do_ecmd(fnum, ffname, sfname, eap, newlnum, flags, oldwin)
     DO_AUTOCHDIR
 
 #if defined(FEAT_SUN_WORKSHOP) || defined(FEAT_NETBEANS_INTG)
-    if (gui.in_use && curbuf->b_ffname != NULL)
+    if (curbuf->b_ffname != NULL)
     {
 # ifdef FEAT_SUN_WORKSHOP
-	if (usingSunWorkShop)
+	if (gui.in_use && usingSunWorkShop)
 	    workshop_file_opened((char *)curbuf->b_ffname, curbuf->b_p_ro);
 # endif
 # ifdef FEAT_NETBEANS_INTG
-	if (usingNetbeans && ((flags & ECMD_SET_HELP) != ECMD_SET_HELP))
+	if ((flags & ECMD_SET_HELP) != ECMD_SET_HELP)
 	    netbeans_file_opened(curbuf);
 # endif
     }
@@ -5151,8 +5164,6 @@ outofmem:
 do_sub_msg(count_only)
     int	    count_only;		/* used 'n' flag for ":s" */
 {
-    int	    len = 0;
-
     /*
      * Only report substitutions when:
      * - more than 'report' substitutions
@@ -5164,23 +5175,21 @@ do_sub_msg(count_only)
 	    && messaging())
     {
 	if (got_int)
-	{
 	    STRCPY(msg_buf, _("(Interrupted) "));
-	    len = (int)STRLEN(msg_buf);
-	}
+	else
+	    *msg_buf = NUL;
 	if (sub_nsubs == 1)
-	    vim_snprintf((char *)msg_buf + len, sizeof(msg_buf) - len,
+	    vim_snprintf_add((char *)msg_buf, sizeof(msg_buf),
 		    "%s", count_only ? _("1 match") : _("1 substitution"));
 	else
-	    vim_snprintf((char *)msg_buf + len, sizeof(msg_buf) - len,
+	    vim_snprintf_add((char *)msg_buf, sizeof(msg_buf),
 		    count_only ? _("%ld matches") : _("%ld substitutions"),
 								   sub_nsubs);
-	len = (int)STRLEN(msg_buf);
 	if (sub_nlines == 1)
-	    vim_snprintf((char *)msg_buf + len, sizeof(msg_buf) - len,
+	    vim_snprintf_add((char *)msg_buf, sizeof(msg_buf),
 		    "%s", _(" on 1 line"));
 	else
-	    vim_snprintf((char *)msg_buf + len, sizeof(msg_buf) - len,
+	    vim_snprintf_add((char *)msg_buf, sizeof(msg_buf),
 		    _(" on %ld lines"), (long)sub_nlines);
 	if (msg(msg_buf))
 	    /* save message to display it after redraw */
@@ -5962,7 +5971,7 @@ fix_help_buffer()
     set_option_value((char_u *)"ft", 0L, (char_u *)"help", OPT_LOCAL);
 
 #ifdef FEAT_SYN_HL
-    if (!syntax_present(curbuf))
+    if (!syntax_present(curwin))
 #endif
     {
 	for (lnum = 1; lnum <= curbuf->b_ml.ml_line_count; ++lnum)
@@ -7223,8 +7232,8 @@ set_context_in_sign_cmd(xp, arg)
     cmd_idx = sign_cmd_idx(arg, end_subcmd);
 
     /* :sign {subcmd} {subcmd_args}
-     *                |
-     *                begin_subcmd_args */
+     *		      |
+     *		      begin_subcmd_args */
     begin_subcmd_args = skipwhite(end_subcmd);
     p = skiptowhite(begin_subcmd_args);
     if (*p == NUL)
@@ -7252,8 +7261,8 @@ set_context_in_sign_cmd(xp, arg)
     /* expand last argument of subcmd */
 
     /* :sign define {name} {args}...
-     *              |
-     *              p */
+     *		    |
+     *		    p */
 
     /* Loop until reaching last argument. */
     do
@@ -7266,8 +7275,8 @@ set_context_in_sign_cmd(xp, arg)
     p = vim_strchr(last, '=');
 
     /* :sign define {name} {args}... {last}=
-     *                               |     |
-     *                            last     p */
+     *				     |	   |
+     *				  last	   p */
     if (p == NUL)
     {
 	/* Expand last argument name (before equal sign). */

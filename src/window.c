@@ -1175,6 +1175,9 @@ win_init(newp, oldp, flags)
     int		i;
 
     newp->w_buffer = oldp->w_buffer;
+#ifdef FEAT_SYN_HL
+    newp->w_s = &(oldp->w_buffer->b_s);
+#endif
     oldp->w_buffer->b_nwindows++;
     newp->w_cursor = oldp->w_cursor;
     newp->w_valid = 0;
@@ -1222,6 +1225,10 @@ win_init(newp, oldp, flags)
 # endif
 
     win_init_some(newp, oldp);
+
+# ifdef FEAT_SYN_HL
+    check_colorcolumn(newp);
+# endif
 }
 
 /*
@@ -2304,6 +2311,7 @@ win_close_othertab(win, free_buf, tp)
     win_T	*wp;
     int		dir;
     tabpage_T   *ptp = NULL;
+    int		free_tp = FALSE;
 
     /* Close the link to the buffer. */
     close_buffer(win, win->w_buffer, free_buf ? DOBUF_UNLOAD : 0);
@@ -2321,11 +2329,8 @@ win_close_othertab(win, free_buf, tp)
     if (wp == NULL)
 	return;
 
-    /* Free the memory used for the window. */
-    wp = win_free_mem(win, &dir, tp);
-
     /* When closing the last window in a tab page remove the tab page. */
-    if (wp == NULL)
+    if (tp == NULL ? firstwin == lastwin : tp->tp_firstwin == tp->tp_lastwin)
     {
 	if (tp == first_tabpage)
 	    first_tabpage = tp->tp_next;
@@ -2341,8 +2346,14 @@ win_close_othertab(win, free_buf, tp)
 	    }
 	    ptp->tp_next = tp->tp_next;
 	}
-	free_tabpage(tp);
+	free_tp = TRUE;
     }
+
+    /* Free the memory used for the window. */
+    win_free_mem(win, &dir, tp);
+
+    if (free_tp)
+	free_tabpage(tp);
 }
 
 /*
@@ -3294,6 +3305,9 @@ win_alloc_firstwin(oldwin)
 	if (curwin == NULL || curbuf == NULL)
 	    return FAIL;
 	curwin->w_buffer = curbuf;
+#ifdef FEAT_SYN_HL
+	curwin->w_s = &(curbuf->b_s);
+#endif
 	curbuf->b_nwindows = 1;	/* there is one window */
 #ifdef FEAT_WINDOWS
 	curwin->w_alist = &global_alist;
@@ -3863,6 +3877,10 @@ tabpage_move(nr)
 win_goto(wp)
     win_T	*wp;
 {
+#ifdef FEAT_CONCEAL
+    win_T	*owp = curwin;
+#endif
+
     if (text_locked())
     {
 	beep_flush();
@@ -3885,6 +3903,13 @@ win_goto(wp)
     need_mouse_correct = TRUE;
 #endif
     win_enter(wp, TRUE);
+
+#ifdef FEAT_CONCEAL
+    /* Conceal cursor line in previous window, unconceal in current window. */
+    if (win_valid(owp))
+	update_single_line(owp, owp->w_cursor.lnum);
+    update_single_line(curwin, curwin->w_cursor.lnum);
+#endif
 }
 
 #if defined(FEAT_PERL) || defined(PROTO)
@@ -4345,6 +4370,10 @@ win_free(wp, tp)
     block_autocmds();
 #endif
 
+#ifdef FEAT_LUA
+    lua_window_free(wp);
+#endif
+
 #ifdef FEAT_MZSCHEME
     mzscheme_window_free(wp);
 #endif
@@ -4355,6 +4384,10 @@ win_free(wp, tp)
 
 #ifdef FEAT_PYTHON
     python_window_free(wp);
+#endif
+
+#ifdef FEAT_PYTHON3
+    python3_window_free(wp);
 #endif
 
 #ifdef FEAT_TCL
@@ -4400,6 +4433,11 @@ win_free(wp, tp)
 	gui_mch_destroy_scrollbar(&wp->w_scrollbars[SBAR_RIGHT]);
     }
 #endif /* FEAT_GUI */
+
+#ifdef FEAT_SYN_HL
+    reset_synblock(wp);  /* free independent synblock */
+    vim_free(wp->w_p_cc_cols);
+#endif
 
 #ifdef FEAT_AUTOCMD
     if (wp != aucmd_win)

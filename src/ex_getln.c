@@ -1411,6 +1411,11 @@ getcmdline(firstc, count, indent)
 				   && !equalpos(curwin->w_cursor, old_cursor))
 		    {
 			c = gchar_cursor();
+			/* If 'ignorecase' and 'smartcase' are set and the
+			* command line has no uppercase characters, convert
+			* the character to lowercase */
+			if (p_ic && p_scs && !pat_has_uppercase(ccline.cmdbuff))
+			    c = MB_TOLOWER(c);
 			if (c != NUL)
 			{
 			    if (c == firstc || vim_strchr((char_u *)(
@@ -4091,8 +4096,10 @@ addstar(fname, len, context)
     int		i, j;
     int		new_len;
     char_u	*tail;
+    int		ends_in_star;
 
     if (context != EXPAND_FILES
+	    && context != EXPAND_FILES_IN_PATH
 	    && context != EXPAND_SHELLCMD
 	    && context != EXPAND_DIRECTORIES)
     {
@@ -4107,6 +4114,7 @@ addstar(fname, len, context)
 	if (context == EXPAND_HELP
 		|| context == EXPAND_COLORS
 		|| context == EXPAND_COMPILER
+		|| context == EXPAND_FILETYPE
 		|| (context == EXPAND_TAGS && fname[0] == '/'))
 	    retval = vim_strnsave(fname, len);
 	else
@@ -4181,8 +4189,17 @@ addstar(fname, len, context)
 	     * When the name ends in '$' don't add a star, remove the '$'.
 	     */
 	    tail = gettail(retval);
+	    ends_in_star = (len > 0 && retval[len - 1] == '*');
+#ifndef BACKSLASH_IN_FILENAME
+	    for (i = len - 2; i >= 0; --i)
+	    {
+		if (retval[i] != '\\')
+		    break;
+		ends_in_star = !ends_in_star;
+	    }
+#endif
 	    if ((*retval != '~' || tail != retval)
-		    && (len == 0 || retval[len - 1] != '*')
+		    && !ends_in_star
 		    && vim_strchr(tail, '$') == NULL
 		    && vim_strchr(retval, '`') == NULL)
 		retval[len++] = '*';
@@ -4407,7 +4424,9 @@ ExpandFromContext(xp, pat, num_file, file, options)
     if (options & WILD_SILENT)
 	flags |= EW_SILENT;
 
-    if (xp->xp_context == EXPAND_FILES || xp->xp_context == EXPAND_DIRECTORIES)
+    if (xp->xp_context == EXPAND_FILES
+	    || xp->xp_context == EXPAND_DIRECTORIES
+	    || xp->xp_context == EXPAND_FILES_IN_PATH)
     {
 	/*
 	 * Expand file or directory names.
@@ -4437,6 +4456,8 @@ ExpandFromContext(xp, pat, num_file, file, options)
 
 	if (xp->xp_context == EXPAND_FILES)
 	    flags |= EW_FILE;
+	else if (xp->xp_context == EXPAND_FILES_IN_PATH)
+	    flags |= (EW_FILE | EW_PATH);
 	else
 	    flags = (flags | EW_DIR) & ~EW_FILE;
 	/* Expand wildcards, supporting %:h and the like. */
@@ -4479,6 +4500,8 @@ ExpandFromContext(xp, pat, num_file, file, options)
 	return ExpandRTDir(pat, num_file, file, "colors");
     if (xp->xp_context == EXPAND_COMPILER)
 	return ExpandRTDir(pat, num_file, file, "compiler");
+    if (xp->xp_context == EXPAND_FILETYPE)
+	return ExpandRTDir(pat, num_file, file, "syntax");
 # if defined(FEAT_USR_CMDS) && defined(FEAT_EVAL)
     if (xp->xp_context == EXPAND_USER_LIST)
 	return ExpandUserList(xp, num_file, file);
@@ -4918,15 +4941,15 @@ ExpandUserList(xp, num_file, file)
 #endif
 
 /*
- * Expand color scheme names: 'runtimepath'/colors/{pat}.vim
- * or compiler names.
+ * Expand color scheme, compiler or filetype names:
+ * 'runtimepath'/{dirname}/{pat}.vim
  */
     static int
 ExpandRTDir(pat, num_file, file, dirname)
     char_u	*pat;
     int		*num_file;
     char_u	***file;
-    char	*dirname;	/* "colors" or "compiler" */
+    char	*dirname;	/* "colors", "compiler" or "syntax" */
 {
     char_u	*all;
     char_u	*s;

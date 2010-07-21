@@ -568,7 +568,7 @@ ex_hardcopy(eap)
     int			page_line;
     int			jobsplit;
 
-    memset(&settings, 0, sizeof(prt_settings_T));
+    vim_memset(&settings, 0, sizeof(prt_settings_T));
     settings.has_color = TRUE;
 
 # ifdef FEAT_POSTSCRIPT
@@ -616,7 +616,7 @@ ex_hardcopy(eap)
 	else
 	    settings.modec = 't';
 
-    if (!syntax_present(curbuf))
+    if (!syntax_present(curwin))
 	settings.do_syntax = FALSE;
     else if (printer_opts[OPT_PRINT_SYNTAX].present
 	    && TOLOWER_ASC(printer_opts[OPT_PRINT_SYNTAX].string[0]) != 'a')
@@ -691,7 +691,7 @@ ex_hardcopy(eap)
 	prt_pos_T	page_prtpos;	/* print position at page start */
 	int		side;
 
-	memset(&page_prtpos, 0, sizeof(prt_pos_T));
+	vim_memset(&page_prtpos, 0, sizeof(prt_pos_T));
 	page_prtpos.file_line = eap->line1;
 	prtpos = page_prtpos;
 

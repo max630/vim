@@ -674,6 +674,9 @@ au BufNewFile,BufRead *.exp			setf expect
 " Exports
 au BufNewFile,BufRead exports			setf exports
 
+" Fantom
+au BufNewFile,BufRead *.fan,*.fwt		setf fan
+
 " Factor
 au BufNewFile,BufRead *.factor			setf factor
 
@@ -981,6 +984,9 @@ endif
 " SBCL implementation of Common Lisp
 au BufNewFile,BufRead sbclrc,.sbclrc		setf lisp
 
+" Liquid
+au BufNewFile,BufRead *.liquid			setf liquid
+
 " Lite
 au BufNewFile,BufRead *.lite,*.lt		setf lite
 
@@ -1047,6 +1053,9 @@ au BufNewFile,BufRead *.mv,*.mpl,*.mws		setf maple
 
 " Map (UMN mapserver config file)
 au BufNewFile,BufRead *.map			setf map
+
+" Markdown
+au BufNewFile,BufRead *.markdown,*.mdown,*.mkd,*.mkdn,README.md  setf markdown
 
 " Mason
 au BufNewFile,BufRead *.mason,*.mhtml		setf mason

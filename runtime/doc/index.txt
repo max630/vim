@@ -1,4 +1,4 @@
-*index.txt*     For Vim version 7.2.  Last change: 2009 Jul 01
+*index.txt*     For Vim version 7.3b.  Last change: 2010 Jul 20
 
 
 		  VIM REFERENCE MANUAL    by Bram Moolenaar
@@ -1299,6 +1299,9 @@ The commands are sorted on the non-optional part of their name.
 |:ltag|		:lt[ag]		jump to tag and add matching tags to the
 				location list
 |:lunmap|	:lu[nmap]	like ":unmap!" but includes Lang-Arg mode
+|:lua|		:lua		execute |Lua| command
+|:luado|	:luad[o]	execute Lua command for each line
+|:luafile|	:luaf[ile]	execute |Lua| script file
 |:lvimgrep|	:lv[imgrep]	search for pattern in files
 |:lvimgrepadd|	:lvimgrepa[dd]	like :vimgrep, but append to current list
 |:lwindow|	:lw[indow]	open or close location window
@@ -1321,7 +1324,9 @@ The commands are sorted on the non-optional part of their name.
 |:mode|		:mod[e]		show or change the screen mode
 |:mzscheme|	:mz[scheme]	execute MzScheme command
 |:mzfile|	:mzf[ile]	execute MzScheme script file
+|:nbclose|	:nbc[lose]	close the current Netbeans session
 |:nbkey|	:nb[key]	pass a key to Netbeans
+|:nbstart|	:nbs[art]	start a new Netbeans session
 |:next|		:n[ext]		go to next file in the argument list
 |:new|		:new		create a new empty window
 |:nmap|		:nm[ap]		like ":map" but for Normal mode
@@ -1350,6 +1355,7 @@ The commands are sorted on the non-optional part of their name.
 |:options|	:opt[ions]	open the options-window
 |:ounmap|	:ou[nmap]	like ":unmap" but for Operator-pending mode
 |:ounmenu|	:ounme[nu]	remove menu for Operator-pending mode
+|:ownsyntax|	:ow[nsyntax]	set new local syntax highlight for this window
 |:pclose|	:pc[lose]	close preview window
 |:pedit|	:ped[it]	edit file in the preview window
 |:perl|		:pe[rl]		execute Perl command
@@ -1376,6 +1382,8 @@ The commands are sorted on the non-optional part of their name.
 |:ptselect|	:pts[elect]	|:tselect| and show tag in preview window
 |:put|		:pu[t]		insert contents of register in the text
 |:pwd|		:pw[d]		print current directory
+|:py3|		:py3		execute Python 3 command
+|:p3yfile|	:py3f[ile]	execute Python 3 script file
 |:python|	:py[thon]	execute Python command
 |:pyfile|	:pyf[ile]	execute Python script file
 |:quit|		:q[uit]		quit current window (when one window quit Vim)
@@ -1397,6 +1405,7 @@ The commands are sorted on the non-optional part of their name.
 |:ruby|		:rub[y]		execute Ruby command
 |:rubydo|	:rubyd[o]	execute Ruby command for each line
 |:rubyfile|	:rubyf[ile]	execute Ruby script file
+|:rundo|	:rund[o]	read undo information from a file
 |:runtime|	:ru[ntime]	source vim scripts in 'runtimepath'
 |:rviminfo|	:rv[iminfo]	read from viminfo file
 |:substitute|	:s[ubstitute]	find and replace text
@@ -1562,6 +1571,7 @@ The commands are sorted on the non-optional part of their name.
 |:wq|		:wq		write to a file and quit window or Vim
 |:wqall|	:wqa[ll]	write all changed buffers and quit Vim
 |:wsverb|	:ws[verb]	pass the verb to workshop over IPC
+|:wundo|	:wu[ndo]	write undo information to a file
 |:wviminfo|	:wv[iminfo]	write to viminfo file
 |:xit|		:x[it]		write if buffer changed and quit window or Vim
 |:xall|		:xa[ll]		same as ":wqall"

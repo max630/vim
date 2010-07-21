@@ -7,7 +7,7 @@ Index: b/runtime/filetype.vim
 ===================================================================
 --- a/runtime/filetype.vim
 +++ b/runtime/filetype.vim
-@@ -987,6 +987,9 @@
+@@ -993,6 +993,9 @@
  " LiteStep RC files
  au BufNewFile,BufRead */LiteStep/*/*.rc		setf litestep
  

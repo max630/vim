@@ -123,8 +123,8 @@ CFLAGS_vim-nox:=$(CFLAGS)
 CFGFLAGS_vim-nox:=$(CFGFLAGS) $(OPTFLAGS) $(NOXFLAGS) $(ALLINTERPFLAGS)
 
 NAME:=vim
-VERSION:=7.2
-SNAPSHOT:=
+VERSION:=7.3
+SNAPSHOT:=b
 VIMCUR:=$(NAME)$(subst .,,$(VERSION))$(SNAPSHOT)
 DEBVERSION:=$(shell dpkg-parsechangelog | sed -n '/^Version:/{s/Version: *\([^:]*:\)\?\([^-]*\)-.*/\2/;p;q}')
 EXPORT_DIR ?= ..
@@ -233,7 +233,7 @@ autoconf-stamp:
 	touch $@
 
 configure-stamp-%: SHADOWDIR=$*
-configure-stamp-%: autoconf-stamp
+configure-stamp-%:
 	dh_testdir
 	@echo "*** DEBIAN *** CONFIGURING VARIANT $*"
 	$(MAKE) -C src shadow SHADOWDIR=$(SHADOWDIR)

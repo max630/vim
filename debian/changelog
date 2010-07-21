@@ -1,3 +1,24 @@
+vim (2:7.3b.20100720+hg~7b7508ee56f1-1) UNRELEASED; urgency=low
+
+  * Merge 7.3b pre-release.
+    + Don't run autocommands when being killed to avoid overrunning the stack.
+      (Closes: #580961)
+    + Detect when the recovered buffer matches the on-disk file and notify the
+      user.  (Closes: #89359)
+    + Update CMake runtime files.  (Closes: #463715)
+    + Correctly set timestamp for X selection transfers.  (Closes: #577035)
+    + Improve 'cindent's handling of javascript.  (Closes: #588875)
+  * Patches merged upstream:
+    + it-manpage-fixes.patch
+    + lang-breaks-floating-point.patch
+    + python-modlibs.patch:
+      - Remove autoconf Build-Depends as configure.in isn't being patched
+        anymore.
+      - Remove autoconf-stamp pre-requisite for configure-stamp-% target.
+  * Update debian/rules to handle the snapshot versioning.
+
+ -- James Vega <jamessan@debian.org>  Tue, 20 Jul 2010 23:14:04 -0400
+
 vim (2:7.2.445+hg~cb94c42c0e1a-1) unstable; urgency=low
 
   * debian/control:
