@@ -8,6 +8,8 @@ vim (2:7.3b.20100720+hg~7b7508ee56f1-1) UNRELEASED; urgency=low
     + Update CMake runtime files.  (Closes: #463715)
     + Correctly set timestamp for X selection transfers.  (Closes: #577035)
     + Improve 'cindent's handling of javascript.  (Closes: #588875)
+    + Correctly displays characters inserted via digraph sequences which wrap
+      to a new line.  (Closes: #442184)
   * Patches merged upstream:
     + it-manpage-fixes.patch
     + lang-breaks-floating-point.patch
