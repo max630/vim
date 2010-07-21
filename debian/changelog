@@ -16,6 +16,10 @@ vim (2:7.3b.20100720+hg~7b7508ee56f1-1) UNRELEASED; urgency=low
         anymore.
       - Remove autoconf-stamp pre-requisite for configure-stamp-% target.
   * Update debian/rules to handle the snapshot versioning.
+  * Enable Python3 language interface.
+    + Add python3-dev to Build-Depends.
+    + Pass --enable-python3interp to configure when building variants with
+      language interfaces enabled.
 
  -- James Vega <jamessan@debian.org>  Tue, 20 Jul 2010 23:14:04 -0400
 
