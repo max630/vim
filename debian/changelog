@@ -1,4 +1,4 @@
-vim (2:7.3b.20100720+hg~7b7508ee56f1-1) UNRELEASED; urgency=low
+vim (2:7.3b.20100720+hg~7b7508ee56f1-1) experimental; urgency=low
 
   * Merge 7.3b pre-release.
     + Don't run autocommands when being killed to avoid overrunning the stack.
@@ -23,7 +23,7 @@ vim (2:7.3b.20100720+hg~7b7508ee56f1-1) UNRELEASED; urgency=low
     + Pass --enable-python3interp to configure when building variants with
       language interfaces enabled.
 
- -- James Vega <jamessan@debian.org>  Tue, 20 Jul 2010 23:14:04 -0400
+ -- James Vega <jamessan@debian.org>  Wed, 21 Jul 2010 00:12:19 -0400
 
 vim (2:7.2.445+hg~cb94c42c0e1a-1) unstable; urgency=low
 
