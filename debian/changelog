@@ -1,3 +1,11 @@
+vim (2:7.3b.20100727+hg~6de9efd58dc0-1) UNRELEASED; urgency=low
+
+  * Merge latest 7.3b pre-release.
+    + Correctly restore multi-byte terminal titles when exiting Vim.  (Closes:
+      #558153)
+
+ -- James Vega <jamessan@debian.org>  Tue, 27 Jul 2010 22:36:26 -0400
+
 vim (2:7.3b.20100720+hg~7b7508ee56f1-1) experimental; urgency=low
 
   * Merge 7.3b pre-release.
