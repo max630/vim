@@ -10,6 +10,8 @@ vim (2:7.3d.20100804+hg~11def19fbb0e-1) UNRELEASED; urgency=low
     + Add liblua5.1-0-dev to Build-Depends.
     + Enable lua interface via dynamic loading.
   * Switch Perl interface to dynamic loading.
+  * debian/rules: Prefer running tests with the vim-nox binary if it's
+    available.
 
  -- James Vega <jamessan@debian.org>  Tue, 27 Jul 2010 22:36:26 -0400
 

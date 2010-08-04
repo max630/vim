@@ -253,7 +253,6 @@ build-stamp-%: configure-stamp-%
 	dh_clean -p$* -k
 	@echo "*** DEBIAN *** BUILDING VARIANT $*"
 	$(MAKE) -C src/$(SHADOWDIR) CFLAGS="$(CURCFLAGS)"
-	mv src/$(SHADOWDIR)/vim src/$(SHADOWDIR)/$(subst -,.,$*)
 	touch $@
 
 install: $(foreach v,$(VARIANTS),install-stamp-$(v))
@@ -288,15 +287,21 @@ install-stamp-vim-basic: build-stamp-vim-basic $(DOT_IN_DEPS)
 	    install-languages
 	
 # Tests need to be run in series, otherwise the terminal requests may not see
-# proper responses
+# proper responses.
+# Prefer the vim-nox binary if it exists since that will also test the
+# language interfaces.
 	if [ $(MAKETEST) = "yes" ]; then \
-	  $(MAKE) -j1 -C src/vim-basic test; \
+	  if [ -e src/vim-nox/vim ]; then \
+	    $(MAKE) -j1 -C src/vim-nox test; \
+	  else \
+	    $(MAKE) -j1 -C src/vim-basic test; \
+	  fi
 	fi
 	# installvimbin installs the vim binary under debian/tmp but we install
 	# it into the vim package from src/.  Need to rm it from debian/tmp so
 	# that dh_install doesn't fail
 	rm -f debian/tmp/usr/bin/vim
-	cp src/vim-basic/vim src/vim-basic/vim.basic
+	mv src/vim-basic/vim src/vim-basic/vim.basic
 	
 	# DEBIAN INSTALLATION
 	
@@ -403,6 +408,7 @@ install-stamp-vim-tiny: build-stamp-vim-tiny $(DOT_IN_DEPS_TINY)
 	@echo "*** DEBIAN *** INSTALLING VARIANT vim-tiny"
 	dh_installdirs
 	
+	mv src/vim-tiny/vim src/vim-tiny/vim.tiny
 	# variant-related installations
 	# to be kept in sync with those in "install-stamp-vim-basic" target
 	for x in $(PER_VARIANT_FILES) ; do \
@@ -436,6 +442,7 @@ install-stamp-%: build-stamp-%
 	@echo "*** DEBIAN *** INSTALLING VARIANT $*"
 	dh_installdirs
 	
+	mv src/$*/vim src/$*/$(subst -,.,$*)
 	# variant-related installations
 	# to be kept in sync with those in "install-stamp-vim-basic" target
 	for x in $(PER_VARIANT_FILES) ; do \
