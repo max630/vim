@@ -1,8 +1,11 @@
-vim (2:7.3b.20100727+hg~6de9efd58dc0-1) UNRELEASED; urgency=low
+vim (2:7.3d.20100804+hg~11def19fbb0e-1) UNRELEASED; urgency=low
 
-  * Merge latest 7.3b pre-release.
+  * Merge latest 7.3d pre-release.
     + Correctly restore multi-byte terminal titles when exiting Vim.  (Closes:
       #558153)
+  * Patches merged upstream:
+    + perl-indent-block.patch
+    + logcheck-ftplugin.patch
 
  -- James Vega <jamessan@debian.org>  Tue, 27 Jul 2010 22:36:26 -0400
 

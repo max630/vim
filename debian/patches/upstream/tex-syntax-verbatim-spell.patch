@@ -7,7 +7,7 @@ Index: b/runtime/syntax/tex.vim
 ===================================================================
 --- a/runtime/syntax/tex.vim
 +++ b/runtime/syntax/tex.vim
-@@ -404,13 +404,13 @@
+@@ -426,13 +426,13 @@
  " Separate lines used for verb` and verb# so that the end conditions {{{1
  " will appropriately terminate.  Ideally vim would let me save a
  " character from the start pattern and re-use it in the end-pattern.
