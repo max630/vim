@@ -129,7 +129,7 @@ CFGFLAGS_vim-nox:=$(CFGFLAGS) $(OPTFLAGS) $(NOXFLAGS) $(ALLINTERPFLAGS)
 
 NAME:=vim
 VERSION:=7.3
-SNAPSHOT:=b
+SNAPSHOT:=d
 VIMCUR:=$(NAME)$(subst .,,$(VERSION))$(SNAPSHOT)
 DEBVERSION:=$(shell dpkg-parsechangelog | sed -n '/^Version:/{s/Version: *\([^:]*:\)\?\([^-]*\)-.*/\2/;p;q}')
 EXPORT_DIR ?= ..
