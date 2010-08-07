@@ -17,6 +17,7 @@ vim (2:7.3e.20100807+hg~3607f126a661-1) UNRELEASED; urgency=low
   * Switch Perl interface to dynamic loading.
   * debian/rules: Prefer running tests with the vim-nox binary if it's
     available.
+  * Bump Standards-Version to 3.9.1.0 -- no changes needed.
 
  -- James Vega <jamessan@debian.org>  Tue, 27 Jul 2010 22:36:26 -0400
 

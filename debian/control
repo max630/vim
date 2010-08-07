@@ -3,7 +3,7 @@ Section: editors
 Priority: optional
 Maintainer: Debian Vim Maintainers <pkg-vim-maintainers@lists.alioth.debian.org>
 Uploaders: James Vega <jamessan@debian.org>
-Standards-Version: 3.9.0.0
+Standards-Version: 3.9.1.0
 Build-Depends: debhelper (>= 5), libacl1-dev, libgpmg1-dev [linux-any],
  libxpm-dev, libncurses5-dev, libselinux1-dev [linux-any],
 # B-D for GUI support
