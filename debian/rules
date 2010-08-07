@@ -31,7 +31,7 @@ CFGFLAGS := --prefix=/usr --mandir='$${prefix}'/share/man --without-local-dir
 CFGFLAGS += --with-modified-by="pkg-vim-maintainers@lists.alioth.debian.org"
 CFGFLAGS += --with-compiledby="$(BUILDER)"
 
-TINYFLAGS+=--with-features=small
+TINYFLAGS:=--with-features=small
 TINYFLAGS+=--disable-gui
 TINYFLAGS+=--disable-xsmp
 TINYFLAGS+=--disable-xsmp-interact
@@ -41,40 +41,40 @@ TINYFLAGS+=--disable-gpm
 TINYFLAGS+=--enable-nls
 TINYFLAGS+=--enable-multibyte
 
+OPTFLAGS:=--enable-cscope
 ifeq ($(DEB_HOST_GNU_SYSTEM),linux-gnu)
     OPTFLAGS+=--enable-gpm
 else
     OPTFLAGS+=--disable-gpm
 endif
-OPTFLAGS+=--enable-cscope
 OPTFLAGS+=--with-features=huge
 OPTFLAGS+=--enable-multibyte
 
-NOXFLAGS+=--without-x
+NOXFLAGS:=--without-x
 NOXFLAGS+=--enable-gui=no
 
-GUIFLAGS+=--with-x
+GUIFLAGS:=--with-x
 GUIFLAGS+=--enable-xim
 
-GTK2FLAGS+=--enable-gui=gtk2
+GTK2FLAGS:=--enable-gui=gtk2
 GTK2FLAGS+=--enable-gtk2-check
 GTK2FLAGS+=--disable-gnome-check
 GTK2FLAGS+=--disable-motif-check
 GTK2FLAGS+=--disable-fontset
 
-GNOMEFLAGS+=--enable-gui=gnome2
+GNOMEFLAGS:=--enable-gui=gnome2
 GNOMEFLAGS+=--disable-gtk2-check
 GNOMEFLAGS+=--enable-gnome-check
 GNOMEFLAGS+=--disable-motif-check
 GNOMEFLAGS+=--disable-fontset
 
-LESSTIFFLAGS+=--enable-gui=motif
+LESSTIFFLAGS:=--enable-gui=motif
 LESSTIFFLAGS+=--disable-gtk2-check
 LESSTIFFLAGS+=--disable-gnome-check
 LESSTIFFLAGS+=--enable-motif-check
 LESSTIFFLAGS+=--enable-fontset
 
-NOINTERPFLAGS+=--disable-luainterp
+NOINTERPFLAGS:=--disable-luainterp
 NOINTERPFLAGS+=--disable-mzschemeinterp
 NOINTERPFLAGS+=--disable-perlinterp
 NOINTERPFLAGS+=--disable-pythoninterp
@@ -82,7 +82,7 @@ NOINTERPFLAGS+=--disable-python3interp
 NOINTERPFLAGS+=--disable-rubyinterp
 NOINTERPFLAGS+=--disable-tclinterp
 
-ALLINTERPFLAGS+=--enable-luainterp=dynamic
+ALLINTERPFLAGS:=--enable-luainterp=dynamic
 ALLINTERPFLAGS+=--disable-mzschemeinterp
 ALLINTERPFLAGS+=--enable-perlinterp=dynamic
 # Python(3) are automatically dynamic since both are being built
