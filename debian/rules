@@ -295,7 +295,7 @@ install-stamp-vim-basic: build-stamp-vim-basic $(DOT_IN_DEPS)
 	    $(MAKE) -j1 -C src/vim-nox test; \
 	  else \
 	    $(MAKE) -j1 -C src/vim-basic test; \
-	  fi
+	  fi \
 	fi
 	# installvimbin installs the vim binary under debian/tmp but we install
 	# it into the vim package from src/.  Need to rm it from debian/tmp so
