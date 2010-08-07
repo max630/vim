@@ -1,4 +1,4 @@
-*todo.txt*      For Vim version 7.3d.  Last change: 2010 Aug 02
+*todo.txt*      For Vim version 7.3e.  Last change: 2010 Aug 07
 
 
 		  VIM REFERENCE MANUAL	  by Bram Moolenaar
@@ -30,24 +30,19 @@ be worked on, but only if you sponsor Vim development.  See |sponsor|.
 							*known-bugs*
 -------------------- Known bugs and current work -----------------------
 
-Using uninitialized memory when crypting an empty file. (Dominique Pelle, 2010
-Aug 2)
-
-Go back to MSVC 2008, so that Windows 2000 is supported?
-
-For 'undoreload': put the cursor on the first line that is different.
-
 Before release 7.3:
 - Rename vim73 branch to default (hints: Xavier de Gaye, 2010 May 23)
 
-test72 causes a beep for using "u" when it doesn't work.
-
 Cursor positioning wrong with 0x200e character. (John Becket, 2010 May 6)
+
+Patch to make more characters work in dialogs. (Yankwei Jia, 2010 Aug 4)
 
 Should readfile() ignore BOM when not in binary mode?
 
 Bug: searching for tags file uses 'suffixesadd', should not happen. (Dominique
 Pelle, 2010 June 28)
+
+Bug: E685 error for func_unref(). (ZyX, 2010 Aug 5)
 
 When directory "/tmp/tags" contains "tags1" and "tags2", setting 'tags' to
 "/tmp/tags/*" doesn't pick up these files.  (Simon Ruggier, 2010 Mar 17)
@@ -69,21 +64,10 @@ accented character. (Tony Mechelynck, 2010 Apr 15)
 Patch: Let rare word highlighting overrule good word highlighting.
 (Jakson A. Aquino, 2010 Jul 30)
 
-Better Czech keymap. (Stepnem, 2010 May 4)  Use if no response from Jiri
-Tobisek.
-
 ":drop" does not respect 'autochdir'. (Peter Odding, 2010 Jul 24)
-
-Use Dutch spell files from:
-http://extensions.services.openoffice.org/en/project/dict-nl
-Looks like this is newer than the new wordlist for Dutch:
-http://www.opentaal.org/bestanden/1_10/nl_NL-Pack
 
 Problem with cursor in the wrong column. (SungHyun Nam, 2010 Mar 11)
 Additional info by Dominique Pelle. (also on 2010 Apr 10)
-
-"make install" installs some of the .info files on Unix.
-(James Vega, 2010 Mar 30)
 
 Is ~/bin (literally) in $PATH supposed to work?  (Paul, 2010 March 29)
 Looks like only bash can do it. (Yakov Lerner)
@@ -183,6 +167,9 @@ Are they all OK?  Update Jul 22.
 
 Win32: Expanding 'path' runs into a maximum size limit. (bgold12, 2009 Nov 15)
 
+Putting a Visual block while 'visualedit' is "all" does not leave the cursor
+on the first character. (John Beckett, 2010 Aug 7)
+
 Setting 'tags' to "tagsdir/*" does not find "tagsdir/tags". (Steven K. Wong,
 2009 Jul 18)
 
@@ -262,6 +249,8 @@ displayed in a window should return the value that's stored for that buffer.
 There should be a way after an abbreviation has expanded to go back to what
 was typed.  CTRL-G h ?  Would also undo last word or line break inserted
 perhaps.  And undo CTRL-W.  CTRL-G l would redo.
+
+Diff mode out of sync. (Gary Johnson, 2010 Aug 4)
 
 Win32: A --remote command that has a directory name starting with a ( doesn't
 work, the backslash is removed, assuming that it escapes the (. (Valery
@@ -1135,7 +1124,7 @@ More patches:
     New version received 2008 Jan 6.
     No maintenance in two years...
 -   Patch to access screen under Python. (Marko Mahni, 2010 Jul 18)
-
+-   Patch to open dropped files in new tabs. (Michael Trim, 2010 Aug 3)
 
 Awaiting updated patches:
 9   Mac unicode patch (Da Woon Jung, Eckehard Berns):
@@ -1980,7 +1969,7 @@ Problems that will (probably) not be solved:
     loop is never quit, which is a wrong assumption.  Also, it overwrites the
     file with different file permissions, which is a privacy issue.  This
     needs to be fixed in GTK.  A solution in Vim would be really complicated.
-    (2008 Jul 31)
+    (2008 Jul 31)  This appears to be fixed in Vim 7.3.
 -   xterm title: The following scenario may occur (esp. when running the Vim
     test script): Vim 1 sets the title to "file1", then restores the title to
     "xterm" with an ESC sequence when exiting.  Vim 2 obtains the old title

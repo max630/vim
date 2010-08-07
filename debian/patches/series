@@ -5,7 +5,6 @@ upstream/xdefaults-syntax-define.patch
 upstream/po-syntax-cpo.patch
 upstream/de.po-lesen.patch
 upstream/dosini-syntax-hash.patch
-upstream/tex-syntax-verbatim-spell.patch
 upstream/extra-rst-detection.patch
 upstream/crontab-syntax-case-ignore.patch
 debian/vim-tiny.patch

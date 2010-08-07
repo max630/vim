@@ -1,11 +1,16 @@
-vim (2:7.3d.20100804+hg~11def19fbb0e-1) UNRELEASED; urgency=low
+vim (2:7.3e.20100807+hg~3607f126a661-1) UNRELEASED; urgency=low
 
-  * Merge latest 7.3d pre-release.
+  * Merge latest 7.3e pre-release.
     + Correctly restore multi-byte terminal titles when exiting Vim.  (Closes:
       #558153)
+    + Highlight text inside math zones correctly for tex files.  (Closes:
+      #509908)
+    + Recognize nested cite regions in tex files.  (Closes: #444288)
+    + Support syntax highlighting of bash's $"".  (Closes: #473736)
   * Patches merged upstream:
     + perl-indent-block.patch
     + logcheck-ftplugin.patch
+    + tex-syntax-verbatim-spell.patch
   * Enable Lua scripting.
     + Add liblua5.1-0-dev and lua5.1 to Build-Depends.
     + Enable lua interface via dynamic loading.
