@@ -4484,52 +4484,6 @@ gui_mch_get_font(char_u *name, int report_error)
 	return NULL;
     }
 
-    /*
-     * The fixed-width check has been disabled for GTK+ 2.  Rationale:
-     *
-     *	 - The check tends to report false positives, particularly
-     *	   in non-Latin locales or with old X fonts.
-     *	 - Thanks to our fixed-width hack in gui_gtk2_draw_string(),
-     *	   GTK+ 2 Vim is actually capable of displaying variable width
-     *	   fonts.  Those will just be spaced out like in AA xterm.
-     *	 - Failing here for the default font causes GUI startup to fail
-     *	   even with wiped out configuration files.
-     *	 - The font dialog displays all fonts unfiltered, and it's rather
-     *	   annoying if 95% of the listed fonts produce an error message.
-     */
-#if 0
-    {
-	/* Check that this is a mono-spaced font.  Naturally, this is a bit
-	 * hackish -- fixed-width isn't really suitable for i18n text :/ */
-	PangoLayout	*layout;
-	unsigned int	i;
-	int		last_width   = -1;
-	const char	test_chars[] = { 'W', 'i', ',', 'x' }; /* arbitrary */
-
-	layout = pango_layout_new(gui.text_context);
-	pango_layout_set_font_description(layout, font);
-
-	for (i = 0; i < G_N_ELEMENTS(test_chars); ++i)
-	{
-	    int width;
-
-	    pango_layout_set_text(layout, &test_chars[i], 1);
-	    pango_layout_get_size(layout, &width, NULL);
-
-	    if (last_width >= 0 && width != last_width)
-	    {
-		pango_font_description_free(font);
-		font = NULL;
-		break;
-	    }
-
-	    last_width = width;
-	}
-
-	g_object_unref(layout);
-    }
-#endif
-
     return font;
 }
 
@@ -5109,13 +5063,20 @@ not_ascii:
 
 		    /* There is a previous glyph, so we deal with combining
 		     * characters the canonical way.
-		     * Older versions of Pango used a positive x_offset,
-		     * then set the width of the previous glyph to zero.
-		     * Newer versions of Pango use a negative x_offset.
+		     * In some circumstances Pango uses a positive x_offset,
+		     * then use the width of the previous glyph for this one
+		     * and set the previous width to zero.
+		     * Otherwise we get a negative x_offset, Pango has already
+		     * positioned the combining char, keep the widths as they
+		     * are.
 		     * For both adjust the x_offset to position the glyph in
-		     * the middle.  */
+		     * the middle. */
 		    if (glyph->geometry.x_offset >= 0)
+		    {
+			glyphs->glyphs[i].geometry.width =
+					 glyphs->glyphs[i - 1].geometry.width;
 			glyphs->glyphs[i - 1].geometry.width = 0;
+		    }
 		    width = cells * gui.char_width * PANGO_SCALE;
 		    glyph->geometry.x_offset +=
 					    MAX(0, width - cluster_width) / 2;
