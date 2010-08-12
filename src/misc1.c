@@ -9263,6 +9263,7 @@ is_unique(maybe_unique, gap, i)
     int	    candidate_len;
     int	    other_path_len;
     char_u  **other_paths = (char_u **)gap->ga_data;
+    char_u  *rival;
 
     for (j = 0; j < gap->ga_len && !got_int; j++)
     {
@@ -9275,7 +9276,8 @@ is_unique(maybe_unique, gap, i)
 	if (other_path_len < candidate_len)
 	    continue;  /* it's different */
 
-	if (fnamecmp(maybe_unique, gettail(other_paths[j])) == 0)
+	rival = other_paths[j] + other_path_len - candidate_len;
+	if (fnamecmp(maybe_unique, rival) == 0)
 	    return FALSE;  /* match */
     }
 
@@ -9300,8 +9302,6 @@ expand_path_option(curdir, gap)
 						  ? p_path : curbuf->b_p_path;
     char_u	*buf;
     char_u	*p;
-
-    ga_init2(gap, (int)sizeof(char_u *), 1);
 
     if ((buf = alloc((int)MAXPATHL)) == NULL)
 	return;
@@ -9357,7 +9357,7 @@ expand_path_option(curdir, gap)
  *
  *    path: /foo/bar/baz
  *   fname: /foo/bar/baz/quux.txt
- * returns:              ^this
+ * returns:		 ^this
  */
     static char_u *
 get_path_cutoff(fname, gap)
@@ -9374,7 +9374,7 @@ get_path_cutoff(fname, gap)
 	int j = 0;
 
 	while ((fname[j] == path_part[i][j]
-#if defined(WIN3264)
+# if defined(MSWIN) || defined(MSDOS)
 		|| (vim_ispathsep(fname[j]) && vim_ispathsep(path_part[i][j]))
 #endif
 			     ) && fname[j] != NUL && path_part[i][j] != NUL)
@@ -9389,7 +9389,7 @@ get_path_cutoff(fname, gap)
     /* Skip to the file or directory name */
     if (cutoff != NULL)
 	while (
-#if defined(WIN3264)
+# if defined(MSWIN) || defined(MSDOS)
 		*cutoff == '/'
 #else
 		vim_ispathsep(*cutoff)
@@ -9413,15 +9413,21 @@ uniquefy_paths(gap, pattern)
     int		i;
     int		len;
     char_u	**fnames = (char_u **)gap->ga_data;
-    int		sort_again = 0;
+    int		sort_again = FALSE;
     char_u	*pat;
     char_u      *file_pattern;
     char_u	*curdir = NULL;
     regmatch_T	regmatch;
     garray_T	path_ga;
+    char_u	**in_curdir = NULL;
+    char_u	*short_name;
 
     sort_strings(fnames, gap->ga_len);
     remove_duplicates(gap);
+    if (gap->ga_len == 0)
+	return;
+
+    ga_init2(&path_ga, (int)sizeof(char_u *), 1);
 
     /*
      * We need to prepend a '*' at the beginning of file_pattern so that the
@@ -9447,96 +9453,141 @@ uniquefy_paths(gap, pattern)
 	return;
 
     if ((curdir = alloc((int)(MAXPATHL))) == NULL)
-	return;
+	goto theend;
     mch_dirname(curdir, MAXPATHL);
 
     expand_path_option(curdir, &path_ga);
+    in_curdir = (char_u **)alloc(gap->ga_len * sizeof(char_u *));
+    if (in_curdir == NULL)
+	goto theend;
 
     for (i = 0; i < gap->ga_len; i++)
     {
 	char_u	    *path = fnames[i];
 	int	    is_in_curdir;
 	char_u	    *dir_end = gettail(path);
+	char_u	    *pathsep_p;
+	char_u	    *path_cutoff;
 
 	len = (int)STRLEN(path);
 	while (dir_end > path &&
-#if defined(WIN3264)
+# if defined(MSWIN) || defined(MSDOS)
 		*dir_end != '/'
 #else
 		!vim_ispathsep(*dir_end)
 #endif
 		)
 	    mb_ptr_back(path, dir_end);
-	is_in_curdir = STRNCMP(curdir, path, dir_end - path) == 0
+	is_in_curdir = fnamencmp(curdir, path, dir_end - path) == 0
 					     && curdir[dir_end - path] == NUL;
 
+	if (is_in_curdir)
+	    in_curdir[i] = vim_strsave(path);
+	else
+	    in_curdir[i] = NULL;
+
+	/* Shorten the filename while maintaining its uniqueness */
+	path_cutoff = get_path_cutoff(path, &path_ga);
+
+	/* we start at the end of the path */
+	pathsep_p = path + len - 1;
+
+	while (find_previous_pathsep(path, &pathsep_p))
+	    if (vim_regexec(&regmatch, pathsep_p + 1, (colnr_T)0)
+		    && is_unique(pathsep_p + 1, gap, i)
+		    && path_cutoff != NULL && pathsep_p + 1 >= path_cutoff)
+	    {
+		sort_again = TRUE;
+		mch_memmove(path, pathsep_p + 1, STRLEN(pathsep_p));
+		break;
+	    }
+
+	if (mch_isFullName(path))
+	{
+	    /*
+	     * Last resort: shorten relative to curdir if possible.
+	     * 'possible' means:
+	     * 1. It is under the current directory.
+	     * 2. The result is actually shorter than the original.
+	     *
+	     *	    Before		  curdir	After
+	     *	    /foo/bar/file.txt	  /foo/bar	./file.txt
+	     *	    c:\foo\bar\file.txt   c:\foo\bar	.\file.txt
+	     *	    /file.txt		  /		/file.txt
+	     *	    c:\file.txt		  c:\		.\file.txt
+	     */
+	    short_name = shorten_fname(path, curdir);
+	    if (short_name != NULL && short_name > path + 1)
+	    {
+		STRCPY(path, ".");
+		add_pathsep(path);
+		STRCAT(path, short_name);
+	    }
+	}
+    }
+
+    /* Shorten filenames in /in/current/directory/{filename} */
+    for (i = 0; i < gap->ga_len; i++)
+    {
+	char_u *rel_path;
+	char_u *path = in_curdir[i];
+
+	if (path == NULL)
+	    continue;
 	/*
 	 * If the file is in the current directory,
 	 * and it is not unique,
 	 * reduce it to ./{filename}
-	 *        FIXME ^ Is this portable?
+	 *	  FIXME ^ Is this portable?
+	 * else reduce it to {filename}
+	 *
+	 * Note: If the full filename is /curdir/foo/bar/{filename}, we don't
+	 * want to shorten it to ./foo/bar/{filename} yet because 'path' might
+	 * contain ". / * *", in which case the shortened filename could be
+	 * shorter than ./foo/bar/{filename}.
 	 */
-	if (is_in_curdir)
+	short_name = shorten_fname(path, curdir);
+	if (short_name == NULL)
+	    short_name = path;
+	if (is_unique(short_name, gap, i))
 	{
-	    char_u *rel_path;
-	    char_u *short_name = shorten_fname(path, curdir);
+	    STRCPY(fnames[i], short_name);
+	    continue;
+	}
 
-	    if (short_name == NULL)
-		short_name = path;
-	    if (is_unique(short_name, gap, i))
+	rel_path = alloc((int)(STRLEN(short_name) + STRLEN(PATHSEPSTR) + 2));
+	if (rel_path == NULL)
+	    goto theend;
+
+	/* FIXME Is "." a portable way of denoting the current directory? */
+	STRCPY(rel_path, ".");
+	add_pathsep(rel_path);
+	STRCAT(rel_path, short_name);
+
+	if (len < (int)STRLEN(rel_path))
+	{
+	    vim_free(fnames[i]);
+	    fnames[i] = alloc((int)(STRLEN(rel_path) + 1));
+	    if (fnames[i] == NULL)
 	    {
-		STRMOVE(path, short_name);
-		continue;
-	    }
-
-	    rel_path = alloc((int)(STRLEN(short_name)
-						   + STRLEN(PATHSEPSTR) + 2));
-	    if (rel_path == NULL)
+		vim_free(rel_path);
 		goto theend;
-
-	    /* FIXME Is "." a portable way of denoting the current directory? */
-	    STRCPY(rel_path, ".");
-	    add_pathsep(rel_path);
-	    STRCAT(rel_path, short_name);
-
-	    if (len < (int)STRLEN(rel_path))
-	    {
-		vim_free(fnames[i]);
-		fnames[i] = alloc((int)(STRLEN(rel_path) + 1));
-		if (fnames[i] == NULL)
-		{
-		    vim_free(rel_path);
-		    goto theend;
-		}
 	    }
-
-	    STRCPY(fnames[i], rel_path);
-	    vim_free(rel_path);
-	    sort_again = 1;
 	}
-	else
-	{
-	    /* Shorten the filename while maintaining its uniqueness */
-	    char_u *pathsep_p;
-	    char_u *path_cutoff = get_path_cutoff(path, &path_ga);
 
-	    /* we start at the end of the path */
-	    pathsep_p = path + len - 1;
-
-	    while (find_previous_pathsep(path, &pathsep_p))
-		if (vim_regexec(&regmatch, pathsep_p + 1, (colnr_T)0)
-			&& is_unique(pathsep_p + 1, gap, i)
-			&& path_cutoff != NULL && pathsep_p + 1 >= path_cutoff)
-		{
-		    sort_again = 1;
-		    mch_memmove(path, pathsep_p + 1, STRLEN(pathsep_p));
-		    break;
-		}
-	}
+	STRCPY(fnames[i], rel_path);
+	vim_free(rel_path);
+	sort_again = TRUE;
     }
 
 theend:
     vim_free(curdir);
+    if (in_curdir != NULL)
+    {
+	for (i = 0; i < gap->ga_len; i++)
+	    vim_free(in_curdir[i]);
+	vim_free(in_curdir);
+    }
     ga_clear_strings(&path_ga);
     vim_free(regmatch.regprog);
 
@@ -9569,6 +9620,7 @@ expand_in_path(gap, pattern, flags)
 	return 0;
     mch_dirname(curdir, MAXPATHL);
 
+    ga_init2(&path_ga, (int)sizeof(char_u *), 1);
     expand_path_option(curdir, &path_ga);
     vim_free(curdir);
     if (path_ga.ga_len == 0)
@@ -9711,7 +9763,7 @@ gen_expand_wildcards(num_pat, pat, num_file, file, flags)
 	    /*
 	     * First expand environment variables, "~/" and "~user/".
 	     */
-	    if (vim_strpbrk(p, (char_u *)"$~") != NULL)
+	    if (vim_strchr(p, '$') != NULL || *p == '~')
 	    {
 		p = expand_env_save_opt(p, TRUE);
 		if (p == NULL)
@@ -9722,7 +9774,7 @@ gen_expand_wildcards(num_pat, pat, num_file, file, flags)
 		 * variable, use the shell to do that.  Discard previously
 		 * found file names and start all over again.
 		 */
-		else if (vim_strpbrk(p, (char_u *)"$~") != NULL)
+		else if (vim_strchr(p, '$') != NULL || *p == '~')
 		{
 		    vim_free(p);
 		    ga_clear_strings(&ga);

@@ -1,6 +1,6 @@
-vim (2:7.3e.20100809+hg~06a44c4eb3e5-1) UNRELEASED; urgency=low
+vim (2:7.3f.20100812+hg~20e83abf88b1-1) UNRELEASED; urgency=low
 
-  * Merge latest 7.3e pre-release.
+  * Merge latest 7.3f pre-release.
     + Correctly restore multi-byte terminal titles when exiting Vim.  (Closes:
       #558153)
     + Highlight text inside math zones correctly for tex files.  (Closes:
