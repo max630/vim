@@ -326,8 +326,8 @@ install-stamp-vim-basic: build-stamp-vim-basic $(DOT_IN_DEPS)
 	done
 	
 	# helpztags manpage
-	pod2man -c "User Commands" -s 1 -q none -r "vim $(VERSION)$(SNAPSHOT)"	\
-		-d "September 2003" debian/helpztags debian/helpztags.1
+	pod2man -c "User Commands" -s 1 -q none -r "vim $(VERSION)$(SNAPSHOT)" \
+		-d "August 2010" debian/helpztags debian/helpztags.1
 	
 	# variant-related installations for package "vim"
 	# to be kept in sync with those in "install-stamp-%" target

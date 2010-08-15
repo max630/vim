@@ -5,6 +5,7 @@ vim (2:7.3.000+hg~ee53a39d5896-1) UNRELEASED; urgency=low
     + Explicitly use the dynamic loading Python interfaces.
     + Remove cleanup from clean target which are now properly handled by
       upstream's Makefile.
+  * Update version information in documentation.
 
  -- James Vega <jamessan@debian.org>  Sun, 15 Aug 2010 17:13:22 -0400
 
