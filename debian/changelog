@@ -1,6 +1,8 @@
 vim (2:7.3.000+hg~ee53a39d5896-1) UNRELEASED; urgency=low
 
   * New upstream release.
+  * debian/rules:
+    + Explicitly use the dynamic loading Python interfaces.
 
  -- James Vega <jamessan@debian.org>  Sun, 15 Aug 2010 17:13:22 -0400
 

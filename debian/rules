@@ -85,9 +85,8 @@ NOINTERPFLAGS+=--disable-tclinterp
 ALLINTERPFLAGS:=--enable-luainterp=dynamic
 ALLINTERPFLAGS+=--disable-mzschemeinterp
 ALLINTERPFLAGS+=--enable-perlinterp=dynamic
-# Python(3) are automatically dynamic since both are being built
-ALLINTERPFLAGS+=--enable-pythoninterp
-ALLINTERPFLAGS+=--enable-python3interp
+ALLINTERPFLAGS+=--enable-pythoninterp=dynamic
+ALLINTERPFLAGS+=--enable-python3interp=dynamic
 ALLINTERPFLAGS+=--enable-rubyinterp
 ALLINTERPFLAGS+=--enable-tclinterp
 
