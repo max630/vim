@@ -1,4 +1,4 @@
-vim (2:7.3.000+hg~ee53a39d5896-1) UNRELEASED; urgency=low
+vim (2:7.3.000+hg~ee53a39d5896-1) unstable; urgency=low
 
   * New upstream release.
   * debian/rules:
@@ -7,7 +7,7 @@ vim (2:7.3.000+hg~ee53a39d5896-1) UNRELEASED; urgency=low
       upstream's Makefile.
   * Update version information in documentation.
 
- -- James Vega <jamessan@debian.org>  Sun, 15 Aug 2010 17:13:22 -0400
+ -- James Vega <jamessan@debian.org>  Sun, 15 Aug 2010 17:34:02 -0400
 
 vim (2:7.3f.20100812+hg~20e83abf88b1-1) experimental; urgency=low
 
