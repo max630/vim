@@ -180,7 +180,6 @@ clean: $(foreach v,$(VARIANTS),clean-$(v))
 	rm -f src/auto/config.h
 	rm -f runtime/doc/doctags runtime/doc/tags.ref
 	rm -f runtime/doc/*.html runtime/doc/*.log
-	rm -f src/pixmaps src/runtime
 	dh_clean
 
 clean-vim-basic:
