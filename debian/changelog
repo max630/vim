@@ -1,3 +1,59 @@
+vim (2:7.3.000+hg~ee53a39d5896-1) UNRELEASED; urgency=low
+
+  * New upstream release.
+
+ -- James Vega <jamessan@debian.org>  Sun, 15 Aug 2010 17:13:22 -0400
+
+vim (2:7.3f.20100812+hg~20e83abf88b1-1) experimental; urgency=low
+
+  * Merge latest 7.3f pre-release.
+    + Correctly restore multi-byte terminal titles when exiting Vim.  (Closes:
+      #558153)
+    + Highlight text inside math zones correctly for tex files.  (Closes:
+      #509908)
+    + Recognize nested cite regions in tex files.  (Closes: #444288)
+    + Support syntax highlighting of bash's $"".  (Closes: #473736)
+  * Patches merged upstream:
+    + perl-indent-block.patch
+    + logcheck-ftplugin.patch
+    + tex-syntax-verbatim-spell.patch
+  * Enable Lua scripting.
+    + Add liblua5.1-0-dev and lua5.1 to Build-Depends.
+    + Enable lua interface via dynamic loading.
+  * Switch Perl interface to dynamic loading.
+  * debian/rules: Prefer running tests with the vim-nox binary if it's
+    available.
+  * Bump Standards-Version to 3.9.1.0 -- no changes needed.
+
+ -- James Vega <jamessan@debian.org>  Thu, 12 Aug 2010 20:01:43 -0400
+
+vim (2:7.3b.20100720+hg~7b7508ee56f1-1) experimental; urgency=low
+
+  * Merge 7.3b pre-release.
+    + Don't run autocommands when being killed to avoid overrunning the stack.
+      (Closes: #580961)
+    + Detect when the recovered buffer matches the on-disk file and notify the
+      user.  (Closes: #89359)
+    + Update CMake runtime files.  (Closes: #463715)
+    + Correctly set timestamp for X selection transfers.  (Closes: #577035)
+    + Improve 'cindent's handling of javascript.  (Closes: #588875)
+    + Correctly displays characters inserted via digraph sequences which wrap
+      to a new line.  (Closes: #442184)
+  * Patches merged upstream:
+    + it-manpage-fixes.patch
+    + lang-breaks-floating-point.patch
+    + python-modlibs.patch:
+      - Remove autoconf Build-Depends as configure.in isn't being patched
+        anymore.
+      - Remove autoconf-stamp pre-requisite for configure-stamp-% target.
+  * Update debian/rules to handle the snapshot versioning.
+  * Enable Python3 language interface.
+    + Add python3-dev to Build-Depends.
+    + Pass --enable-python3interp to configure when building variants with
+      language interfaces enabled.
+
+ -- James Vega <jamessan@debian.org>  Wed, 21 Jul 2010 00:12:19 -0400
+
 vim (2:7.2.445+hg~cb94c42c0e1a-1) unstable; urgency=low
 
   * debian/control:

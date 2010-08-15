@@ -31,7 +31,7 @@ CFGFLAGS := --prefix=/usr --mandir='$${prefix}'/share/man --without-local-dir
 CFGFLAGS += --with-modified-by="pkg-vim-maintainers@lists.alioth.debian.org"
 CFGFLAGS += --with-compiledby="$(BUILDER)"
 
-TINYFLAGS+=--with-features=small
+TINYFLAGS:=--with-features=small
 TINYFLAGS+=--disable-gui
 TINYFLAGS+=--disable-xsmp
 TINYFLAGS+=--disable-xsmp-interact
@@ -41,48 +41,53 @@ TINYFLAGS+=--disable-gpm
 TINYFLAGS+=--enable-nls
 TINYFLAGS+=--enable-multibyte
 
+OPTFLAGS:=--enable-cscope
 ifeq ($(DEB_HOST_GNU_SYSTEM),linux-gnu)
     OPTFLAGS+=--enable-gpm
 else
     OPTFLAGS+=--disable-gpm
 endif
-OPTFLAGS+=--enable-cscope
 OPTFLAGS+=--with-features=huge
 OPTFLAGS+=--enable-multibyte
 
-NOXFLAGS+=--without-x
+NOXFLAGS:=--without-x
 NOXFLAGS+=--enable-gui=no
 
-GUIFLAGS+=--with-x
+GUIFLAGS:=--with-x
 GUIFLAGS+=--enable-xim
 
-GTK2FLAGS+=--enable-gui=gtk2
+GTK2FLAGS:=--enable-gui=gtk2
 GTK2FLAGS+=--enable-gtk2-check
 GTK2FLAGS+=--disable-gnome-check
 GTK2FLAGS+=--disable-motif-check
 GTK2FLAGS+=--disable-fontset
 
-GNOMEFLAGS+=--enable-gui=gnome2
+GNOMEFLAGS:=--enable-gui=gnome2
 GNOMEFLAGS+=--disable-gtk2-check
 GNOMEFLAGS+=--enable-gnome-check
 GNOMEFLAGS+=--disable-motif-check
 GNOMEFLAGS+=--disable-fontset
 
-LESSTIFFLAGS+=--enable-gui=motif
+LESSTIFFLAGS:=--enable-gui=motif
 LESSTIFFLAGS+=--disable-gtk2-check
 LESSTIFFLAGS+=--disable-gnome-check
 LESSTIFFLAGS+=--enable-motif-check
 LESSTIFFLAGS+=--enable-fontset
 
+NOINTERPFLAGS:=--disable-luainterp
 NOINTERPFLAGS+=--disable-mzschemeinterp
-NOINTERPFLAGS+=--disable-tclinterp
 NOINTERPFLAGS+=--disable-perlinterp
 NOINTERPFLAGS+=--disable-pythoninterp
+NOINTERPFLAGS+=--disable-python3interp
 NOINTERPFLAGS+=--disable-rubyinterp
+NOINTERPFLAGS+=--disable-tclinterp
 
+ALLINTERPFLAGS:=--enable-luainterp=dynamic
 ALLINTERPFLAGS+=--disable-mzschemeinterp
-ALLINTERPFLAGS+=--enable-perlinterp
+ALLINTERPFLAGS+=--enable-perlinterp=dynamic
+# Python(3) are automatically dynamic since both are being built
 ALLINTERPFLAGS+=--enable-pythoninterp
+ALLINTERPFLAGS+=--enable-python3interp
 ALLINTERPFLAGS+=--enable-rubyinterp
 ALLINTERPFLAGS+=--enable-tclinterp
 
@@ -123,7 +128,7 @@ CFLAGS_vim-nox:=$(CFLAGS)
 CFGFLAGS_vim-nox:=$(CFGFLAGS) $(OPTFLAGS) $(NOXFLAGS) $(ALLINTERPFLAGS)
 
 NAME:=vim
-VERSION:=7.2
+VERSION:=7.3
 SNAPSHOT:=
 VIMCUR:=$(NAME)$(subst .,,$(VERSION))$(SNAPSHOT)
 DEBVERSION:=$(shell dpkg-parsechangelog | sed -n '/^Version:/{s/Version: *\([^:]*:\)\?\([^-]*\)-.*/\2/;p;q}')
@@ -233,7 +238,7 @@ autoconf-stamp:
 	touch $@
 
 configure-stamp-%: SHADOWDIR=$*
-configure-stamp-%: autoconf-stamp
+configure-stamp-%:
 	dh_testdir
 	@echo "*** DEBIAN *** CONFIGURING VARIANT $*"
 	$(MAKE) -C src shadow SHADOWDIR=$(SHADOWDIR)
@@ -248,7 +253,6 @@ build-stamp-%: configure-stamp-%
 	dh_clean -p$* -k
 	@echo "*** DEBIAN *** BUILDING VARIANT $*"
 	$(MAKE) -C src/$(SHADOWDIR) CFLAGS="$(CURCFLAGS)"
-	mv src/$(SHADOWDIR)/vim src/$(SHADOWDIR)/$(subst -,.,$*)
 	touch $@
 
 install: $(foreach v,$(VARIANTS),install-stamp-$(v))
@@ -283,15 +287,21 @@ install-stamp-vim-basic: build-stamp-vim-basic $(DOT_IN_DEPS)
 	    install-languages
 	
 # Tests need to be run in series, otherwise the terminal requests may not see
-# proper responses
+# proper responses.
+# Prefer the vim-nox binary if it exists since that will also test the
+# language interfaces.
 	if [ $(MAKETEST) = "yes" ]; then \
-	  $(MAKE) -j1 -C src/vim-basic test; \
+	  if [ -e src/vim-nox/vim ]; then \
+	    $(MAKE) -j1 -C src/vim-nox test; \
+	  else \
+	    $(MAKE) -j1 -C src/vim-basic test; \
+	  fi \
 	fi
 	# installvimbin installs the vim binary under debian/tmp but we install
 	# it into the vim package from src/.  Need to rm it from debian/tmp so
 	# that dh_install doesn't fail
 	rm -f debian/tmp/usr/bin/vim
-	cp src/vim-basic/vim src/vim-basic/vim.basic
+	mv src/vim-basic/vim src/vim-basic/vim.basic
 	
 	# DEBIAN INSTALLATION
 	
@@ -398,6 +408,7 @@ install-stamp-vim-tiny: build-stamp-vim-tiny $(DOT_IN_DEPS_TINY)
 	@echo "*** DEBIAN *** INSTALLING VARIANT vim-tiny"
 	dh_installdirs
 	
+	mv src/vim-tiny/vim src/vim-tiny/vim.tiny
 	# variant-related installations
 	# to be kept in sync with those in "install-stamp-vim-basic" target
 	for x in $(PER_VARIANT_FILES) ; do \
@@ -431,6 +442,7 @@ install-stamp-%: build-stamp-%
 	@echo "*** DEBIAN *** INSTALLING VARIANT $*"
 	dh_installdirs
 	
+	mv src/$*/vim src/$*/$(subst -,.,$*)
 	# variant-related installations
 	# to be kept in sync with those in "install-stamp-vim-basic" target
 	for x in $(PER_VARIANT_FILES) ; do \

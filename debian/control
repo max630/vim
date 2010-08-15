@@ -3,13 +3,14 @@ Section: editors
 Priority: optional
 Maintainer: Debian Vim Maintainers <pkg-vim-maintainers@lists.alioth.debian.org>
 Uploaders: James Vega <jamessan@debian.org>
-Standards-Version: 3.9.0.0
-Build-Depends: debhelper (>= 5), bzip2, libperl-dev, tcl-dev, libacl1-dev,
- libgpmg1-dev [linux-any], python-dev, libxpm-dev, libncurses5-dev, ruby,
- ruby1.8-dev, libgtk2.0-dev, libgnomeui-dev, lesstif2-dev, libxt-dev,
- libselinux1-dev [linux-any],
-# Need autoconf since we're patching config.mk.in and configure.in for #566842
- autoconf
+Standards-Version: 3.9.1.0
+Build-Depends: debhelper (>= 5), libacl1-dev, libgpmg1-dev [linux-any],
+ libxpm-dev, libncurses5-dev, libselinux1-dev [linux-any],
+# B-D for GUI support
+ libgtk2.0-dev, libgnomeui-dev, lesstif2-dev, libxt-dev,
+# B-D for language interpreters
+ libperl-dev, tcl-dev, python-dev, ruby, ruby1.8-dev, python3-dev, lua5.1,
+ liblua5.1-dev
 Build-Depends-Indep: docbook-xml, docbook-utils
 Vcs-Hg: http://hg.debian.org/hg/pkg-vim/vim
 Vcs-Browser: http://hg.debian.org/hg/pkg-vim/vim

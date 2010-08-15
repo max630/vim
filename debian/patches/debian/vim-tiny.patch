@@ -22,7 +22,7 @@ Index: b/src/main.c
  } mparm_T;
  
  /* Values for edit_type. */
-@@ -1507,6 +1510,10 @@
+@@ -1571,6 +1574,10 @@
      }
      else if (STRNICMP(initstr, "vim", 3) == 0)
  	initstr += 3;
@@ -33,7 +33,7 @@ Index: b/src/main.c
  
      /* Catch "[r][g]vimdiff" and "[r][g]viewdiff". */
      if (STRICMP(initstr, "diff") == 0)
-@@ -2806,7 +2813,12 @@
+@@ -2881,7 +2888,12 @@
  	 * Get system wide defaults, if the file name is defined.
  	 */
  #ifdef SYS_VIMRC_FILE
