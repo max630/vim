@@ -250,7 +250,7 @@ build-stamp-%: configure-stamp-%
 	dh_testdir
 	dh_clean -p$* -k
 	@echo "*** DEBIAN *** BUILDING VARIANT $*"
-	$(MAKE) -C src/$(SHADOWDIR) CFLAGS="$(CURCFLAGS)"
+	$(MAKE) -C src/$(SHADOWDIR)
 	touch $@
 
 install: $(foreach v,$(VARIANTS),install-stamp-$(v))
