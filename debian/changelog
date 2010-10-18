@@ -9,6 +9,8 @@ vim (2:7.3.029+hg~94694351f592-1) UNRELEASED; urgency=low
       with _FORTIFY_SOURCE=2.
     + Use DEB_HOST_ARCH_OS instead of DEB_HOST_GNU_SYSTEM to determine whether
       Linux-specific functionality is enabled.
+  * Make helpztags capable of generating tags files for non-English help
+    files.  (Closes: #600248)
 
  -- James Vega <jamessan@debian.org>  Sun, 17 Oct 2010 22:39:15 -0400
 
