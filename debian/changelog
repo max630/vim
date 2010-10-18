@@ -1,3 +1,10 @@
+vim (2:7.3.029+hg~94694351f592-1) UNRELEASED; urgency=low
+
+  * Pull patches 001 - 029.
+    + More robust YAML highlighting.  (Closes: #535682)
+
+ -- James Vega <jamessan@debian.org>  Sun, 17 Oct 2010 22:39:15 -0400
+
 vim (2:7.3.000+hg~ee53a39d5896-1) unstable; urgency=low
 
   * New upstream release.
