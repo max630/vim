@@ -11,6 +11,10 @@ vim (2:7.3.029+hg~94694351f592-1) UNRELEASED; urgency=low
       Linux-specific functionality is enabled.
   * Make helpztags capable of generating tags files for non-English help
     files.  (Closes: #600248)
+  * Debian runtime:
+    + Add natty as a recognized distribution.  (Closes: #600560)
+    + Add metapackages as a recognized section.  (Closes: #600562)
+    + Remove etch as a recognized distribution.
 
  -- James Vega <jamessan@debian.org>  Sun, 17 Oct 2010 22:39:15 -0400
 

@@ -7,6 +7,7 @@ upstream/de.po-lesen.patch
 upstream/dosini-syntax-hash.patch
 upstream/extra-rst-detection.patch
 upstream/crontab-syntax-case-ignore.patch
+upstream/debian-runtime.patch
 debian/vim-tiny.patch
 debian/disabled-modelines.patch
 debian/awk-shebang.patch

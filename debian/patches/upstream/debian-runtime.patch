@@ -1,0 +1,78 @@
+Subject: Update Debian runtime files
+Forwarded: yes
+Author: James Vega <jamessan@debian.org>
+Bug-Debian: http://bugs.debian.org/600560
+Bug-Debian: http://bugs.debian.org/600562
+
+Index: b/runtime/syntax/debchangelog.vim
+===================================================================
+--- a/runtime/syntax/debchangelog.vim
++++ b/runtime/syntax/debchangelog.vim
+@@ -3,8 +3,8 @@
+ " Maintainer:  Debian Vim Maintainers <pkg-vim-maintainers@lists.alioth.debian.org>
+ " Former Maintainers: Gerfried Fuchs <alfie@ist.org>
+ "                     Wichert Akkerman <wakkerma@debian.org>
+-" Last Change: 2010 May 06
+-" URL: http://hg.debian.org/hg/pkg-vim/vim/raw-file/tip/runtime/syntax/debchangelog.vim
++" Last Change: 2010 Oct 21
++" URL: http://hg.debian.org/hg/pkg-vim/vim/raw-file/unstable/runtime/syntax/debchangelog.vim
+ 
+ " Standard syntax initialization
+ if version < 600
+@@ -19,7 +19,7 @@
+ " Define some common expressions we can use later on
+ syn match debchangelogName	contained "^[[:alnum:]][[:alnum:].+-]\+ "
+ syn match debchangelogUrgency	contained "; urgency=\(low\|medium\|high\|critical\|emergency\)\( \S.*\)\="
+-syn match debchangelogTarget	contained "\v %(frozen|unstable|%(testing|%(old)=stable)%(-proposed-updates|-security)=|experimental|%(etch|lenny)-%(backports|volatile)|%(dapper|hardy|jaunty|karmic|lucid|maverick)%(-%(security|proposed|updates|backports|commercial|partner))=)+"
++syn match debchangelogTarget	contained "\v %(frozen|unstable|%(testing|%(old)=stable)%(-proposed-updates|-security)=|experimental|%(lenny|squeeze)-%(backports%(-sloppy)=|volatile)|%(dapper|hardy|jaunty|karmic|lucid|maverick|natty)%(-%(security|proposed|updates|backports|commercial|partner))=)+"
+ syn match debchangelogVersion	contained "(.\{-})"
+ syn match debchangelogCloses	contained "closes:\_s*\(bug\)\=#\=\_s\=\d\+\(,\_s*\(bug\)\=#\=\_s\=\d\+\)*"
+ syn match debchangelogLP	contained "\clp:\s\+#\d\+\(,\s*#\d\+\)*"
+Index: b/runtime/syntax/debcontrol.vim
+===================================================================
+--- a/runtime/syntax/debcontrol.vim
++++ b/runtime/syntax/debcontrol.vim
+@@ -3,8 +3,8 @@
+ " Maintainer:  Debian Vim Maintainers <pkg-vim-maintainers@lists.alioth.debian.org>
+ " Former Maintainers: Gerfried Fuchs <alfie@ist.org>
+ "                     Wichert Akkerman <wakkerma@debian.org>
+-" Last Change: 2009 Aug 17
+-" URL: http://hg.debian.org/hg/pkg-vim/vim/raw-file/tip/runtime/syntax/debcontrol.vim
++" Last Change: 2010 Oct 21
++" URL: http://hg.debian.org/hg/pkg-vim/vim/raw-file/unstable/runtime/syntax/debcontrol.vim
+ 
+ " Standard syntax initialization
+ if version < 600
+@@ -27,7 +27,7 @@
+ syn match debcontrolArchitecture contained "\%(all\|any\|alpha\|amd64\|arm\%(e[bl]\)\=\|avr32\|hppa\|i386\|ia64\|lpia\|m32r\|m68k\|mips\%(el\)\=\|powerpc\|ppc64\|s390x\=\|sh[34]\(eb\)\=\|sh\|sparc\%(64\)\=\|hurd-i386\|kfreebsd-\%(i386\|amd64\|gnu\)\|knetbsd-i386\|kopensolaris-i386\|netbsd-\%(alpha\|i386\)\)"
+ syn match debcontrolName contained "[a-z0-9][a-z0-9+.-]\+"
+ syn match debcontrolPriority contained "\(extra\|important\|optional\|required\|standard\)"
+-syn match debcontrolSection contained "\v((contrib|non-free|non-US/main|non-US/contrib|non-US/non-free|restricted|universe|multiverse)/)?(admin|cli-mono|comm|database|debian-installer|debug|devel|doc|editors|electronics|embedded|fonts|games|gnome|gnustep|gnu-r|graphics|hamradio|haskell|httpd|interpreters|java|kde|kernel|libs|libdevel|lisp|localization|mail|math|misc|net|news|ocaml|oldlibs|otherosfs|perl|php|python|ruby|science|shells|sound|text|tex|utils|vcs|video|web|x11|xfce|zope)"
++syn match debcontrolSection contained "\v((contrib|non-free|non-US/main|non-US/contrib|non-US/non-free|restricted|universe|multiverse)/)?(admin|cli-mono|comm|database|debian-installer|debug|devel|doc|editors|electronics|embedded|fonts|games|gnome|gnustep|gnu-r|graphics|hamradio|haskell|httpd|interpreters|java|kde|kernel|libs|libdevel|lisp|localization|mail|math|metapackages|misc|net|news|ocaml|oldlibs|otherosfs|perl|php|python|ruby|science|shells|sound|text|tex|utils|vcs|video|web|x11|xfce|zope)"
+ syn match debcontrolPackageType contained "u\?deb"
+ syn match debcontrolVariable contained "\${.\{-}}"
+ syn match debcontrolDmUpload contained "\cyes"
+Index: b/runtime/syntax/debsources.vim
+===================================================================
+--- a/runtime/syntax/debsources.vim
++++ b/runtime/syntax/debsources.vim
+@@ -2,8 +2,8 @@
+ " Language:     Debian sources.list
+ " Maintainer:   Debian Vim Maintainers <pkg-vim-maintainers@lists.alioth.debian.org>
+ " Former Maintainer: Matthijs Mohlmann <matthijs@cacholong.nl>
+-" Last Change: 2010 May 06
+-" URL: http://hg.debian.org/hg/pkg-vim/vim/raw-file/tip/runtime/syntax/debsources.vim
++" Last Change: 2010 Oct 21
++" URL: http://hg.debian.org/hg/pkg-vim/vim/raw-file/unstable/runtime/syntax/debsources.vim
+ 
+ " Standard syntax initialization
+ if version < 600
+@@ -23,7 +23,7 @@
+ 
+ " Match uri's
+ syn match debsourcesUri            +\(http://\|ftp://\|[rs]sh://\|debtorrent://\|\(cdrom\|copy\|file\):\)[^' 	<>"]\++
+-syn match debsourcesDistrKeyword   +\([[:alnum:]_./]*\)\(etch\|lenny\|squeeze\|\(old\)\=stable\|testing\|unstable\|sid\|rc-buggy\|experimental\|dapper\|hardy\|jaunty\|karmic\|lucid\|maverick\)\([-[:alnum:]_./]*\)+
++syn match debsourcesDistrKeyword   +\([[:alnum:]_./]*\)\(lenny\|squeeze\|\(old\)\=stable\|testing\|unstable\|sid\|rc-buggy\|experimental\|dapper\|hardy\|jaunty\|karmic\|lucid\|maverick\|natty\)\([-[:alnum:]_./]*\)+
+ 
+ " Associate our matches and regions with pretty colours
+ hi def link debsourcesLine            Error
