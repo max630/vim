@@ -9,12 +9,15 @@ vim (2:7.3.035+hg~8fdc12103333-1) UNRELEASED; urgency=low
       with _FORTIFY_SOURCE=2.
     + Use DEB_HOST_ARCH_OS instead of DEB_HOST_GNU_SYSTEM to determine whether
       Linux-specific functionality is enabled.
+    + Use dpkg-vendor to change build configuration when building on Ubuntu.
+      Thanks to Michael Bienia for the patch.
   * Make helpztags capable of generating tags files for non-English help
     files.  (Closes: #600248)
   * Debian runtime:
     + Add natty as a recognized distribution.  (Closes: #600560)
     + Add metapackages as a recognized section.  (Closes: #600562)
     + Remove etch as a recognized distribution.
+  * debian/control: Add dpkg-dev (>= 1.15.1) Build-Depends for dpkg-vendor.
 
  -- James Vega <jamessan@debian.org>  Sun, 17 Oct 2010 22:39:15 -0400
 

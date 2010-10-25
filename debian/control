@@ -5,9 +5,11 @@ Maintainer: Debian Vim Maintainers <pkg-vim-maintainers@lists.alioth.debian.org>
 Uploaders: James Vega <jamessan@debian.org>
 Standards-Version: 3.9.1.0
 Build-Depends: debhelper (>= 5), libacl1-dev, libgpmg1-dev [linux-any],
- libxpm-dev, libncurses5-dev, libselinux1-dev [linux-any],
+ libncurses5-dev, libselinux1-dev [linux-any],
+# B-D for dpkg-vendor
+ dpkg-dev (>= 1.15.1),
 # B-D for GUI support
- libgtk2.0-dev, libgnomeui-dev, lesstif2-dev, libxt-dev,
+ libgtk2.0-dev, libgnomeui-dev, lesstif2-dev, libxt-dev, libxpm-dev,
 # B-D for language interpreters
  libperl-dev, tcl-dev, python-dev, ruby, ruby1.8-dev, python3-dev, lua5.1,
  liblua5.1-dev

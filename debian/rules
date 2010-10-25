@@ -5,6 +5,7 @@ export DH_OPTIONS
 DEB_HOST_ARCH_OS ?= $(shell dpkg-architecture -qDEB_HOST_ARCH_OS)
 DEB_HOST_GNU_TYPE ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
 DEB_BUILD_GNU_TYPE ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
+DEB_VENDOR := $(shell dpkg-vendor --query vendor)
 
 BUILDER := $(shell echo $${DEBEMAIL:-$${EMAIL:-$$(echo $$LOGNAME@$$(cat /etc/mailname 2> /dev/null))}})
 
@@ -77,8 +78,13 @@ LESSTIFFLAGS+=--enable-fontset
 NOINTERPFLAGS:=--disable-luainterp
 NOINTERPFLAGS+=--disable-mzschemeinterp
 NOINTERPFLAGS+=--disable-perlinterp
-NOINTERPFLAGS+=--disable-pythoninterp
-NOINTERPFLAGS+=--disable-python3interp
+ifeq ($(DEB_VENDOR),Ubuntu)
+	NOINTERPFLAGS+=--enable-pythoninterp=dynamic
+	NOINTERPFLAGS+=--enable-python3interp=dynamic
+else
+	NOINTERPFLAGS+=--disable-pythoninterp
+	NOINTERPFLAGS+=--disable-python3interp
+endif
 NOINTERPFLAGS+=--disable-rubyinterp
 NOINTERPFLAGS+=--disable-tclinterp
 
