@@ -1,4 +1,4 @@
-vim (2:7.3.035+hg~8fdc12103333-1) UNRELEASED; urgency=low
+vim (2:7.3.035+hg~8fdc12103333-1) unstable; urgency=low
 
   * Pull patches 001 - 035.
     + More robust YAML highlighting.  (Closes: #535682)
@@ -19,7 +19,7 @@ vim (2:7.3.035+hg~8fdc12103333-1) UNRELEASED; urgency=low
     + Remove etch as a recognized distribution.
   * debian/control: Add dpkg-dev (>= 1.15.1) Build-Depends for dpkg-vendor.
 
- -- James Vega <jamessan@debian.org>  Sun, 17 Oct 2010 22:39:15 -0400
+ -- James Vega <jamessan@debian.org>  Mon, 25 Oct 2010 00:48:58 -0400
 
 vim (2:7.3.000+hg~ee53a39d5896-1) unstable; urgency=low
 
