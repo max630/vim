@@ -1,3 +1,9 @@
+vim (2:7.3.035+hg~8fdc12103333-2) UNRELEASED; urgency=low
+
+  * debian/watch: Adjust dversionmangle to handle the hg naming.
+
+ -- James Vega <jamessan@debian.org>  Fri, 17 Dec 2010 11:52:04 -0500
+
 vim (2:7.3.035+hg~8fdc12103333-1) unstable; urgency=low
 
   * Pull patches 001 - 035.
