@@ -5,8 +5,9 @@ vim (2:7.3.125+hg~e44523d45bf5-1) UNRELEASED; urgency=low
       for a buffer.  (Closes: #600688)
     + 7.3.091: Don't write special K_IGNORE codes when recording a Vim
       session.  (Closes: #608242)
+  * debian/watch: Adjust dversionmangle to handle the hg naming.
 
- -- James Vega <jamessan@debian.org>  Thu, 17 Feb 2011 22:43:17 -0500
+ -- James Vega <jamessan@debian.org>  Fri, 17 Dec 2010 11:52:04 -0500
 
 vim (2:7.3.035+hg~8fdc12103333-1) unstable; urgency=low
 
