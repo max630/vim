@@ -11,14 +11,6 @@
  * fileio.c: read from and write to a file
  */
 
-#if defined(MSDOS) || defined(WIN16) || defined(WIN32) || defined(_WIN64)
-# include "vimio.h"	/* for lseek(), must be before vim.h */
-#endif
-
-#if defined __EMX__
-# include "vimio.h"	/* for mktemp(), CJW 1997-12-03 */
-#endif
-
 #include "vim.h"
 
 #if defined(__TANDEM) || defined(__MINT__)
@@ -325,7 +317,7 @@ readfile(fname, sfname, from, lines_to_skip, lines_to_read, eap, flags)
     int		using_b_fname;
 #endif
 
-    write_no_eol_lnum = 0;	/* in case it was set by the previous read */
+    curbuf->b_no_eol_lnum = 0;	/* in case it was set by the previous read */
 
     /*
      * If there is no file name yet, use the one for the read file.
@@ -918,7 +910,7 @@ readfile(fname, sfname, from, lines_to_skip, lines_to_read, eap, flags)
 	    {
 		/* Read the first line (and a bit more).  Immediately rewind to
 		 * the start of the file.  If the read() fails "len" is -1. */
-		len = vim_read(fd, firstline, 80);
+		len = read_eintr(fd, firstline, 80);
 		lseek(fd, (off_t)0L, SEEK_SET);
 		for (p = firstline; p < firstline + len; ++p)
 		    if (*p >= 0x80)
@@ -1373,7 +1365,7 @@ retry:
 		    /*
 		     * Read bytes from the file.
 		     */
-		    size = vim_read(fd, ptr, size);
+		    size = read_eintr(fd, ptr, size);
 		}
 
 		if (size <= 0)
@@ -2607,10 +2599,11 @@ failed:
 
     /*
      * Trick: We remember if the last line of the read didn't have
-     * an eol for when writing it again.  This is required for
+     * an eol even when 'binary' is off, for when writing it again with
+     * 'binary' on.  This is required for
      * ":autocmd FileReadPost *.gz set bin|'[,']!gunzip" to work.
      */
-    write_no_eol_lnum = read_no_eol_lnum;
+    curbuf->b_no_eol_lnum = read_no_eol_lnum;
 
     /* When reloading a buffer put the cursor at the first line that is
      * different. */
@@ -2658,12 +2651,16 @@ failed:
 							    FALSE, NULL, eap);
 	if (msg_scrolled == n)
 	    msg_scroll = m;
-#ifdef FEAT_EVAL
+# ifdef FEAT_EVAL
 	if (aborting())	    /* autocmds may abort script processing */
 	    return FAIL;
-#endif
+# endif
     }
 #endif
+
+    /* Reset now, following writes should not omit the EOL.  Also, the line
+     * number will become invalid because of edits. */
+    curbuf->b_no_eol_lnum = 0;
 
     if (recoverymode && error)
 	return FAIL;
@@ -4000,7 +3997,7 @@ buf_write(buf, fname, sfname, start, end, eap, append, forceit,
 #ifdef HAS_BW_FLAGS
 			write_info.bw_flags = FIO_NOCONVERT;
 #endif
-			while ((write_info.bw_len = vim_read(fd, copybuf,
+			while ((write_info.bw_len = read_eintr(fd, copybuf,
 								BUFSIZE)) > 0)
 			{
 			    if (buf_write_bytes(&write_info) == FAIL)
@@ -4568,7 +4565,7 @@ restore_backup:
 	if (end == 0
 		|| (lnum == end
 		    && write_bin
-		    && (lnum == write_no_eol_lnum
+		    && (lnum == buf->b_no_eol_lnum
 			|| (lnum == buf->b_ml.ml_line_count && !buf->b_p_eol))))
 	{
 	    ++lnum;			/* written the line, count it */
@@ -4813,7 +4810,7 @@ restore_backup:
 #ifdef HAS_BW_FLAGS
 			write_info.bw_flags = FIO_NOCONVERT;
 #endif
-			while ((write_info.bw_len = vim_read(fd, smallbuf,
+			while ((write_info.bw_len = read_eintr(fd, smallbuf,
 						      SMBUFSIZE)) > 0)
 			    if (buf_write_bytes(&write_info) == FAIL)
 				break;
@@ -5094,8 +5091,6 @@ nofail:
     {
 	aco_save_T	aco;
 
-	write_no_eol_lnum = 0;	/* in case it was set by the previous read */
-
 	/*
 	 * Apply POST autocommands.
 	 * Careful: The autocommands may call buf_write() recursively!
@@ -5330,7 +5325,7 @@ time_differs(t1, t2)
 
 /*
  * Call write() to write a number of bytes to the file.
- * Also handles encryption and 'encoding' conversion.
+ * Handles encryption and 'encoding' conversion.
  *
  * Return FAIL for failure, OK otherwise.
  */
@@ -5702,16 +5697,8 @@ buf_write_bytes(ip)
 	crypt_encode(buf, len, buf);
 #endif
 
-    /* Repeat the write(), it may be interrupted by a signal. */
-    while (len > 0)
-    {
-	wlen = vim_write(ip->bw_fd, buf, len);
-	if (wlen <= 0)		    /* error! */
-	    return FAIL;
-	len -= wlen;
-	buf += wlen;
-    }
-    return OK;
+    wlen = write_eintr(ip->bw_fd, buf, len);
+    return (wlen < len) ? FAIL : OK;
 }
 
 #ifdef FEAT_MBYTE
@@ -6662,8 +6649,8 @@ vim_rename(from, to)
 	return -1;
     }
 
-    while ((n = vim_read(fd_in, buffer, BUFSIZE)) > 0)
-	if (vim_write(fd_out, buffer, n) != n)
+    while ((n = read_eintr(fd_in, buffer, BUFSIZE)) > 0)
+	if (write_eintr(fd_out, buffer, n) != n)
 	{
 	    errmsg = _("E208: Error writing to \"%s\"");
 	    break;
@@ -7024,7 +7011,7 @@ buf_check_timestamp(buf, focus)
 		    STRCAT(tbuf, mesg2);
 		}
 		if (do_dialog(VIM_WARNING, (char_u *)_("Warning"), tbuf,
-				(char_u *)_("&OK\n&Load File"), 1, NULL) == 2)
+			  (char_u *)_("&OK\n&Load File"), 1, NULL, TRUE) == 2)
 		    reload = TRUE;
 	    }
 	    else
@@ -7272,8 +7259,8 @@ buf_store_time(buf, st, fname)
 write_lnum_adjust(offset)
     linenr_T	offset;
 {
-    if (write_no_eol_lnum != 0)		/* only if there is a missing eol */
-	write_no_eol_lnum += offset;
+    if (curbuf->b_no_eol_lnum != 0)	/* only if there is a missing eol */
+	curbuf->b_no_eol_lnum += offset;
 }
 
 #if defined(TEMPDIRNAMES) || defined(PROTO)
@@ -7475,7 +7462,10 @@ vim_tempname(extra_char)
 
     STRCPY(itmp, "");
     if (GetTempPath(_MAX_PATH, szTempFile) == 0)
-	szTempFile[0] = NUL;	/* GetTempPath() failed, use current dir */
+    {
+	szTempFile[0] = '.';	/* GetTempPath() failed, use current dir */
+	szTempFile[1] = NUL;
+    }
     strcpy(buf4, "VIM");
     buf4[2] = extra_char;   /* make it "VIa", "VIb", etc. */
     if (GetTempFileName(szTempFile, buf4, 0, itmp) == 0)
@@ -7496,8 +7486,11 @@ vim_tempname(extra_char)
 # else /* WIN3264 */
 
 #  ifdef USE_TMPNAM
+    char_u	*p;
+
     /* tmpnam() will make its own name */
-    if (*tmpnam((char *)itmp) == NUL)
+    p = tmpnam((char *)itmp);
+    if (p == NULL || *p == NUL)
 	return NULL;
 #  else
     char_u	*p;
@@ -10304,3 +10297,55 @@ file_pat_to_reg_pat(pat, pat_end, allow_dirs, no_bslash)
     }
     return reg_pat;
 }
+
+#if defined(EINTR) || defined(PROTO)
+/*
+ * Version of read() that retries when interrupted by EINTR (possibly
+ * by a SIGWINCH).
+ */
+    long
+read_eintr(fd, buf, bufsize)
+    int	    fd;
+    void    *buf;
+    size_t  bufsize;
+{
+    long ret;
+
+    for (;;)
+    {
+	ret = vim_read(fd, buf, bufsize);
+	if (ret >= 0 || errno != EINTR)
+	    break;
+    }
+    return ret;
+}
+
+/*
+ * Version of write() that retries when interrupted by EINTR (possibly
+ * by a SIGWINCH).
+ */
+    long
+write_eintr(fd, buf, bufsize)
+    int	    fd;
+    void    *buf;
+    size_t  bufsize;
+{
+    long    ret = 0;
+    long    wlen;
+
+    /* Repeat the write() so long it didn't fail, other than being interrupted
+     * by a signal. */
+    while (ret < (long)bufsize)
+    {
+	wlen = vim_write(fd, (char *)buf + ret, bufsize - ret);
+	if (wlen < 0)
+	{
+	    if (errno != EINTR)
+		break;
+	}
+	else
+	    ret += wlen;
+    }
+    return ret;
+}
+#endif

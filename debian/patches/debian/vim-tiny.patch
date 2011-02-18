@@ -12,7 +12,7 @@ Index: b/src/main.c
 ===================================================================
 --- a/src/main.c
 +++ b/src/main.c
-@@ -87,6 +87,9 @@
+@@ -83,6 +83,9 @@
  #ifdef FEAT_DIFF
      int		diff_mode;		/* start with 'diff' set */
  #endif
@@ -22,7 +22,7 @@ Index: b/src/main.c
  } mparm_T;
  
  /* Values for edit_type. */
-@@ -1571,6 +1574,10 @@
+@@ -1569,6 +1572,10 @@
      }
      else if (STRNICMP(initstr, "vim", 3) == 0)
  	initstr += 3;
@@ -33,7 +33,7 @@ Index: b/src/main.c
  
      /* Catch "[r][g]vimdiff" and "[r][g]viewdiff". */
      if (STRICMP(initstr, "diff") == 0)
-@@ -2881,7 +2888,12 @@
+@@ -2879,7 +2886,12 @@
  	 * Get system wide defaults, if the file name is defined.
  	 */
  #ifdef SYS_VIMRC_FILE

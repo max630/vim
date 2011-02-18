@@ -11,10 +11,6 @@
  * ex_cmds.c: some functions for command line commands
  */
 
-#if defined(MSDOS) || defined(WIN16) || defined(WIN32) || defined(_WIN64)
-# include "vimio.h"	/* for mch_open(), must be before vim.h */
-#endif
-
 #include "vim.h"
 #include "version.h"
 
@@ -2705,6 +2701,10 @@ do_write(eap)
 									TRUE);
 		do_modelines(0);
 	    }
+
+	    /* Autocommands may have changed buffer names, esp. when
+	     * 'autochdir' is set. */
+	    fname = curbuf->b_sfname;
 #endif
 	}
 
@@ -5412,7 +5412,7 @@ read_viminfo_sub_string(virp, force)
     vir_T	*virp;
     int		force;
 {
-    if (old_sub != NULL && force)
+    if (force)
 	vim_free(old_sub);
     if (force || old_sub == NULL)
 	old_sub = viminfo_readstring(virp, 1, TRUE);

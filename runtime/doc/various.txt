@@ -1,4 +1,4 @@
-*various.txt*   For Vim version 7.3.  Last change: 2010 Sep 23
+*various.txt*   For Vim version 7.3.  Last change: 2011 Feb 01
 
 
 		  VIM REFERENCE MANUAL    by Bram Moolenaar
@@ -101,13 +101,14 @@ g8			Print the hex values of the bytes used in the
 :[range]P[rint] [count] [flags]
 			Just as ":print".  Was apparently added to Vi for
 			people that keep the shift key pressed too long...
+			Note: A user command can overrule this command.
 			See |ex-flags| for [flags].
 
 							*:l* *:list*
 :[range]l[ist] [count] [flags]
 			Same as :print, but display unprintable characters
 			with '^' and put $ after the line.  This can be
-			changed with the 'listchars' option.
+			further changed with the 'listchars' option.
 			See |ex-flags| for [flags].
 
 							*:nu* *:number*

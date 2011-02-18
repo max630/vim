@@ -283,12 +283,13 @@ CC=
 
 ######################## auto/config.mk ######################## {{{1
 # At this position auto/config.mk is included. When starting from the
-# distribution it is almost empty. After running auto/configure it contains
-# settings that have been discovered for your system. Settings below this
-# include override settings in auto/config.mk!
+# toplevel Makefile it is almost empty. After running auto/configure it
+# contains settings that have been discovered for your system. Settings below
+# this include override settings in auto/config.mk!
 
-# Note: if auto/config.mk is lost somehow (e.g., because configure was
-# interrupted), create an empty auto/config.mk file and do "make config".
+# Note: If make fails because auto/config.mk does not exist (it is not
+# included in the repository), do:
+#    cp config.mk.dist auto/config.mk
 
 # (X) How to include auto/config.mk depends on the version of "make" you have,
 #     if the current choice doesn't work, try the other one.
@@ -414,12 +415,16 @@ CClink = $(CC)
 # However, this may still cause problems, such as "import termios" failing.
 # Build two separate versions of Vim in that case.
 #CONF_OPT_PYTHON = --enable-pythoninterp
+#CONF_OPT_PYTHON = --enable-pythoninterp=dynamic
 #CONF_OPT_PYTHON3 = --enable-python3interp
+#CONF_OPT_PYTHON3 = --enable-python3interp=dynamic
 
 # RUBY
 # Uncomment this when you want to include the Ruby interface.
+# First one for static linking, second one for loading when used.
 # Note: you need the development package (e.g., ruby1.9.1-dev on Ubuntu).
 #CONF_OPT_RUBY = --enable-rubyinterp
+#CONF_OPT_RUBY = --enable-rubyinterp=dynamic
 #CONF_OPT_RUBY = --enable-rubyinterp --with-ruby-command=ruby1.9.1
 
 # TCL
@@ -1047,8 +1052,9 @@ INSTALL_PROG	= cp
 INSTALL_DATA	= cp
 INSTALL_DATA_R	= cp -r
 
-### Program to run on installed binary
+### Program to run on installed binary.  Use the second one to disable strip.
 #STRIP = strip
+#STRIP = /bin/true
 
 ### Permissions for binaries  {{{1
 BINMOD = 755
@@ -1321,7 +1327,7 @@ SHELL = /bin/sh
 .SUFFIXES: .c .o .pro
 
 PRE_DEFS = -Iproto $(DEFS) $(GUI_DEFS) $(GUI_IPATH) $(CPPFLAGS) $(EXTRA_IPATHS)
-POST_DEFS = $(X_CFLAGS) $(MZSCHEME_CFLAGS) $(TCL_CFLAGS) $(RUBY_CFLAGS) $(EXTRA_DEFS)
+POST_DEFS = $(X_CFLAGS) $(MZSCHEME_CFLAGS) $(TCL_CFLAGS) $(EXTRA_DEFS)
 
 ALL_CFLAGS = $(PRE_DEFS) $(CFLAGS) $(PROFILE_CFLAGS) $(POST_DEFS)
 
@@ -1329,7 +1335,7 @@ ALL_CFLAGS = $(PRE_DEFS) $(CFLAGS) $(PROFILE_CFLAGS) $(POST_DEFS)
 # with "-E".
 OSDEF_CFLAGS = $(PRE_DEFS) $(POST_DEFS)
 
-LINT_CFLAGS = -DLINT -I. $(PRE_DEFS) $(POST_DEFS) $(LUA_CFLAGS) $(PERL_CFLAGS) $(PYTHON_CFLAGS) -Dinline= -D__extension__= -Dalloca=alloca
+LINT_CFLAGS = -DLINT -I. $(PRE_DEFS) $(POST_DEFS) $(RUBY_CFLAGS) $(LUA_CFLAGS) $(PERL_CFLAGS) $(PYTHON_CFLAGS) -Dinline= -D__extension__= -Dalloca=alloca
 
 LINT_EXTRA = -DUSE_SNIFF -DHANGUL_INPUT -D"__attribute__(x)="
 
@@ -1695,7 +1701,8 @@ $(VIMTARGET): auto/config.mk objects $(OBJ) version.c version.h
 	$(CCC) version.c -o objects/version.o
 	@LINK="$(PURIFY) $(SHRPENV) $(CClink) $(ALL_LIB_DIRS) $(LDFLAGS) \
 		-o $(VIMTARGET) $(OBJ) objects/version.o $(ALL_LIBS)" \
-		MAKE="$(MAKE)" sh $(srcdir)/link.sh
+		MAKE="$(MAKE)" LINK_AS_NEEDED=$(LINK_AS_NEEDED) \
+		sh $(srcdir)/link.sh
 
 xxd/xxd$(EXEEXT): xxd/xxd.c
 	cd xxd; CC="$(CC)" CFLAGS="$(CPPFLAGS) $(CFLAGS)" \
@@ -2532,7 +2539,7 @@ objects/if_python3.o: if_python3.c if_py_both.h
 	$(CCC) $(PYTHON3_CFLAGS) $(PYTHON3_CFLAGS_EXTRA) -o $@ if_python3.c
 
 objects/if_ruby.o: if_ruby.c
-	$(CCC) -o $@ if_ruby.c
+	$(CCC) $(RUBY_CFLAGS) -o $@ if_ruby.c
 
 objects/if_sniff.o: if_sniff.c
 	$(CCC) -o $@ if_sniff.c

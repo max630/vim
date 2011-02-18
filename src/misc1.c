@@ -2919,7 +2919,7 @@ unchanged(buf, ff)
     buf_T	*buf;
     int		ff;	/* also reset 'fileformat' */
 {
-    if (buf->b_changed || (ff && file_ff_differs(buf)))
+    if (buf->b_changed || (ff && file_ff_differs(buf, FALSE)))
     {
 	buf->b_changed = 0;
 	ml_setflags(buf);
@@ -3114,10 +3114,11 @@ get_keystroke()
 	       && (!p_ttimeout || waited * 100L < (p_ttm < 0 ? p_tm : p_ttm)))
 	    continue;
 
-	/* found a termcode: adjust length */
-	if (n > 0)
+	if (n == KEYLEN_REMOVED)  /* key code removed */
+	    continue;
+	if (n > 0)		/* found a termcode: adjust length */
 	    len = n;
-	if (len == 0)	    /* nothing typed yet */
+	if (len == 0)		/* nothing typed yet */
 	    continue;
 
 	/* Handle modifier and/or special key code. */
@@ -9161,7 +9162,10 @@ unix_expandpath(gap, path, wildoff, flags, didstar)
 #ifdef CASE_INSENSITIVE_FILENAME
     regmatch.rm_ic = TRUE;		/* Behave like Terminal.app */
 #else
-    regmatch.rm_ic = FALSE;		/* Don't ever ignore case */
+    if (flags & EW_ICASE)
+	regmatch.rm_ic = TRUE;		/* 'wildignorecase' set */
+    else
+	regmatch.rm_ic = FALSE;		/* Don't ignore case */
 #endif
     regmatch.regprog = vim_regcomp(pat, RE_MAGIC);
     vim_free(pat);
@@ -9643,7 +9647,7 @@ expand_in_path(gap, pattern, flags)
     if (paths == NULL)
 	return 0;
 
-    files = globpath(paths, pattern, 0);
+    files = globpath(paths, pattern, (flags & EW_ICASE) ? WILD_ICASE : 0);
     vim_free(paths);
     if (files == NULL)
 	return 0;

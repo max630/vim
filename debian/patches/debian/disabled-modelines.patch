@@ -13,7 +13,7 @@ Index: b/runtime/doc/options.txt
 ===================================================================
 --- a/runtime/doc/options.txt
 +++ b/runtime/doc/options.txt
-@@ -4770,7 +4770,7 @@
+@@ -4790,7 +4790,7 @@
  
  				   *'modeline'* *'ml'* *'nomodeline'* *'noml'*
  'modeline' 'ml'		boolean	(Vim default: on (off for root),

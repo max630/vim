@@ -569,6 +569,10 @@ emsg(s)
     int		severe;
 #endif
 
+    /* Skip this if not giving error messages at the moment. */
+    if (emsg_not_now())
+	return TRUE;
+
     called_emsg = TRUE;
     ex_exitval = 1;
 
@@ -580,10 +584,6 @@ emsg(s)
     severe = emsg_severe;
     emsg_severe = FALSE;
 #endif
-
-    /* Skip this if not giving error messages at the moment. */
-    if (emsg_not_now())
-	return TRUE;
 
     if (!emsg_off || vim_strchr(p_debug, 't') != NULL)
     {
@@ -1637,8 +1637,16 @@ msg_prt_line(s, list)
 	else if (has_mbyte && (l = (*mb_ptr2len)(s)) > 1)
 	{
 	    col += (*mb_ptr2cells)(s);
-	    mch_memmove(buf, s, (size_t)l);
-	    buf[l] = NUL;
+	    if (lcs_nbsp != NUL && list && mb_ptr2char(s) == 160)
+	    {
+		mb_char2bytes(lcs_nbsp, buf);
+		buf[(*mb_ptr2len)(buf)] = NUL;
+	    }
+	    else
+	    {
+		mch_memmove(buf, s, (size_t)l);
+		buf[l] = NUL;
+	    }
 	    msg_puts(buf);
 	    s += l;
 	    continue;
@@ -1663,6 +1671,11 @@ msg_prt_line(s, list)
 		    c_extra = lcs_tab2;
 		    attr = hl_attr(HLF_8);
 		}
+	    }
+	    else if (c == 160 && list && lcs_nbsp != NUL)
+	    {
+		c = lcs_nbsp;
+		attr = hl_attr(HLF_8);
 	    }
 	    else if (c == NUL && list && lcs_eol != NUL)
 	    {
@@ -3315,7 +3328,7 @@ msg_advance(col)
  * different letter.
  */
     int
-do_dialog(type, title, message, buttons, dfltbutton, textfield)
+do_dialog(type, title, message, buttons, dfltbutton, textfield, ex_cmd)
     int		type UNUSED;
     char_u	*title UNUSED;
     char_u	*message;
@@ -3323,6 +3336,8 @@ do_dialog(type, title, message, buttons, dfltbutton, textfield)
     int		dfltbutton;
     char_u	*textfield UNUSED;	/* IObuff for inputdialog(), NULL
 					   otherwise */
+    int		ex_cmd;	    /* when TRUE pressing : accepts default and starts
+			       Ex command */
 {
     int		oldState;
     int		retval = 0;
@@ -3341,7 +3356,7 @@ do_dialog(type, title, message, buttons, dfltbutton, textfield)
     if (gui.in_use && vim_strchr(p_go, GO_CONDIALOG) == NULL)
     {
 	c = gui_mch_dialog(type, title, message, buttons, dfltbutton,
-								   textfield);
+							   textfield, ex_cmd);
 	/* avoid a hit-enter prompt without clearing the cmdline */
 	need_wait_return = FALSE;
 	emsg_on_display = FALSE;
@@ -3388,6 +3403,13 @@ do_dialog(type, title, message, buttons, dfltbutton, textfield)
 	    default:		/* Could be a hotkey? */
 		if (c < 0)	/* special keys are ignored here */
 		    continue;
+		if (c == ':' && ex_cmd)
+		{
+		    retval = dfltbutton;
+		    ins_char_typebuf(':');
+		    break;
+		}
+
 		/* Make the character lowercase, as chars in "hotkeys" are. */
 		c = MB_TOLOWER(c);
 		retval = 1;
@@ -3661,7 +3683,7 @@ vim_dialog_yesno(type, title, message, dflt)
     if (do_dialog(type,
 		title == NULL ? (char_u *)_("Question") : title,
 		message,
-		(char_u *)_("&Yes\n&No"), dflt, NULL) == 1)
+		(char_u *)_("&Yes\n&No"), dflt, NULL, FALSE) == 1)
 	return VIM_YES;
     return VIM_NO;
 }
@@ -3676,7 +3698,7 @@ vim_dialog_yesnocancel(type, title, message, dflt)
     switch (do_dialog(type,
 		title == NULL ? (char_u *)_("Question") : title,
 		message,
-		(char_u *)_("&Yes\n&No\n&Cancel"), dflt, NULL))
+		(char_u *)_("&Yes\n&No\n&Cancel"), dflt, NULL, FALSE))
     {
 	case 1: return VIM_YES;
 	case 2: return VIM_NO;
@@ -3695,7 +3717,7 @@ vim_dialog_yesnoallcancel(type, title, message, dflt)
 		title == NULL ? (char_u *)"Question" : title,
 		message,
 		(char_u *)_("&Yes\n&No\nSave &All\n&Discard All\n&Cancel"),
-								  dflt, NULL))
+							   dflt, NULL, FALSE))
     {
 	case 1: return VIM_YES;
 	case 2: return VIM_NO;

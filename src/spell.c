@@ -303,10 +303,6 @@
  *			    few bytes as possible, see offset2bytes())
  */
 
-#if defined(MSDOS) || defined(WIN16) || defined(WIN32) || defined(_WIN64)
-# include "vimio.h"	/* for lseek(), must be before vim.h */
-#endif
-
 #include "vim.h"
 
 #if defined(FEAT_SPELL) || defined(PROTO)
@@ -325,6 +321,16 @@
 typedef int idx_T;
 #else
 typedef long idx_T;
+#endif
+
+#ifdef VMS
+# define SPL_FNAME_TMPL  "%s_%s.spl"
+# define SPL_FNAME_ADD   "_add."
+# define SPL_FNAME_ASCII "_ascii."
+#else
+# define SPL_FNAME_TMPL  "%s.%s.spl"
+# define SPL_FNAME_ADD   ".add."
+# define SPL_FNAME_ASCII ".ascii."
 #endif
 
 /* Flags used for a word.  Only the lowest byte can be used, the region byte
@@ -2471,14 +2477,24 @@ spell_load_lang(lang)
 	 * Find the first spell file for "lang" in 'runtimepath' and load it.
 	 */
 	vim_snprintf((char *)fname_enc, sizeof(fname_enc) - 5,
-					"spell/%s.%s.spl", lang, spell_enc());
+#ifdef VMS
+					"spell/%s_%s.spl",
+#else
+					"spell/%s.%s.spl",
+#endif
+							   lang, spell_enc());
 	r = do_in_runtimepath(fname_enc, FALSE, spell_load_cb, &sl);
 
 	if (r == FAIL && *sl.sl_lang != NUL)
 	{
 	    /* Try loading the ASCII version. */
 	    vim_snprintf((char *)fname_enc, sizeof(fname_enc) - 5,
-						  "spell/%s.ascii.spl", lang);
+#ifdef VMS
+						  "spell/%s_ascii.spl",
+#else
+						  "spell/%s.ascii.spl",
+#endif
+									lang);
 	    r = do_in_runtimepath(fname_enc, FALSE, spell_load_cb, &sl);
 
 #ifdef FEAT_AUTOCMD
@@ -2496,7 +2512,12 @@ spell_load_lang(lang)
 
     if (r == FAIL)
     {
-	smsg((char_u *)_("Warning: Cannot find word list \"%s.%s.spl\" or \"%s.ascii.spl\""),
+	smsg((char_u *)
+#ifdef VMS
+	_("Warning: Cannot find word list \"%s_%s.spl\" or \"%s_ascii.spl\""),
+#else
+	_("Warning: Cannot find word list \"%s.%s.spl\" or \"%s.ascii.spl\""),
+#endif
 						     lang, spell_enc(), lang);
     }
     else if (sl.sl_slang != NULL)
@@ -2530,7 +2551,7 @@ spell_enc()
 int_wordlist_spl(fname)
     char_u	    *fname;
 {
-    vim_snprintf((char *)fname, MAXPATHL, "%s.%s.spl",
+    vim_snprintf((char *)fname, MAXPATHL, SPL_FNAME_TMPL,
 						  int_wordlist, spell_enc());
 }
 
@@ -2785,8 +2806,8 @@ spell_load_file(fname, lang, old_lp, silent)
 	if (lp->sl_fname == NULL)
 	    goto endFAIL;
 
-	/* Check for .add.spl. */
-	lp->sl_add = strstr((char *)gettail(fname), ".add.") != NULL;
+	/* Check for .add.spl (_add.spl for VMS). */
+	lp->sl_add = strstr((char *)gettail(fname), SPL_FNAME_ADD) != NULL;
     }
     else
 	lp = old_lp;
@@ -3613,7 +3634,7 @@ read_compound(fd, slang, len)
 	}
 
 	/* Add all flags to "sl_compallflags". */
-	if (vim_strchr((char_u *)"+*[]/", c) == NULL
+	if (vim_strchr((char_u *)"?*+[]/", c) == NULL
 		&& !byte_in_str(slang->sl_compallflags, c))
 	{
 	    *ap++ = c;
@@ -3643,7 +3664,7 @@ read_compound(fd, slang, len)
 	/* Copy flag to "sl_comprules", unless we run into a wildcard. */
 	if (crp != NULL)
 	{
-	    if (c == '+' || c == '*')
+	    if (c == '?' || c == '+' || c == '*')
 	    {
 		vim_free(slang->sl_comprules);
 		slang->sl_comprules = NULL;
@@ -3661,8 +3682,8 @@ read_compound(fd, slang, len)
 	}
 	else		    /* normal char, "[abc]" and '*' are copied as-is */
 	{
-	    if (c == '+' || c == '~')
-		*pp++ = '\\';	    /* "a+" becomes "a\+" */
+	    if (c == '?' || c == '+' || c == '~')
+		*pp++ = '\\';	    /* "a?" becomes "a\?", "a+" becomes "a\+" */
 #ifdef FEAT_MBYTE
 	    if (enc_utf8)
 		pp += mb_char2bytes(c, pp);
@@ -4930,6 +4951,8 @@ typedef struct spellinfo_S
 
     sblock_T	*si_blocks;	/* memory blocks used */
     long	si_blocks_cnt;	/* memory blocks allocated */
+    int		si_did_emsg;	/* TRUE when ran out of memory */
+
     long	si_compress_cnt;    /* words to add before lowering
 				       compression limit */
     wordnode_T	*si_first_free; /* List of nodes that have been freed during
@@ -5456,21 +5479,25 @@ spell_read_aff(spin, fname)
 	    }
 	    else if (is_aff_rule(items, itemcnt, "COMPOUNDRULE", 2))
 	    {
-		/* Concatenate this string to previously defined ones, using a
-		 * slash to separate them. */
-		l = (int)STRLEN(items[1]) + 1;
-		if (compflags != NULL)
-		    l += (int)STRLEN(compflags) + 1;
-		p = getroom(spin, l, FALSE);
-		if (p != NULL)
+		/* Don't use the first rule if it is a number. */
+		if (compflags != NULL || *skipdigits(items[1]) != NUL)
 		{
+		    /* Concatenate this string to previously defined ones,
+		     * using a slash to separate them. */
+		    l = (int)STRLEN(items[1]) + 1;
 		    if (compflags != NULL)
+			l += (int)STRLEN(compflags) + 1;
+		    p = getroom(spin, l, FALSE);
+		    if (p != NULL)
 		    {
-			STRCPY(p, compflags);
-			STRCAT(p, "/");
+			if (compflags != NULL)
+			{
+			    STRCPY(p, compflags);
+			    STRCAT(p, "/");
+			}
+			STRCAT(p, items[1]);
+			compflags = p;
 		    }
-		    STRCAT(p, items[1]);
-		    compflags = p;
 		}
 	    }
 	    else if (is_aff_rule(items, itemcnt, "COMPOUNDWORDMAX", 2)
@@ -6270,7 +6297,7 @@ process_compflags(spin, aff, compflags)
 
     for (p = compflags; *p != NUL; )
     {
-	if (vim_strchr((char_u *)"/*+[]", *p) != NULL)
+	if (vim_strchr((char_u *)"/?*+[]", *p) != NULL)
 	    /* Copy non-flag characters directly. */
 	    *tp++ = *p++;
 	else
@@ -6299,7 +6326,7 @@ process_compflags(spin, aff, compflags)
 		    {
 			check_renumber(spin);
 			id = spin->si_newcompID--;
-		    } while (vim_strchr((char_u *)"/+*[]\\-^", id) != NULL);
+		    } while (vim_strchr((char_u *)"/?*+[]\\-^", id) != NULL);
 		    ci->ci_newID = id;
 		    hash_add(&aff->af_comp, ci->ci_key);
 		}
@@ -7343,10 +7370,21 @@ getroom(spin, len, align)
 
     if (bl == NULL || bl->sb_used + len > SBLOCKSIZE)
     {
-	/* Allocate a block of memory. This is not freed until much later. */
-	bl = (sblock_T *)alloc_clear((unsigned)(sizeof(sblock_T) + SBLOCKSIZE));
+	if (len >= SBLOCKSIZE)
+	    bl = NULL;
+	else
+	    /* Allocate a block of memory. It is not freed until much later. */
+	    bl = (sblock_T *)alloc_clear(
+				   (unsigned)(sizeof(sblock_T) + SBLOCKSIZE));
 	if (bl == NULL)
+	{
+	    if (!spin->si_did_emsg)
+	    {
+		EMSG(_("E845: Insufficient memory, word list will be incomplete"));
+		spin->si_did_emsg = TRUE;
+	    }
 	    return NULL;
+	}
 	bl->sb_next = spin->si_blocks;
 	spin->si_blocks = bl;
 	bl->sb_used = 0;
@@ -7361,6 +7399,7 @@ getroom(spin, len, align)
 
 /*
  * Make a copy of a string into memory allocated with getroom().
+ * Returns NULL when out of memory.
  */
     static char_u *
 getroom_save(spin, s)
@@ -7395,6 +7434,7 @@ free_blocks(bl)
 
 /*
  * Allocate the root of a word tree.
+ * Returns NULL when out of memory.
  */
     static wordnode_T *
 wordtree_alloc(spin)
@@ -7679,6 +7719,7 @@ spell_check_msm()
 /*
  * Get a wordnode_T, either from the list of previously freed nodes or
  * allocate a new one.
+ * Returns NULL when out of memory.
  */
     static wordnode_T *
 get_wordnode(spin)
@@ -7696,7 +7737,8 @@ get_wordnode(spin)
 	--spin->si_free_count;
     }
 #ifdef SPELL_PRINTTREE
-    n->wn_nr = ++spin->si_wordnode_nr;
+    if (n != NULL)
+	n->wn_nr = ++spin->si_wordnode_nr;
 #endif
     return n;
 }
@@ -9109,8 +9151,8 @@ mkspell(fcount, fnames, ascii, overwrite, added_word)
 	    /* For ":mkspell path/vim" output file is "path/vim.latin1.spl". */
 	    innames = &fnames[0];
 	    incount = 1;
-	    vim_snprintf((char *)wfname, sizeof(wfname), "%s.%s.spl", fnames[0],
-			     spin.si_ascii ? (char_u *)"ascii" : spell_enc());
+	    vim_snprintf((char *)wfname, sizeof(wfname), SPL_FNAME_TMPL,
+		  fnames[0], spin.si_ascii ? (char_u *)"ascii" : spell_enc());
 	}
 	else if (len > 4 && STRCMP(fnames[0] + len - 4, ".spl") == 0)
 	{
@@ -9119,15 +9161,15 @@ mkspell(fcount, fnames, ascii, overwrite, added_word)
 	}
 	else
 	    /* Name should be language, make the file name from it. */
-	    vim_snprintf((char *)wfname, sizeof(wfname), "%s.%s.spl", fnames[0],
-			     spin.si_ascii ? (char_u *)"ascii" : spell_enc());
+	    vim_snprintf((char *)wfname, sizeof(wfname), SPL_FNAME_TMPL,
+		  fnames[0], spin.si_ascii ? (char_u *)"ascii" : spell_enc());
 
 	/* Check for .ascii.spl. */
-	if (strstr((char *)gettail(wfname), ".ascii.") != NULL)
+	if (strstr((char *)gettail(wfname), SPL_FNAME_ASCII) != NULL)
 	    spin.si_ascii = TRUE;
 
 	/* Check for .add.spl. */
-	if (strstr((char *)gettail(wfname), ".add.") != NULL)
+	if (strstr((char *)gettail(wfname), SPL_FNAME_ADD) != NULL)
 	    spin.si_add = TRUE;
     }
 
@@ -9839,10 +9881,7 @@ spell_iswordp(p, wp)
 	{
 	    /* be quick for ASCII */
 	    if (wp->w_s->b_spell_ismw[*p])
-	    {
 		s = p + 1;		/* skip a mid-word character */
-		l = MB_BYTE2LEN(*s);
-	    }
 	}
 	else
 	{
@@ -9850,10 +9889,7 @@ spell_iswordp(p, wp)
 	    if (c < 256 ? wp->w_s->b_spell_ismw[c]
 		    : (wp->w_s->b_spell_ismw_mb != NULL
 			   && vim_strchr(wp->w_s->b_spell_ismw_mb, c) != NULL))
-	    {
 		s = p + l;
-		l = MB_BYTE2LEN(*s);
-	    }
 	}
 
 	c = mb_ptr2char(s);
@@ -13813,11 +13849,8 @@ add_suggestion(su, gap, goodword, badlenarg, score, altscore, had_bonus,
 		    su->su_sfmaxscore = cleanup_suggestions(gap,
 				      su->su_sfmaxscore, SUG_CLEAN_COUNT(su));
 		else
-		{
-		    i = su->su_maxscore;
 		    su->su_maxscore = cleanup_suggestions(gap,
 					su->su_maxscore, SUG_CLEAN_COUNT(su));
-		}
 	    }
 	}
     }

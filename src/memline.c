@@ -42,10 +42,6 @@
  *  mf_get().
  */
 
-#if defined(MSDOS) || defined(WIN16) || defined(WIN32) || defined(_WIN64)
-# include "vimio.h"	/* for mch_open(), must be before vim.h */
-#endif
-
 #include "vim.h"
 
 #ifndef UNIX		/* it's in os_unix.h for Unix */
@@ -54,10 +50,6 @@
 
 #if defined(SASC) || defined(__amigaos4__)
 # include <proto/dos.h>	    /* for Open() and Close() */
-#endif
-
-#ifdef HAVE_ERRNO_H
-# include <errno.h>
 #endif
 
 typedef struct block0		ZERO_BL;    /* contents of the first block */
@@ -582,6 +574,9 @@ ml_set_crypt_key(buf, old_key, old_cm)
 	    idx = ip->ip_index + 1;	    /* go to next index */
 	    page_count = 1;
 	}
+
+	if (error > 0)
+	    EMSG(_("E843: Error while updating swap file crypt"));
     }
 
     mfp->mf_old_key = NULL;
@@ -2059,7 +2054,7 @@ swapfile_info(fname)
     fd = mch_open((char *)fname, O_RDONLY | O_EXTRA, 0);
     if (fd >= 0)
     {
-	if (read(fd, (char *)&b0, sizeof(b0)) == sizeof(b0))
+	if (read_eintr(fd, &b0, sizeof(b0)) == sizeof(b0))
 	{
 	    if (STRNCMP(b0.b0_version, "VIM 3.0", 7) == 0)
 	    {
@@ -2384,7 +2379,7 @@ theend:
  * Make a copy of the line if necessary.
  */
 /*
- * get a pointer to a (read-only copy of a) line
+ * Return a pointer to a (read-only copy of a) line.
  *
  * On failure an error message is given and IObuff is returned (to avoid
  * having to check for error everywhere).
@@ -2397,7 +2392,7 @@ ml_get(lnum)
 }
 
 /*
- * ml_get_pos: get pointer to position 'pos'
+ * Return pointer to position "pos".
  */
     char_u *
 ml_get_pos(pos)
@@ -2407,7 +2402,7 @@ ml_get_pos(pos)
 }
 
 /*
- * ml_get_curline: get pointer to cursor line.
+ * Return pointer to cursor line.
  */
     char_u *
 ml_get_curline()
@@ -2416,7 +2411,7 @@ ml_get_curline()
 }
 
 /*
- * ml_get_cursor: get pointer to cursor position
+ * Return pointer to cursor position.
  */
     char_u *
 ml_get_cursor()
@@ -2426,7 +2421,7 @@ ml_get_cursor()
 }
 
 /*
- * get a pointer to a line in a specific buffer
+ * Return a pointer to a line in a specific buffer
  *
  * "will_change": if TRUE mark the buffer dirty (chars in the line will be
  * changed)
@@ -4076,9 +4071,9 @@ attention_message(buf, fname)
     }
     /* Some of these messages are long to allow translation to
      * other languages. */
-    MSG_PUTS(_("\n(1) Another program may be editing the same file.\n    If this is the case, be careful not to end up with two\n    different instances of the same file when making changes.\n"));
-    MSG_PUTS(_("    Quit, or continue with caution.\n"));
-    MSG_PUTS(_("\n(2) An edit session for this file crashed.\n"));
+    MSG_PUTS(_("\n(1) Another program may be editing the same file.  If this is the case,\n    be careful not to end up with two different instances of the same\n    file when making changes."));
+    MSG_PUTS(_("  Quit, or continue with caution.\n"));
+    MSG_PUTS(_("(2) An edit session for this file crashed.\n"));
     MSG_PUTS(_("    If this is the case, use \":recover\" or \"vim -r "));
     msg_outtrans(buf->b_fname);
     MSG_PUTS(_("\"\n    to recover the changes (see \":help recovery\").\n"));
@@ -4389,7 +4384,7 @@ findswapname(buf, dirp, old_fname)
 		fd = mch_open((char *)fname, O_RDONLY | O_EXTRA, 0);
 		if (fd >= 0)
 		{
-		    if (read(fd, (char *)&b0, sizeof(b0)) == sizeof(b0))
+		    if (read_eintr(fd, &b0, sizeof(b0)) == sizeof(b0))
 		    {
 			/*
 			 * If the swapfile has the same directory as the
@@ -4521,7 +4516,7 @@ findswapname(buf, dirp, old_fname)
 				    process_still_running
 					? (char_u *)_("&Open Read-Only\n&Edit anyway\n&Recover\n&Quit\n&Abort") :
 # endif
-					(char_u *)_("&Open Read-Only\n&Edit anyway\n&Recover\n&Delete it\n&Quit\n&Abort"), 1, NULL);
+					(char_u *)_("&Open Read-Only\n&Edit anyway\n&Recover\n&Delete it\n&Quit\n&Abort"), 1, NULL, FALSE);
 
 # if defined(UNIX) || defined(__EMX__) || defined(VMS)
 			if (process_still_running && choice >= 4)

@@ -289,13 +289,13 @@ typedef struct tagNMTTDISPINFOW {
 
 #ifdef FEAT_MENU
 static UINT	s_menu_id = 100;
+#endif
 
 /*
  * Use the system font for dialogs and tear-off menus.  Remove this line to
  * use DLG_FONT_NAME.
  */
-# define USE_SYSMENU_FONT
-#endif
+#define USE_SYSMENU_FONT
 
 #define VIM_NAME	"vim"
 #define VIM_CLASS	"Vim"
@@ -1571,6 +1571,11 @@ gui_mch_init(void)
     s_findrep_struct_w.wFindWhatLen = MSWIN_FR_BUFSIZE;
     s_findrep_struct_w.wReplaceWithLen = MSWIN_FR_BUFSIZE;
 # endif
+#endif
+
+#ifdef FEAT_EVAL
+    /* set the v:windowid variable */
+    set_vim_var_nr(VV_WINDOWID, (long)s_hwnd);
 #endif
 
 theend:
@@ -3000,7 +3005,8 @@ gui_mch_dialog(
     char_u	*message,
     char_u	*buttons,
     int		 dfltbutton,
-    char_u	*textfield)
+    char_u	*textfield,
+    int		ex_cmd)
 {
     WORD	*p, *pdlgtemplate, *pnumitems;
     DWORD	*dwp;

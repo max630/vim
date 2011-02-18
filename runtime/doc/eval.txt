@@ -1,4 +1,4 @@
-*eval.txt*	For Vim version 7.3.  Last change: 2010 Oct 18
+*eval.txt*	For Vim version 7.3.  Last change: 2011 Feb 07
 
 
 		  VIM REFERENCE MANUAL	  by Bram Moolenaar
@@ -1542,8 +1542,9 @@ v:progname	Contains the name (with path removed) with which Vim was
 		Read-only.
 
 					*v:register* *register-variable*
-v:register	The name of the register supplied to the last normal mode
-		command.  Empty if none were supplied. |getreg()| |setreg()|
+v:register	The name of the register in effect for the current normal mode
+		command.  If none is supplied it is the default register.
+		Also see |getreg()| and |setreg()|
 
 					*v:scrollstart* *scrollstart-variable*
 v:scrollstart	String describing the script or function that caused the
@@ -1660,7 +1661,11 @@ v:warningmsg	Last given warning message.  It's allowed to set this variable.
 					*v:windowid* *windowid-variable*
 v:windowid	When any X11 based GUI is running or when running in a
 		terminal and Vim connects to the X server (|-X|) this will be
-		set to the window ID.  Otherwise the value is zero.
+		set to the window ID.
+		When an MS-Windows GUI is running this will be set to the
+		window handle.
+		Otherwise the value is zero.
+		Note: for windows inside Vim use |winnr()|.
 
 ==============================================================================
 4. Builtin Functions					*functions*
@@ -1916,7 +1921,7 @@ spellsuggest( {word} [, {max} [, {capital}]])
 				List	spelling suggestions
 split( {expr} [, {pat} [, {keepempty}]])
 				List	make |List| from {pat} separated {expr}
-sqrt( {expr}			Float	squar root of {expr}
+sqrt( {expr})			Float	square root of {expr}
 str2float( {expr})		Float	convert String to Float
 str2nr( {expr} [, {base}])	Number	convert String to Number
 strchars( {expr})		Number	character length of the String {expr}
@@ -1955,7 +1960,7 @@ tolower( {expr})		String	the String {expr} switched to lowercase
 toupper( {expr})		String	the String {expr} switched to uppercase
 tr( {src}, {fromstr}, {tostr})	String	translate chars of {src} in {fromstr}
 					to chars in {tostr}
-trunc( {expr}			Float	truncate Float {expr}
+trunc( {expr})			Float	truncate Float {expr}
 type( {name})			Number	type of variable {name}
 undofile( {name})		String	undo file name for {name}
 undotree()			List	undo file tree
@@ -2716,7 +2721,7 @@ exp({expr})						*exp()*
 
 expand({expr} [, {flag}])				*expand()*
 		Expand wildcards and the following special keywords in {expr}.
-		The result is a String.
+		The result is a String.  'wildignorecase' applies.
 
 		When there are several matches, they are separated by <NL>
 		characters.  [Note: in version 5.0 a space was used, which
@@ -2737,6 +2742,7 @@ expand({expr} [, {flag}])				*expand()*
 			<abuf>		autocmd buffer number (as a String!)
 			<amatch>	autocmd matched name
 			<sfile>		sourced script file name
+			<slnum>		sourced script file line number
 			<cword>		word under the cursor
 			<cWORD>		WORD under the cursor
 			<client>	the {clientid} of the last received
@@ -3430,6 +3436,7 @@ glob({expr} [, {flag}])					*glob()*
 		the 'suffixes' and 'wildignore' options apply: Names matching
 		one of the patterns in 'wildignore' will be skipped and
 		'suffixes' affect the ordering of matches.
+		'wildignorecase' always applies.
 		If the expansion fails, the result is an empty string.
 		A name for a non-existing file is not included.
 
@@ -4005,7 +4012,7 @@ maparg({name}[, {mode} [, {abbr} [, {dict}]]])			*maparg()*
 		  "lhs"	     The {lhs} of the mapping.
 		  "rhs"	     The {rhs} of the mapping as typed.
 		  "silent"   1 for a |:map-silent| mapping, else 0.
-		  "noremap"  1 if the {rhs} of the mapping is remappable.
+		  "noremap"  1 if the {rhs} of the mapping is not remappable.
 		  "expr"     1 for an expression mapping (|:map-<expr>|).
 		  "buffer"   1 for a buffer local mapping (|:map-local|).
 		  "mode"     Modes for which the mapping is defined. In
@@ -4013,9 +4020,9 @@ maparg({name}[, {mode} [, {abbr} [, {dict}]]])			*maparg()*
 			     characters will be used:
 			     " "     Normal, Visual and Operator-pending
 			     "!"     Insert and Commandline mode
-				     (|mapmpde-ic|)
-		  "sid"	     the Script local ID, used for <sid> mappings
-			     (|<SID>|)
+				     (|mapmode-ic|)
+		  "sid"	     The script local ID, used for <sid> mappings
+			     (|<SID>|).
 
 		The mappings local to the current buffer are checked first,
 		then the global mappings.
@@ -5450,8 +5457,8 @@ stridx({haystack}, {needle} [, {start}])		*stridx()*
 		{haystack} of the first occurrence of the String {needle}.
 		If {start} is specified, the search starts at index {start}.
 		This can be used to find a second match: >
-			:let comma1 = stridx(line, ",")
-			:let comma2 = stridx(line, ",", comma1 + 1)
+			:let colon1 = stridx(line, ":")
+			:let colon2 = stridx(line, ":", colon1 + 1)
 <		The search is done case-sensitive.
 		For pattern searches use |match()|.
 		-1 is returned if the {needle} does not occur in {haystack}.
@@ -6127,17 +6134,17 @@ cmdline_compl		Compiled with |cmdline-completion| support.
 cmdline_hist		Compiled with |cmdline-history| support.
 cmdline_info		Compiled with 'showcmd' and 'ruler' support.
 comments		Compiled with |'comments'| support.
+compatible		Compiled to be very Vi compatible.
 cryptv			Compiled with encryption support |encryption|.
 cscope			Compiled with |cscope| support.
-compatible		Compiled to be very Vi compatible.
 debug			Compiled with "DEBUG" defined.
 dialog_con		Compiled with console dialog support.
 dialog_gui		Compiled with GUI dialog support.
 diff			Compiled with |vimdiff| and 'diff' support.
 digraphs		Compiled with support for digraphs.
 dnd			Compiled with support for the "~ register |quote_~|.
-dos32			32 bits DOS (DJGPP) version of Vim.
 dos16			16 bits DOS version of Vim.
+dos32			32 bits DOS (DJGPP) version of Vim.
 ebcdic			Compiled on a machine with ebcdic character set.
 emacs_tags		Compiled with support for Emacs tags.
 eval			Compiled with expression evaluation support.  Always
@@ -6160,15 +6167,15 @@ fork			Compiled to use fork()/exec() instead of system().
 gettext			Compiled with message translation |multi-lang|
 gui			Compiled with GUI enabled.
 gui_athena		Compiled with Athena GUI.
+gui_gnome		Compiled with Gnome support (gui_gtk is also defined).
 gui_gtk			Compiled with GTK+ GUI (any version).
 gui_gtk2		Compiled with GTK+ 2 GUI (gui_gtk is also defined).
-gui_gnome		Compiled with Gnome support (gui_gtk is also defined).
 gui_mac			Compiled with Macintosh GUI.
 gui_motif		Compiled with Motif GUI.
 gui_photon		Compiled with Photon GUI.
+gui_running		Vim is running in the GUI, or it will start soon.
 gui_win32		Compiled with MS Windows Win32 GUI.
 gui_win32s		idem, and Win32s system being used (Windows 3.1)
-gui_running		Vim is running in the GUI, or it will start soon.
 hangul_input		Compiled with Hangul input support. |hangul|
 iconv			Can use iconv() for conversion.
 insert_expand		Compiled with support for CTRL-X expansion commands in
@@ -6190,20 +6197,20 @@ menu			Compiled with support for |:menu|.
 mksession		Compiled with support for |:mksession|.
 modify_fname		Compiled with file name modifiers. |filename-modifiers|
 mouse			Compiled with support mouse.
-mouseshape		Compiled with support for 'mouseshape'.
 mouse_dec		Compiled with support for Dec terminal mouse.
 mouse_gpm		Compiled with support for gpm (Linux console mouse)
 mouse_netterm		Compiled with support for netterm mouse.
 mouse_pterm		Compiled with support for qnx pterm mouse.
 mouse_sysmouse		Compiled with support for sysmouse (*BSD console mouse)
 mouse_xterm		Compiled with support for xterm mouse.
+mouseshape		Compiled with support for 'mouseshape'.
 multi_byte		Compiled with support for 'encoding'
 multi_byte_encoding	'encoding' is set to a multi-byte encoding.
 multi_byte_ime		Compiled with support for IME input method.
 multi_lang		Compiled with support for multiple languages.
 mzscheme		Compiled with MzScheme interface |mzscheme|.
-netbeans_intg		Compiled with support for |netbeans|.
 netbeans_enabled	Compiled with support for |netbeans| and connected.
+netbeans_intg		Compiled with support for |netbeans|.
 ole			Compiled with OLE automation support for Win32.
 os2			OS/2 version of Vim.
 osfiletype		Compiled with support for osfiletypes |+osfiletype|
@@ -6224,11 +6231,11 @@ showcmd			Compiled with 'showcmd' support.
 signs			Compiled with |:sign| support.
 smartindent		Compiled with 'smartindent' support.
 sniff			Compiled with SNiFF interface support.
+spell			Compiled with spell checking support |spell|.
 startuptime		Compiled with |--startuptime| support.
 statusline		Compiled with support for 'statusline', 'rulerformat'
 			and special formats of 'titlestring' and 'iconstring'.
 sun_workshop		Compiled with support for Sun |workshop|.
-spell			Compiled with spell checking support |spell|.
 syntax			Compiled with syntax highlighting support |syntax|.
 syntax_items		There are active syntax highlighting items for the
 			current buffer.
@@ -6249,9 +6256,9 @@ title			Compiled with window title support |'title'|.
 toolbar			Compiled with support for |gui-toolbar|.
 unix			Unix version of Vim.
 user_commands		User-defined commands.
-viminfo			Compiled with viminfo support.
-vim_starting		True while initial source'ing takes place. |startup|
 vertsplit		Compiled with vertically split windows |:vsplit|.
+vim_starting		True while initial source'ing takes place. |startup|
+viminfo			Compiled with viminfo support.
 virtualedit		Compiled with 'virtualedit' option.
 visual			Compiled with Visual mode.
 visualextra		Compiled with extra Visual mode commands.
@@ -6260,13 +6267,14 @@ vms			VMS version of Vim.
 vreplace		Compiled with |gR| and |gr| commands.
 wildignore		Compiled with 'wildignore' option.
 wildmenu		Compiled with 'wildmenu' option.
-windows			Compiled with support for more than one window.
-winaltkeys		Compiled with 'winaltkeys' option.
 win16			Win16 version of Vim (MS-Windows 3.1).
-win32			Win32 version of Vim (MS-Windows 95/98/ME/NT/2000/XP).
-win64			Win64 version of Vim (MS-Windows 64 bit).
+win32			Win32 version of Vim (MS-Windows 95 and later, 32 or
+			64 bits)
 win32unix		Win32 version of Vim, using Unix files (Cygwin)
+win64			Win64 version of Vim (MS-Windows 64 bit).
 win95			Win32 version for MS-Windows 95/98/ME.
+winaltkeys		Compiled with 'winaltkeys' option.
+windows			Compiled with support for more than one window.
 writebackup		Compiled with 'writebackup' default on.
 xfontset		Compiled with X fontset support |xfontset|.
 xim			Compiled with X input method support |xim|.

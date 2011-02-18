@@ -510,8 +510,13 @@ EXTERN VimClipboard clip_star;	/* PRIMARY selection in X11 */
 EXTERN VimClipboard clip_plus;	/* CLIPBOARD selection in X11 */
 # else
 #  define clip_plus clip_star	/* there is only one clipboard */
+#  define ONE_CLIPBOARD
 # endif
-EXTERN int	clip_unnamed INIT(= FALSE);
+
+#define CLIP_UNNAMED      1
+#define CLIP_UNNAMED_PLUS 2
+EXTERN int	clip_unnamed INIT(= 0); /* above two values or'ed */
+
 EXTERN int	clip_autoselect INIT(= FALSE);
 EXTERN int	clip_autoselectml INIT(= FALSE);
 EXTERN int	clip_html INIT(= FALSE);
@@ -1051,10 +1056,6 @@ EXTERN pos_T	last_cursormoved	    /* for CursorMoved event */
 # endif
 			;
 #endif
-
-EXTERN linenr_T	write_no_eol_lnum INIT(= 0); /* non-zero lnum when last line
-						of next binary write should
-						not have an end-of-line */
 
 #ifdef FEAT_WINDOWS
 EXTERN int	postponed_split INIT(= 0);  /* for CTRL-W CTRL-] command */
