@@ -11,6 +11,8 @@ vim (2:7.3.135+hg~0139403c8eb0-1) UNRELEASED; urgency=low
   * Add upstream/es.po-recover.patch, which corrects the translation of the
     swap file recovery prompt.  Thanks to vituko for the patch.  (Closes:
     #606947)
+  * debian/rules:
+    + Remove -Wl,--as-needed since upstream now uses that when available.
 
  -- James Vega <jamessan@debian.org>  Sat, 26 Feb 2011 15:43:33 -0500
 
