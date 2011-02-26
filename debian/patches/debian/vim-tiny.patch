@@ -51,7 +51,7 @@ Index: b/src/os_unix.h
 ===================================================================
 --- a/src/os_unix.h
 +++ b/src/os_unix.h
-@@ -237,6 +237,9 @@
+@@ -233,6 +233,9 @@
  /*
   * Unix system-dependent file names
   */
