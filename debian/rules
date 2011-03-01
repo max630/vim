@@ -61,19 +61,22 @@ GTK2FLAGS:=--enable-gui=gtk2
 GTK2FLAGS+=--enable-gtk2-check
 GTK2FLAGS+=--disable-gnome-check
 GTK2FLAGS+=--disable-motif-check
+GTK2FLAGS+=--disable-athena-check
 GTK2FLAGS+=--disable-fontset
 
 GNOMEFLAGS:=--enable-gui=gnome2
 GNOMEFLAGS+=--disable-gtk2-check
 GNOMEFLAGS+=--enable-gnome-check
 GNOMEFLAGS+=--disable-motif-check
+GNOMEFLAGS+=--disable-athena-check
 GNOMEFLAGS+=--disable-fontset
 
-LESSTIFFLAGS:=--enable-gui=motif
-LESSTIFFLAGS+=--disable-gtk2-check
-LESSTIFFLAGS+=--disable-gnome-check
-LESSTIFFLAGS+=--enable-motif-check
-LESSTIFFLAGS+=--enable-fontset
+ATHENAFLAGS:=--enable-gui=athena
+ATHENAFLAGS+=--disable-gtk2-check
+ATHENAFLAGS+=--disable-gnome-check
+ATHENAFLAGS+=--disable-motif-check
+ATHENAFLAGS+=--enable-athena-check
+ATHENAFLAGS+=--enable-fontset
 
 NOINTERPFLAGS:=--disable-luainterp
 NOINTERPFLAGS+=--disable-mzschemeinterp
@@ -106,7 +109,7 @@ ALLINTERPFLAGS+=--enable-tclinterp
 VARIANTS+=vim-tiny
 VARIANTS+=vim-gtk
 VARIANTS+=vim-gnome
-VARIANTS+=vim-lesstif
+VARIANTS+=vim-athena
 VARIANTS+=vim-nox
 VARIANTS+=vim-basic
 
@@ -126,8 +129,8 @@ CFGFLAGS_vim-gtk:=$(CFGFLAGS) $(OPTFLAGS) $(GUIFLAGS) $(GTKFLAGS) $(ALLINTERPFLA
 CFLAGS_vim-gnome:=$(CFLAGS)
 CFGFLAGS_vim-gnome:=$(CFGFLAGS) $(OPTFLAGS) $(GUIFLAGS) $(GNOMEFLAGS) $(ALLINTERPFLAGS)
 
-CFLAGS_vim-lesstif:=$(CFLAGS)
-CFGFLAGS_vim-lesstif:=$(CFGFLAGS) $(OPTFLAGS) $(GUIFLAGS) $(LESSTIFFLAGS) $(ALLINTERPFLAGS)
+CFLAGS_vim-athena:=$(CFLAGS)
+CFGFLAGS_vim-athena:=$(CFGFLAGS) $(OPTFLAGS) $(GUIFLAGS) $(ATHENAFLAGS) $(ALLINTERPFLAGS)
 
 CFLAGS_vim-nox:=$(CFLAGS)
 CFGFLAGS_vim-nox:=$(CFGFLAGS) $(OPTFLAGS) $(NOXFLAGS) $(ALLINTERPFLAGS)
@@ -261,7 +264,7 @@ build-stamp-%: configure-stamp-%
 
 install: $(foreach v,$(VARIANTS),install-stamp-$(v))
 
-install-stamp-indep: export DH_OPTIONS=-pvim-doc
+install-stamp-indep: export DH_OPTIONS=-i -Nvim-gui-common -Nvim-runtime
 install-stamp-indep: build-stamp-indep
 	dh_testdir
 	dh_testroot

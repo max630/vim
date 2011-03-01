@@ -13,6 +13,7 @@ vim (2:7.3.135+hg~0139403c8eb0-1) UNRELEASED; urgency=low
     #606947)
   * debian/rules:
     + Remove -Wl,--as-needed since upstream now uses that when available.
+  * Add a vim-athena package as a replacement for vim-lesstif.
 
  -- James Vega <jamessan@debian.org>  Sat, 26 Feb 2011 15:43:33 -0500
 

@@ -9,7 +9,7 @@ Build-Depends: debhelper (>= 5), libacl1-dev, libgpmg1-dev [linux-any],
 # B-D for dpkg-vendor
  dpkg-dev (>= 1.15.1),
 # B-D for GUI support
- libgtk2.0-dev, libgnomeui-dev, lesstif2-dev, libxt-dev, libxpm-dev,
+ libgtk2.0-dev, libgnomeui-dev, libxaw7-dev, libxt-dev, libxpm-dev,
 # B-D for language interpreters
  libperl-dev, tcl-dev, python-dev, ruby, ruby1.8-dev, python3-dev, lua5.1,
  liblua5.1-dev
@@ -175,21 +175,28 @@ Description: Vi IMproved - enhanced vi editor
  This package contains a version of vim compiled with support for
  scripting with Perl, Python, Ruby, and Tcl but no GUI.
 
-Package: vim-lesstif
+Package: vim-athena
 Priority: extra
 Architecture: any
 Depends: vim-gui-common (= ${source:Version}), vim-common (= ${binary:Version}), vim-runtime (= ${source:Version}), ${misc:Depends}, ${shlibs:Depends}
-Suggests: cscope, vim-doc, ttf-dejavu
+Suggests: cscope, vim-doc
 Provides: vim, gvim, editor, vim-perl, vim-python, vim-ruby, vim-tcl
-Description: Vi IMproved - enhanced vi editor - with LessTif GUI
+Description: Vi IMproved - enhanced vi editor - with Athena GUI
  Vim is an almost compatible version of the UNIX editor Vi.
  .
  Many new features have been added: multi level undo, syntax
  highlighting, command line history, on-line help, filename
  completion, block operations, folding, Unicode support, etc.
  .
- This package contains a version of vim compiled with a LessTif GUI
+ This package contains a version of vim compiled with a Athena GUI
  and support for scripting with Perl, Python, Ruby, and Tcl.
+
+Package: vim-lesstif
+Priority: extra
+Architecture: all
+Depends: vim-athena
+Description: Vi IMproved - enhanced vi editor (transitional package)
+ This package is a transitional package from vim-lesstif to vim-athena.
 
 Package: vim-gnome
 Priority: extra
