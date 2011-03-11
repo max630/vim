@@ -1,6 +1,6 @@
-vim (2:7.3.135+hg~0139403c8eb0-1) UNRELEASED; urgency=low
+vim (2:7.3.138+hg~ea399ac2c1b9-1) UNRELEASED; urgency=low
 
-  * Pull patches 036 - 135.  (Closes: #608390)
+  * Pull patches 036 - 138.  (Closes: #608390)
     + 7.3.042: Clear the spell checking info only when clearing the options
       for a buffer.  (Closes: #600688)
     + 7.3.088: Fix a sporadic crash when using Ruby bindings.  (Closes:
@@ -15,7 +15,7 @@ vim (2:7.3.135+hg~0139403c8eb0-1) UNRELEASED; urgency=low
     + Remove -Wl,--as-needed since upstream now uses that when available.
   * Add a vim-athena package as a replacement for vim-lesstif.
 
- -- James Vega <jamessan@debian.org>  Sat, 26 Feb 2011 15:43:33 -0500
+ -- James Vega <jamessan@debian.org>  Thu, 10 Mar 2011 22:02:39 -0500
 
 vim (2:7.3.035+hg~8fdc12103333-1) unstable; urgency=low
 
