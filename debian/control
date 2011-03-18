@@ -22,7 +22,7 @@ Package: vim-common
 Priority: important
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
-Recommends: vim | vim-gnome | vim-gtk | vim-lesstif | vim-nox | vim-tiny
+Recommends: vim | vim-gnome | vim-gtk | vim-athena | vim-nox | vim-tiny
 Description: Vi IMproved - Common files
  Vim is an almost compatible version of the UNIX editor Vi.
  .
@@ -37,7 +37,7 @@ Description: Vi IMproved - Common files
 
 Package: vim-gui-common
 Architecture: all
-Recommends: vim-gnome | vim-gtk | vim-lesstif
+Recommends: vim-gnome | vim-gtk | vim-athena
 Depends: ${misc:Depends}
 Breaks: vim-runtime (<< 2:7.2.438+hg~d44112feb815-3)
 Replaces: vim-runtime (<< 2:7.2.438+hg~d44112feb815-3)
@@ -58,7 +58,7 @@ Depends: ${misc:Depends}
 # Upgrades across major versions need to update vim-tiny first, otherwise
 # vim-runtime's removal of the old diversions will fail
 Breaks: vim-tiny (<< ${source:Version})
-Recommends: vim | vim-gnome | vim-gtk | vim-lesstif | vim-nox | vim-tiny
+Recommends: vim | vim-gnome | vim-gtk | vim-athena | vim-nox | vim-tiny
 Enhances: vim-tiny
 Description: Vi IMproved - Runtime files
  Vim is an almost compatible version of the UNIX editor Vi.
@@ -132,7 +132,7 @@ Priority: extra
 Architecture: any
 Depends: vim (= ${binary:Version}) | vim-gtk (= ${binary:Version}) |
  vim-gnome (= ${binary:Version}) | vim-nox (= ${binary:Version}) |
- vim-common (= ${binary:Version}) | vim-lesstif (= ${binary:Version}) |
+ vim-common (= ${binary:Version}) | vim-athena (= ${binary:Version}) |
  vim-tiny (= ${binary:Version}), ${misc:Depends}
 Description: Vi IMproved - enhanced vi editor (debugging symbols)
  Vim is an almost compatible version of the UNIX editor Vi.
