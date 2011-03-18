@@ -9,8 +9,8 @@ vim (2:7.3.138+hg~ea399ac2c1b9-1) UNRELEASED; urgency=low
       session.  (Closes: #608242)
   * debian/watch: Adjust dversionmangle to handle the hg naming.
   * Add upstream/es.po-recover.patch, which corrects the translation of the
-    swap file recovery prompt.  Thanks to vituko for the patch.  (Closes:
-    #606947)
+    swap file recovery prompt.  Thanks to Vicente Couce Díaz for the patch.
+    (Closes: #606947)
   * debian/rules:
     + Remove -Wl,--as-needed since upstream now uses that when available.
   * Add a vim-athena package as a replacement for vim-lesstif.

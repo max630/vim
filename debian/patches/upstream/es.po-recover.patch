@@ -1,6 +1,6 @@
 Subject: Correct Spanish translation for swap file recovery
 Forwarded: no
-Author: Vituko <vituko@debian.org>
+Author: Vicente Couce Díaz <vituko@gmail.com>
 Bug-Debian: http://bugs.debian.org/606947
 
 Index: b/src/po/es.po
