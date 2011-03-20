@@ -8,6 +8,7 @@ upstream/dosini-syntax-hash.patch
 upstream/extra-rst-detection.patch
 upstream/crontab-syntax-case-ignore.patch
 upstream/es.po-recover.patch
+upstream/pythoncomplete-autoload-init.patch
 debian/vim-tiny.patch
 debian/disabled-modelines.patch
 debian/awk-shebang.patch
