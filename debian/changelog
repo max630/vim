@@ -13,6 +13,7 @@ vim (2:7.3.138+hg~ea399ac2c1b9-1) UNRELEASED; urgency=low
     (Closes: #606947)
   * debian/rules:
     + Remove -Wl,--as-needed since upstream now uses that when available.
+    + Switch Ruby interface to dynamic loading.
   * Add a vim-athena package as a replacement for vim-lesstif.
 
  -- James Vega <jamessan@debian.org>  Thu, 10 Mar 2011 22:02:39 -0500

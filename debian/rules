@@ -96,7 +96,7 @@ ALLINTERPFLAGS+=--disable-mzschemeinterp
 ALLINTERPFLAGS+=--enable-perlinterp=dynamic
 ALLINTERPFLAGS+=--enable-pythoninterp=dynamic
 ALLINTERPFLAGS+=--enable-python3interp=dynamic
-ALLINTERPFLAGS+=--enable-rubyinterp
+ALLINTERPFLAGS+=--enable-rubyinterp=dynamic
 ALLINTERPFLAGS+=--enable-tclinterp
 
 # Each vim-xxx package is said to be a vim variant and contains only a vim
