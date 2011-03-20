@@ -18,6 +18,9 @@ vim (2:7.3.138+hg~ea399ac2c1b9-1) UNRELEASED; urgency=low
   * Add upstream/pythoncomplete-autoload-init.patch, which ensures PyParser's
     parserline variable is initialized.  Thanks to John Eikenberry for the
     patch.  (Closes: #608420)
+  * Bump debhelper compatibility to 7.
+    + Use dh_prep instead of dh_clean -k.
+    + Bump debhelper Build-Depends to >= 7.
 
  -- James Vega <jamessan@debian.org>  Thu, 10 Mar 2011 22:02:39 -0500
 
