@@ -14,7 +14,7 @@ vim (2:7.3.138+hg~ea399ac2c1b9-1) UNRELEASED; urgency=low
   * debian/rules:
     + Remove -Wl,--as-needed since upstream now uses that when available.
     + Switch Ruby interface to dynamic loading.
-  * Add a vim-athena package as a replacement for vim-lesstif.
+  * Remove vim-lesstif package in favor of the new vim-athena package.
   * Add upstream/pythoncomplete-autoload-init.patch, which ensures PyParser's
     parserline variable is initialized.  Thanks to John Eikenberry for the
     patch.  (Closes: #608420)
