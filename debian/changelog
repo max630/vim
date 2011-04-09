@@ -25,6 +25,9 @@ vim (2:7.3.154+hg~74503f6ee649-1) UNRELEASED; urgency=low
   * debian.vim: Remove BufRead autocmd which was incorrectly setting
     filetype=mail for reportbug.conf.  Reportbug's temp files are always
     reportbug-*.  (Closes: #621798)
+  * Add upstream/debcontrol-syntax-multiarch.patch, which adds syntax
+    highlighting of Multi-Arch fields in debian/control.  Thanks to Thomas
+    Preud'homme for the patch.  (Closes: #621098)
 
  -- James Vega <jamessan@debian.org>  Thu, 10 Mar 2011 22:02:39 -0500
 
