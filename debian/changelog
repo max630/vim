@@ -33,6 +33,10 @@ vim (2:7.3.154+hg~74503f6ee649-1) UNRELEASED; urgency=low
       if dynamically loading the language binding libraries.
     + Change ruby Build-Depends to ruby1.8 since the unversioned packages are
       going away.
+  * Add upstream/Makefile-parallel.patch, which adds the "shadow" target to
+    the top-level Makefile so src/config.mk.dist is properly copied to
+    src/auto/config.mk before invoking src/Makefile.  This fixes parallel
+    builds since config.mk.dist was introduced.
 
  -- James Vega <jamessan@debian.org>  Thu, 10 Mar 2011 22:02:39 -0500
 

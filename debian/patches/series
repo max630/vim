@@ -10,6 +10,7 @@ upstream/crontab-syntax-case-ignore.patch
 upstream/es.po-recover.patch
 upstream/pythoncomplete-autoload-init.patch
 upstream/debcontrol-syntax-multiarch.patch
+upstream/Makefile-parallel.patch
 debian/vim-tiny.patch
 debian/disabled-modelines.patch
 debian/awk-shebang.patch
