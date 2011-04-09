@@ -219,6 +219,7 @@ build-indep: build-stamp-indep
 build-stamp-indep: export DH_OPTIONS=-pvim-doc
 build-stamp-indep:
 	dh_testdir
+	dh_prep
 	$(MAKE) -C runtime/doc html
 	$(MAKE) -C debian/policy text html
 	$(MAKE) -C src/po vim.pot
@@ -255,6 +256,7 @@ build-stamp-%: CURCFLAGS=$(CFLAGS_$*)
 build-stamp-%: SHADOWDIR=$*
 build-stamp-%: configure-stamp-%
 	dh_testdir
+	dh_prep -p $*
 	@echo "*** DEBIAN *** BUILDING VARIANT $*"
 	$(MAKE) -C src/$(SHADOWDIR)
 	touch $@
@@ -265,7 +267,6 @@ install-stamp-indep: export DH_OPTIONS=-i -Nvim-gui-common -Nvim-runtime
 install-stamp-indep: build-stamp-indep
 	dh_testdir
 	dh_testroot
-	dh_prep
 	dh_installdirs
 	dh_install
 	dh_installchangelogs
@@ -277,7 +278,6 @@ install-stamp-vim-basic: DESTDIR=$(CURDIR)/debian/tmp
 install-stamp-vim-basic: build-stamp-vim-basic $(DOT_IN_DEPS)
 	dh_testdir
 	dh_testroot
-	dh_prep
 	@echo "*** DEBIAN *** INSTALLING VARIANT vim-basic"
 	dh_installdirs
 	
@@ -411,7 +411,6 @@ install-stamp-vim-tiny: DESTDIR=$(CURDIR)/debian/vim-tiny
 install-stamp-vim-tiny: build-stamp-vim-tiny $(DOT_IN_DEPS_TINY)
 	dh_testdir
 	dh_testroot
-	dh_prep
 	@echo "*** DEBIAN *** INSTALLING VARIANT vim-tiny"
 	dh_installdirs
 	
@@ -446,7 +445,6 @@ install-stamp-%: DESTDIR=$(CURDIR)/debian/$*
 install-stamp-%: build-stamp-%
 	dh_testdir
 	dh_testroot
-	dh_prep
 	@echo "*** DEBIAN *** INSTALLING VARIANT $*"
 	dh_installdirs
 	
