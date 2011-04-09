@@ -28,6 +28,11 @@ vim (2:7.3.154+hg~74503f6ee649-1) UNRELEASED; urgency=low
   * Add upstream/debcontrol-syntax-multiarch.patch, which adds syntax
     highlighting of Multi-Arch fields in debian/control.  Thanks to Thomas
     Preud'homme for the patch.  (Closes: #621098)
+  * debian/control:
+    + Remove python3-dev Build-Depends since python3interp can only be enabled
+      if dynamically loading the language binding libraries.
+    + Change ruby Build-Depends to ruby1.8 since the unversioned packages are
+      going away.
 
  -- James Vega <jamessan@debian.org>  Thu, 10 Mar 2011 22:02:39 -0500
 

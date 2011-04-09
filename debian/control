@@ -11,7 +11,7 @@ Build-Depends: debhelper (>= 7), libacl1-dev, libgpmg1-dev [linux-any],
 # B-D for GUI support
  libgtk2.0-dev, libgnomeui-dev, libxaw7-dev, libxt-dev, libxpm-dev,
 # B-D for language interpreters
- libperl-dev, tcl-dev, python-dev, ruby, ruby1.8-dev, python3-dev, lua5.1,
+ libperl-dev, tcl-dev, python-dev, ruby1.8, ruby1.8-dev, lua5.1,
  liblua5.1-dev
 Build-Depends-Indep: docbook-xml, docbook-utils
 Vcs-Hg: http://hg.debian.org/hg/pkg-vim/vim
