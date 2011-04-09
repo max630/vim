@@ -466,9 +466,13 @@ install-stamp-%: build-stamp-%
 	sed -e "s:@PKG@:$*:;s:@VARIANT@:$(patsubst vim-%,%,$*):" \
 	    debian/lintian/vim-variant > debian/lintian/$*
 	# Handle the gvim menu file overrides
-	if [ -e "debian/lintian/$*.in" ]; then \
-	    cat debian/lintian/$*.in >> debian/lintian/$*; \
-	fi
+	case "$*" in \
+	  vim-tiny|vim|vim-nox) ;; \
+	  *) \
+	    sed -e "s:@PKG@:$*:;s:@VARIANT@:$*:" \
+	        debian/lintian/menu.in >> debian/lintian/$*; \
+	    ;; \
+	esac
 	for L in $(LANGS); do \
 	  sed -e "s:\(.*\)@LANG_ALTS@:\1--slave \$$mandir/$$L/man1/\$$i.1.gz \$$i.$$L.1.gz \$$mandir/$$L/man1/vim.1.gz \\\\\n&:" \
 	      -i debian/$*.postinst; \
