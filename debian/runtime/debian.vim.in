@@ -30,7 +30,6 @@ endif
 if has("autocmd")
   " set mail filetype for reportbug's temp files
   augroup debian
-    au BufRead reportbug.*		set ft=mail
     au BufRead reportbug-*		set ft=mail
   augroup END
 endif

@@ -22,6 +22,9 @@ vim (2:7.3.154+hg~74503f6ee649-1) UNRELEASED; urgency=low
   * Bump debhelper compatibility to 7.
     + Use dh_prep instead of dh_clean -k.
     + Bump debhelper Build-Depends to >= 7.
+  * debian.vim: Remove BufRead autocmd which was incorrectly setting
+    filetype=mail for reportbug.conf.  Reportbug's temp files are always
+    reportbug-*.  (Closes: #621798)
 
  -- James Vega <jamessan@debian.org>  Thu, 10 Mar 2011 22:02:39 -0500
 
