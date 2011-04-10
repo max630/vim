@@ -1,3 +1,13 @@
+vim (2:7.3.154+hg~74503f6ee649-2) UNRELEASED; urgency=low
+
+  * Remove upstream/Makefile-parallel.patch as many parallel invocations of
+    upstream's Makefile may result in multiple instances of cp trying to
+    exclusively open src/auto/config.mk.
+  * debian/rules: Add a src/auto/config.mk target which all configure-*
+    targets have as a pre-requisite.
+
+ -- James Vega <jamessan@debian.org>  Sun, 10 Apr 2011 16:56:16 -0400
+
 vim (2:7.3.154+hg~74503f6ee649-1) unstable; urgency=low
 
   * Pull patches 036 - 154.  (Closes: #608390)
