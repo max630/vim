@@ -1,3 +1,10 @@
+vim (2:7.3.154+hg~74503f6ee649-3) UNRELEASED; urgency=low
+
+  * debian/control: Add vim-lua Provides to packages which are built with lua
+    bindings.
+
+ -- James Vega <jamessan@debian.org>  Thu, 21 Apr 2011 19:54:17 -0400
+
 vim (2:7.3.154+hg~74503f6ee649-2) unstable; urgency=low
 
   * Remove upstream/Makefile-parallel.patch as many parallel invocations of
