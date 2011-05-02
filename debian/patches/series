@@ -6,7 +6,6 @@ upstream/po-syntax-cpo.patch
 upstream/de.po-lesen.patch
 upstream/dosini-syntax-hash.patch
 upstream/extra-rst-detection.patch
-upstream/crontab-syntax-case-ignore.patch
 upstream/es.po-recover.patch
 upstream/pythoncomplete-autoload-init.patch
 upstream/debcontrol-syntax-multiarch.patch

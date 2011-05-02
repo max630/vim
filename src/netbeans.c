@@ -2891,7 +2891,7 @@ netbeans_beval_cb(
     char_u	*text;
     linenr_T	lnum;
     int		col;
-    char	buf[MAXPATHL * 2 + 25];
+    char	*buf;
     char_u	*p;
 
     /* Don't do anything when 'ballooneval' is off, messages scrolled the
@@ -2905,15 +2905,20 @@ netbeans_beval_cb(
 	 * length. */
 	if (text != NULL && text[0] != NUL && STRLEN(text) < MAXPATHL)
 	{
-	    p = nb_quote(text);
-	    if (p != NULL)
+	    buf = (char *)alloc(MAXPATHL * 2 + 25);
+	    if (buf != NULL)
 	    {
-		vim_snprintf(buf, sizeof(buf),
-				       "0:balloonText=%d \"%s\"\n", r_cmdno, p);
-		vim_free(p);
+		p = nb_quote(text);
+		if (p != NULL)
+		{
+		    vim_snprintf(buf, MAXPATHL * 2 + 25,
+				     "0:balloonText=%d \"%s\"\n", r_cmdno, p);
+		    vim_free(p);
+		}
+		nbdebug(("EVT: %s", buf));
+		nb_send(buf, "netbeans_beval_cb");
+		vim_free(buf);
 	    }
-	    nbdebug(("EVT: %s", buf));
-	    nb_send(buf, "netbeans_beval_cb");
 	}
 	vim_free(text);
     }
@@ -3914,14 +3919,12 @@ print_save_msg(buf, nchars)
     }
     else
     {
-	char_u ebuf[BUFSIZ];
+	char_u msgbuf[IOSIZE];
 
-	STRCPY(ebuf, (char_u *)_("E505: "));
-	STRCAT(ebuf, IObuff);
-	STRCAT(ebuf, (char_u *)_("is read-only (add ! to override)"));
-	STRCPY(IObuff, ebuf);
-	nbdebug(("    %s\n", ebuf ));
-	emsg(IObuff);
+	vim_snprintf((char *)msgbuf, IOSIZE,
+		_("E505: %s is read-only (add ! to override)"), IObuff);
+	nbdebug(("    %s\n", msgbuf));
+	emsg(msgbuf);
     }
 }
 

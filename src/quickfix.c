@@ -2742,6 +2742,13 @@ ex_make(eap)
 #ifdef FEAT_AUTOCMD
     char_u	*au_name = NULL;
 
+    /* Redirect ":grep" to ":vimgrep" if 'grepprg' is "internal". */
+    if (grep_internal(eap->cmdidx))
+    {
+	ex_vimgrep(eap);
+	return;
+    }
+
     switch (eap->cmdidx)
     {
 	case CMD_make:	    au_name = (char_u *)"make"; break;
@@ -2762,13 +2769,6 @@ ex_make(eap)
 # endif
     }
 #endif
-
-    /* Redirect ":grep" to ":vimgrep" if 'grepprg' is "internal". */
-    if (grep_internal(eap->cmdidx))
-    {
-	ex_vimgrep(eap);
-	return;
-    }
 
     if (eap->cmdidx == CMD_lmake || eap->cmdidx == CMD_lgrep
 	|| eap->cmdidx == CMD_lgrepadd)
@@ -3049,18 +3049,22 @@ ex_vimgrep(eap)
     int		flags = 0;
     colnr_T	col;
     long	tomatch;
-    char_u	dirname_start[MAXPATHL];
-    char_u	dirname_now[MAXPATHL];
+    char_u	*dirname_start = NULL;
+    char_u	*dirname_now = NULL;
     char_u	*target_dir = NULL;
 #ifdef FEAT_AUTOCMD
     char_u	*au_name =  NULL;
 
     switch (eap->cmdidx)
     {
-	case CMD_vimgrep: au_name = (char_u *)"vimgrep"; break;
-	case CMD_lvimgrep: au_name = (char_u *)"lvimgrep"; break;
-	case CMD_vimgrepadd: au_name = (char_u *)"vimgrepadd"; break;
+	case CMD_vimgrep:     au_name = (char_u *)"vimgrep"; break;
+	case CMD_lvimgrep:    au_name = (char_u *)"lvimgrep"; break;
+	case CMD_vimgrepadd:  au_name = (char_u *)"vimgrepadd"; break;
 	case CMD_lvimgrepadd: au_name = (char_u *)"lvimgrepadd"; break;
+	case CMD_grep:	      au_name = (char_u *)"grep"; break;
+	case CMD_lgrep:	      au_name = (char_u *)"lgrep"; break;
+	case CMD_grepadd:     au_name = (char_u *)"grepadd"; break;
+	case CMD_lgrepadd:    au_name = (char_u *)"lgrepadd"; break;
 	default: break;
     }
     if (au_name != NULL)
@@ -3127,6 +3131,11 @@ ex_vimgrep(eap)
 	EMSG(_(e_nomatch));
 	goto theend;
     }
+
+    dirname_start = alloc(MAXPATHL);
+    dirname_now = alloc(MAXPATHL);
+    if (dirname_start == NULL || dirname_now == NULL)
+	goto theend;
 
     /* Remember the current directory, because a BufRead autocommand that does
      * ":lcd %:p:h" changes the meaning of short path names. */
@@ -3364,6 +3373,8 @@ ex_vimgrep(eap)
     }
 
 theend:
+    vim_free(dirname_now);
+    vim_free(dirname_start);
     vim_free(target_dir);
     vim_free(regmatch.regprog);
 }
