@@ -157,7 +157,7 @@ Description: Vi IMproved - enhanced vi editor - with GTK2 GUI
  completion, block operations, folding, Unicode support, etc.
  .
  This package contains a version of vim compiled with a GTK2 GUI
- and support for scripting with Perl, Python, Ruby, and Tcl.
+ and support for scripting with Lua, Perl, Python, Ruby, and Tcl.
 
 Package: vim-nox
 Priority: extra
@@ -173,7 +173,7 @@ Description: Vi IMproved - enhanced vi editor
  completion, block operations, folding, Unicode support, etc.
  .
  This package contains a version of vim compiled with support for
- scripting with Perl, Python, Ruby, and Tcl but no GUI.
+ scripting with Lua, Perl, Python, Ruby, and Tcl but no GUI.
 
 Package: vim-athena
 Priority: extra
@@ -189,7 +189,7 @@ Description: Vi IMproved - enhanced vi editor - with Athena GUI
  completion, block operations, folding, Unicode support, etc.
  .
  This package contains a version of vim compiled with a Athena GUI
- and support for scripting with Perl, Python, Ruby, and Tcl.
+ and support for scripting with Lua, Perl, Python, Ruby, and Tcl.
 
 Package: vim-lesstif
 Priority: extra
@@ -212,4 +212,4 @@ Description: Vi IMproved - enhanced vi editor - with GNOME2 GUI
  completion, block operations, folding, Unicode support, etc.
  .
  This package contains a version of vim compiled with a GNOME2 GUI
- and support for scripting with Perl, Python, Ruby, and Tcl.
+ and support for scripting with Lua, Perl, Python, Ruby, and Tcl.

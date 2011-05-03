@@ -2,8 +2,9 @@ vim (2:7.3.170-1) UNRELEASED; urgency=low
 
   * Pull upstream tag v7-3-170.
     + Remove patches/crontab-syntax-case-ignore, merged upstream.
-  * debian/control: Add vim-lua Provides to packages which are built with lua
-    bindings.
+  * debian/control:
+    + Add vim-lua Provides to packages which are built with lua bindings.
+    + Add Lua to long description for the packages which provide the bindings.
   * Drop +hg~$hash from the version string now that upstream is tagging the
     minor updates.
 
