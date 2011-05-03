@@ -161,7 +161,7 @@ all:
 
 $(ORIG_SOURCE):
 	if hg root >/dev/null 2>&1; then \
-	    hg archive -t tgz -X .hg\* --prefix=$(NAME)-$(DEBVERSION)/ -r $$(echo $(DEBVERSION) | sed 's/.*+hg~//') $(ORIG_SOURCE); \
+	    hg archive -t tgz -X .hg\* --prefix=$(NAME)-$(DEBVERSION)/ -r v$$(echo $(DEBVERSION) | sed 's/\./-/g') $(ORIG_SOURCE); \
 	fi
 
 update-orig: $(ORIG_SOURCE)
