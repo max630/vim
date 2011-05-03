@@ -9,6 +9,7 @@ upstream/extra-rst-detection.patch
 upstream/es.po-recover.patch
 upstream/pythoncomplete-autoload-init.patch
 upstream/debcontrol-syntax-multiarch.patch
+upstream/debian-runtime-codenames.patch
 debian/vim-tiny.patch
 debian/disabled-modelines.patch
 debian/awk-shebang.patch
