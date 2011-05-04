@@ -9,6 +9,8 @@ vim (2:7.3.170-1) UNRELEASED; urgency=low
     minor updates.
   * Update Debian/Ubuntu codenames in debchangelog/debsources syntax files.
     (Closes: #624686)
+  * Add support for architecture wildcards in debcontrol syntax file.  Thanks
+    to Jakub Wilk for the patch.  (Closes: #624805)
 
  -- James Vega <jamessan@debian.org>  Thu, 21 Apr 2011 19:54:17 -0400
 
