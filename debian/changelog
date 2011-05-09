@@ -13,6 +13,7 @@ vim (2:7.3.177-1) UNRELEASED; urgency=low
     to Jakub Wilk for the patch.  (Closes: #624805)
   * Remove path and extension from Icon key in the desktop file.  Thanks to
     Michael Bienia for the patch.  (Closes: #624688, LP: #740842)
+  * debian/watch: Change dversionmangle to just drop the patch version.
 
  -- James Vega <jamessan@debian.org>  Thu, 21 Apr 2011 19:54:17 -0400
 
