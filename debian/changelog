@@ -1,6 +1,6 @@
-vim (2:7.3.177-1) UNRELEASED; urgency=low
+vim (2:7.3.206-1) UNRELEASED; urgency=low
 
-  * Pull upstream tag v7-3-177.
+  * Pull upstream tag v7-3-206.
     + Remove patches/crontab-syntax-case-ignore, merged upstream.
   * debian/control:
     + Add vim-lua Provides to packages which are built with lua bindings.

@@ -7,7 +7,7 @@ Index: b/src/po/es.po
 ===================================================================
 --- a/src/po/es.po
 +++ b/src/po/es.po
-@@ -4957,7 +4957,8 @@
+@@ -4939,7 +4939,8 @@
  "&Abrir para lectura únicamente\n"
  "&Editar de todas formas\n"
  "&Recuperar\n"
