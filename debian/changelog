@@ -14,6 +14,8 @@ vim (2:7.3.177-1) UNRELEASED; urgency=low
   * Remove path and extension from Icon key in the desktop file.  Thanks to
     Michael Bienia for the patch.  (Closes: #624688, LP: #740842)
   * debian/watch: Change dversionmangle to just drop the patch version.
+  * Make the leading XC- optional for the Package-Type header in debcontrol
+    syntax file.  Thanks to Guillem Jover for the patch.  (Closes: #628763)
 
  -- James Vega <jamessan@debian.org>  Thu, 21 Apr 2011 19:54:17 -0400
 
