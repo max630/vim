@@ -12,6 +12,7 @@ upstream/debcontrol-syntax-multiarch.patch
 upstream/debian-runtime-codenames.patch
 upstream/debcontrol-syntax-arch-wildcards.patch
 upstream/debcontrol-syntax-package-type.patch
+upstream/automake-syntax-update.patch
 debian/vim-tiny.patch
 debian/disabled-modelines.patch
 debian/awk-shebang.patch

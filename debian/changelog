@@ -16,6 +16,8 @@ vim (2:7.3.206-1) UNRELEASED; urgency=low
   * debian/watch: Change dversionmangle to just drop the patch version.
   * Make the leading XC- optional for the Package-Type header in debcontrol
     syntax file.  Thanks to Guillem Jover for the patch.  (Closes: #628763)
+  * Add patch automake-syntax-update, which improves syntax highlighting for
+    automake files.  Based on a patch by Guillem Jover.  (Closes: #628759)
 
  -- James Vega <jamessan@debian.org>  Thu, 21 Apr 2011 19:54:17 -0400
 
