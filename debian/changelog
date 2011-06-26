@@ -1,7 +1,8 @@
-vim (2:7.3.206-1) UNRELEASED; urgency=low
+vim (2:7.3.237-1) UNRELEASED; urgency=low
 
-  * Pull upstream tag v7-3-206.
+  * Pull upstream tag v7-3-237.
     + Remove patches/crontab-syntax-case-ignore, merged upstream.
+    + Remove patches/debcontrol-syntax-multiarch, merged upstream
   * debian/control:
     + Add vim-lua Provides to packages which are built with lua bindings.
     + Add Lua to long description for the packages which provide the bindings.
@@ -16,8 +17,8 @@ vim (2:7.3.206-1) UNRELEASED; urgency=low
   * debian/watch: Change dversionmangle to just drop the patch version.
   * Make the leading XC- optional for the Package-Type header in debcontrol
     syntax file.  Thanks to Guillem Jover for the patch.  (Closes: #628763)
-  * Add patch automake-syntax-update, which improves syntax highlighting for
-    automake files.  Based on a patch by Guillem Jover.  (Closes: #628759)
+  * Improve syntax highlighting for automake files.  Based on a patch by
+    Guillem Jover.  (Closes: #628759)
 
  -- James Vega <jamessan@debian.org>  Thu, 21 Apr 2011 19:54:17 -0400
 
