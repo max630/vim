@@ -9043,8 +9043,12 @@ dos_expandpath(
     }
 
     /* compile the regexp into a program */
+    if (flags & EW_NOERROR)
+	++emsg_silent;
     regmatch.rm_ic = TRUE;		/* Always ignore case */
     regmatch.regprog = vim_regcomp(pat, RE_MAGIC);
+    if (flags & EW_NOERROR)
+	--emsg_silent;
     vim_free(pat);
 
     if (regmatch.regprog == NULL)
@@ -9115,7 +9119,9 @@ dos_expandpath(
 	 * all entries found with "matchname". */
 	if ((p[0] != '.' || starts_with_dot)
 		&& (matchname == NULL
-		    || vim_regexec(&regmatch, p, (colnr_T)0)))
+		  || vim_regexec(&regmatch, p, (colnr_T)0)
+		  || ((flags & EW_NOTWILD)
+		     && fnamencmp(path + (s - buf), p, e - s) == 0)))
 	{
 #ifdef WIN3264
 	    STRCPY(s, p);
@@ -9319,7 +9325,7 @@ unix_expandpath(gap, path, wildoff, flags, didstar)
     e = p;
     *e = NUL;
 
-    /* now we have one wildcard component between "s" and "e" */
+    /* Now we have one wildcard component between "s" and "e". */
     /* Remove backslashes between "wildoff" and the start of the wildcard
      * component. */
     for (p = buf + wildoff; p < s; ++p)
@@ -9386,7 +9392,9 @@ unix_expandpath(gap, path, wildoff, flags, didstar)
 	    if (dp == NULL)
 		break;
 	    if ((dp->d_name[0] != '.' || starts_with_dot)
-		    && vim_regexec(&regmatch, (char_u *)dp->d_name, (colnr_T)0))
+		 && (vim_regexec(&regmatch, (char_u *)dp->d_name, (colnr_T)0)
+		   || ((flags & EW_NOTWILD)
+		     && fnamencmp(path + (s - buf), dp->d_name, e - s) == 0)))
 	    {
 		STRCPY(s, dp->d_name);
 		len = STRLEN(buf);
