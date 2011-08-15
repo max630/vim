@@ -4,8 +4,8 @@ vim (2:7.3.280-1) UNRELEASED; urgency=low
     + Remove patches/crontab-syntax-case-ignore, merged upstream.
     + Remove patches/debcontrol-syntax-multiarch, merged upstream
     + Remove patches/dosini-syntax-hash, merged upstream
-    + Parse GCC 4.5+ "In file included from" messages correctly when using
-      quickfix.  (Closes: #621693)
+    + 7.3.261: Parse GCC 4.5+ "In file included from" messages correctly when
+      using quickfix.  (Closes: #621693)
   * debian/control:
     + Add vim-lua Provides to packages which are built with lua bindings.
     + Add Lua to long description for the packages which provide the bindings.
