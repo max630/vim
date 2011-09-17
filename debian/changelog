@@ -9,6 +9,8 @@ vim (2:7.3.315-1) UNRELEASED; urgency=low
   * Fix typo in vim policy.  Thanks to Jakub Wilk for the patch.  (Closes:
     #640042)
   * Add GenericName field to desktop file. (Closes: #641037)
+  * Use versioned ruby binary name to ensure we're getting the correct build
+    flags.
 
  -- James Vega <jamessan@debian.org>  Sat, 17 Sep 2011 13:38:54 -0400
 
