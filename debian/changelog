@@ -6,6 +6,8 @@ vim (2:7.3.315-1) UNRELEASED; urgency=low
     + 7.3.300: Python doesn't parse multi-byte argument correctly. (Closes:
       #638375)
   * Recognize armhf as an architecture in debcontrol files.  (Closes: #638873)
+  * Fix typo in vim policy.  Thanks to Jakub Wilk for the patch.  (Closes:
+    #640042)
 
  -- James Vega <jamessan@debian.org>  Sat, 17 Sep 2011 13:38:54 -0400
 

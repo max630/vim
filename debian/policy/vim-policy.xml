@@ -70,7 +70,7 @@
 	    <filename>debian/control</filename> and write into
 	    <filename>README.Debian</filename> something like: <blockquote>
 	      <para> Dear user, this package provides the vim addon
-		<replaceable>ADDON</replaceable>, but it is not enable per
+		<replaceable>ADDON</replaceable>, but it is not enabled per
 		default. If you want to enable it for your user account just
 		execute <userinput>vim-addons install
 		  <replaceable>ADDON</replaceable></userinput>. Similarly, to
