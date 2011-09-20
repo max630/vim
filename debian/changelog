@@ -1,3 +1,9 @@
+vim (2:7.3.315-2) UNRELEASED; urgency=low
+
+  * debian/rules: Remove debian/lintian/vim in clean-vim-basic
+
+ -- James Vega <jamessan@debian.org>  Mon, 19 Sep 2011 23:37:25 -0400
+
 vim (2:7.3.315-1) unstable; urgency=low
 
   * Pull upstream tag v7-3-315.

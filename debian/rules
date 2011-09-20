@@ -198,6 +198,7 @@ clean-vim-basic:
 	for x in $(PER_VARIANT_FILES) ; do \
 	  rm -f debian/vim.$$x ; \
 	done
+	rm -f debian/lintian/vim
 	[ ! -L src/vim-basic/po ] || $(MAKE) -C src/vim-basic/po clean
 	rm -f $(DOT_IN_DEPS)
 	rm -rf src/vim-basic
