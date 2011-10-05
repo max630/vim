@@ -1,4 +1,4 @@
-vim (2:7.3.333-1) UNRELEASED; urgency=low
+vim (2:7.3.333-1) unstable; urgency=low
 
   * Pull upstream tag v7-3-333
     + 7.3.318: Fix behavior of C on empty last line.  (Closes: #642432)
@@ -10,7 +10,7 @@ vim (2:7.3.333-1) UNRELEASED; urgency=low
   * debian/rules: Include makefiles from dpkg-dev.
     + Bump dpkg-dev versioned B-D >= 1.16.1
 
- -- James Vega <jamessan@debian.org>  Mon, 19 Sep 2011 23:37:25 -0400
+ -- James Vega <jamessan@debian.org>  Tue, 04 Oct 2011 21:43:53 -0400
 
 vim (2:7.3.315-1) unstable; urgency=low
 
