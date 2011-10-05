@@ -7,6 +7,8 @@ vim (2:7.3.333-1) UNRELEASED; urgency=low
     + 7.3.333: Handle multi-byte characters when using `.' to repeat a
       command.  (Closes: #632542)
   * debian/rules: Remove debian/lintian/vim in clean-vim-basic
+  * debian/rules: Include makefiles from dpkg-dev.
+    + Bump dpkg-dev versioned B-D >= 1.16.1
 
  -- James Vega <jamessan@debian.org>  Mon, 19 Sep 2011 23:37:25 -0400
 

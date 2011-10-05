@@ -2,19 +2,9 @@
 
 export DH_OPTIONS
 
-DEB_HOST_ARCH_OS ?= $(shell dpkg-architecture -qDEB_HOST_ARCH_OS)
-DEB_HOST_GNU_TYPE ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
-DEB_BUILD_GNU_TYPE ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
-DEB_VENDOR := $(shell dpkg-vendor --query vendor)
+include /usr/share/dpkg/default.mk
 
 BUILDER := $(shell echo $${DEBEMAIL:-$${EMAIL:-$$(echo $$LOGNAME@$$(cat /etc/mailname 2> /dev/null))}})
-
-CFLAGS = -Wall -g
-ifneq (,$(filter noopt,$(DEB_BUILD_OPTIONS)))
-  CFLAGS+=-O0
-else
-  CFLAGS+=-O2
-endif
 
 MAKETEST := no
 ifeq ($(DEB_HOST_GNU_TYPE),$(DEB_BUILD_GNU_TYPE))
@@ -139,9 +129,8 @@ NAME:=vim
 VERSION:=7.3
 SNAPSHOT:=
 VIMCUR:=$(NAME)$(subst .,,$(VERSION))$(SNAPSHOT)
-DEBVERSION:=$(shell dpkg-parsechangelog | sed -n '/^Version:/{s/Version: *\([^:]*:\)\?\([^-]*\)-.*/\2/;p;q}')
 EXPORT_DIR ?= ..
-ORIG_SOURCE := $(EXPORT_DIR)/$(NAME)_$(DEBVERSION).orig.tar.gz
+ORIG_SOURCE := $(EXPORT_DIR)/$(NAME)_$(DEB_VERSION_UPSTREAM_REVISION).orig.tar.gz
 PER_VARIANT_FILES := install postinst prerm links
 LANGS := fr it pl ru
 
@@ -162,7 +151,7 @@ all:
 
 $(ORIG_SOURCE):
 	if hg root >/dev/null 2>&1; then \
-	    hg archive -t tgz -X .hg\* --prefix=$(NAME)-$(DEBVERSION)/ -r v$$(echo $(DEBVERSION) | sed 's/\./-/g') $(ORIG_SOURCE); \
+	    hg archive -t tgz -X .hg\* --prefix=$(NAME)-$(DEB_VERSION_UPSTREAM_REVISION)/ -r v$$(echo $(DEB_VERSION_UPSTREAM_REVISION) | sed 's/\./-/g') $(ORIG_SOURCE); \
 	fi
 
 update-orig: $(ORIG_SOURCE)
