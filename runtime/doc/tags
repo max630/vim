@@ -5876,6 +5876,8 @@ g:netrw_use_nt_rcp	pi_netrw.txt	/*g:netrw_use_nt_rcp*
 g:netrw_win95ftp	pi_netrw.txt	/*g:netrw_win95ftp*
 g:netrw_winsize	pi_netrw.txt	/*g:netrw_winsize*
 g:netrw_xstrlen	pi_netrw.txt	/*g:netrw_xstrlen*
+g:sh_isk	syntax.txt	/*g:sh_isk*
+g:sh_noisk	syntax.txt	/*g:sh_noisk*
 g:syntax_on	syntax.txt	/*g:syntax_on*
 g:tar_browseoptions	pi_tar.txt	/*g:tar_browseoptions*
 g:tar_cmd	pi_tar.txt	/*g:tar_cmd*
@@ -7447,6 +7449,8 @@ setuid	change.txt	/*setuid*
 setwinvar()	eval.txt	/*setwinvar()*
 sftp	pi_netrw.txt	/*sftp*
 sgml.vim	syntax.txt	/*sgml.vim*
+sh-awk	syntax.txt	/*sh-awk*
+sh-embed	syntax.txt	/*sh-embed*
 sh.vim	syntax.txt	/*sh.vim*
 shell-window	tips.txt	/*shell-window*
 shell_error-variable	eval.txt	/*shell_error-variable*
