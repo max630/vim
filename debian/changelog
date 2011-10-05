@@ -10,7 +10,7 @@ vim (2:7.3.333-1) unstable; urgency=low
   * debian/rules: Include makefiles from dpkg-dev.
     + Bump dpkg-dev versioned B-D >= 1.16.1
 
- -- James Vega <jamessan@debian.org>  Tue, 04 Oct 2011 21:43:53 -0400
+ -- James Vega <jamessan@debian.org>  Tue, 04 Oct 2011 21:48:44 -0400
 
 vim (2:7.3.315-1) unstable; urgency=low
 
