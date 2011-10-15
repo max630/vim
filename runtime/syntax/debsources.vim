@@ -23,7 +23,7 @@ syn match debsourcesComment        /#.*/  contains=@Spell
 
 " Match uri's
 syn match debsourcesUri            +\(http://\|ftp://\|[rs]sh://\|debtorrent://\|\(cdrom\|copy\|file\):\)[^' 	<>"]\++
-syn match debsourcesDistrKeyword   +\([[:alnum:]_./]*\)\(lenny\|squeeze\|wheezy\|\(old\)\=stable\|testing\|unstable\|sid\|rc-buggy\|experimental\|hardy\|lucid\|maverick\|natty\|oneiric\)\([-[:alnum:]_./]*\)+
+syn match debsourcesDistrKeyword   +\([[:alnum:]_./]*\)\(lenny\|squeeze\|wheezy\|\(old\)\=stable\|testing\|unstable\|sid\|rc-buggy\|experimental\|hardy\|lucid\|maverick\|natty\|oneiric\|precise\)\([-[:alnum:]_./]*\)+
 
 " Associate our matches and regions with pretty colours
 hi def link debsourcesLine            Error
