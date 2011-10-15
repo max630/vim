@@ -6,6 +6,7 @@ vim (2:7.3.338-1) UNRELEASED; urgency=low
   * Don't build vim-gnome on m68k, since the dependencies aren't available.
   * Update Debian runtime files for Precise Pangolin.  (Closes: #644489)
   * Use correct DEB_VERSION_* make variable for update-orig target.
+  * Change libncurses5-dev B-D to libtinfo-dev.
 
  -- James Vega <jamessan@debian.org>  Fri, 14 Oct 2011 23:15:08 -0400
 
