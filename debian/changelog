@@ -1,5 +1,8 @@
-vim (2:7.3.333-2) UNRELEASED; urgency=low
+vim (2:7.3.338-1) UNRELEASED; urgency=low
 
+  * Pull upstream tag v7-3-338
+    + 7.3.337: Redraw the screen after resizing the terminal.  (Closes:
+      #644668)
   * Don't build vim-gnome on m68k, since the dependencies aren't available.
 
  -- James Vega <jamessan@debian.org>  Fri, 14 Oct 2011 23:15:08 -0400
