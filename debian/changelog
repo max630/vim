@@ -1,3 +1,9 @@
+vim (2:7.3.333-2) UNRELEASED; urgency=low
+
+  * Don't build vim-gnome on m68k, since the dependencies aren't available.
+
+ -- James Vega <jamessan@debian.org>  Fri, 14 Oct 2011 23:15:08 -0400
+
 vim (2:7.3.333-1) unstable; urgency=low
 
   * Pull upstream tag v7-3-333
