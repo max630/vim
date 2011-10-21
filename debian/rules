@@ -252,7 +252,7 @@ configure-stamp-%: src/auto/config.mk
 	@echo "*** DEBIAN *** CONFIGURING VARIANT $*"
 	$(MAKE) -C src shadow SHADOWDIR=$(SHADOWDIR)
 	if test -f src/auto/config.cache; then make distclean; fi
-	cd src/$(SHADOWDIR) && CFLAGS="$(CFLAGS_$(*))" ./configure $(CFGFLAGS_$(*))
+	cd src/$(SHADOWDIR) && LDFLAGS="$(LDFLAGS)" CPPFLAGS="$(CPPFLAGS)" CFLAGS="$(CFLAGS_$(*))" ./configure $(CFGFLAGS_$(*))
 	touch $@
 
 build-stamp-%: CURCFLAGS=$(CFLAGS_$*)
