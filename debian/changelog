@@ -12,6 +12,8 @@ vim (2:7.3.346-1) UNRELEASED; urgency=low
   * Also use CPPFLAGS and LDFLAGS from /u/s/dpkg/buildflags.mk
   * Change libncurses5-dev B-D to libtinfo-dev.
   * Remove patch de.po-lesen.patch, merged upstream.
+  * Set DEB_BUILD_MAINT_OPTIONS=hardening=-fortify so we don't override
+    upstream's handling.
 
  -- James Vega <jamessan@debian.org>  Fri, 14 Oct 2011 23:15:08 -0400
 

@@ -2,6 +2,9 @@
 
 export DH_OPTIONS
 
+# Upstream handles the _FORTIFY_SOURCE flag on their own
+DEB_BUILD_MAINT_OPTIONS=hardening=-fortify
+
 include /usr/share/dpkg/default.mk
 
 BUILDER := $(shell echo $${DEBEMAIL:-$${EMAIL:-$$(echo $$LOGNAME@$$(cat /etc/mailname 2> /dev/null))}})
