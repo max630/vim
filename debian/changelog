@@ -14,8 +14,9 @@ vim (2:7.3.346-1) UNRELEASED; urgency=low
   * Remove patch de.po-lesen.patch, merged upstream.
   * Set DEB_BUILD_MAINT_OPTIONS=hardening=-fortify so we don't override
     upstream's handling.
+  * Bump Standards-Version to 3.9.2, no changes needed.
 
- -- James Vega <jamessan@debian.org>  Fri, 14 Oct 2011 23:15:08 -0400
+ -- James McCoy <jamessan@debian.org>  Fri, 14 Oct 2011 23:15:08 -0400
 
 vim (2:7.3.333-1) unstable; urgency=low
 
