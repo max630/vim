@@ -379,6 +379,11 @@ static char *(features[]) =
 # else
 	"-mouse_xterm",
 # endif
+# ifdef FEAT_MOUSE_URXVT
+	"+mouse_urxvt",
+# else
+	"-mouse_urxvt",
+# endif
 #endif
 #ifdef __QNX__
 # ifdef FEAT_MOUSE_PTERM
@@ -709,6 +714,22 @@ static char *(features[]) =
 
 static int included_patches[] =
 {   /* Add new patch number below this line */
+/**/
+    346,
+/**/
+    345,
+/**/
+    344,
+/**/
+    343,
+/**/
+    342,
+/**/
+    341,
+/**/
+    340,
+/**/
+    339,
 /**/
     338,
 /**/
