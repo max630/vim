@@ -1,3 +1,9 @@
+vim (2:7.3.353-1) UNRELEASED; urgency=low
+
+  * Pull upstream tag v7-3-353
+
+ -- James McCoy <jamessan@debian.org>  Wed, 02 Nov 2011 19:46:05 -0400
+
 vim (2:7.3.346-1) unstable; urgency=low
 
   * Pull upstream tag v7-3-346
