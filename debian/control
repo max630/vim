@@ -195,6 +195,7 @@ Description: Vi IMproved - enhanced vi editor - with Athena GUI
  and support for scripting with Lua, Perl, Python, Ruby, and Tcl.
 
 Package: vim-lesstif
+Section: oldlibs
 Priority: extra
 Architecture: all
 Depends: vim-athena
