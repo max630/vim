@@ -1,6 +1,7 @@
-vim (2:7.3.353-1) UNRELEASED; urgency=low
+vim (2:7.3.363-1) UNRELEASED; urgency=low
 
-  * Pull upstream tag v7-3-353
+  * Pull upstream tag v7-3-363
+    + 7.3.358: Fix mouse handling since urxvt support.  (Closes: #647055)
 
  -- James McCoy <jamessan@debian.org>  Wed, 02 Nov 2011 19:46:05 -0400
 
