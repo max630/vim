@@ -23,7 +23,7 @@ clean:
 	$(RM) -rf $(INSTALL_STUFF)
 
 upload_web: all
-	scp -rC $(INSTALL_STUFF) alioth.debian.org:/org/alioth.debian.org/chroot/home/groups/pkg-vim/htdocs/
+	scp -rC $(INSTALL_STUFF) alioth.debian.org:/srv/home/groups/pkg-vim/htdocs/
 
 .PHONY: html text upload_web
 
