@@ -1,9 +1,10 @@
-vim (2:7.3.363-2) UNRELEASED; urgency=low
+vim (2:7.3.372-1) UNRELEASED; urgency=low
 
+  * Pull upstream tag v7-3-372
   * Add new education and introspection sections to debcontrol syntax file.
     (Closes: #651381)
 
- -- James McCoy <jamessan@debian.org>  Fri, 09 Dec 2011 20:10:11 -0500
+ -- James McCoy <jamessan@debian.org>  Fri, 09 Dec 2011 20:24:51 -0500
 
 vim (2:7.3.363-1) unstable; urgency=low
 
