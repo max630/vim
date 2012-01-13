@@ -3,6 +3,10 @@ vim (2:7.3.372-1) UNRELEASED; urgency=low
   * Pull upstream tag v7-3-372
   * Add new education and introspection sections to debcontrol syntax file.
     (Closes: #651381)
+  * Update vim-common's mime information to handle only having vim-tiny
+    installed.  (Closes: #654674)
+    + Add test -x /usr/bin/vim for the vim entries.
+    + Add lower-priority vi entries.
 
  -- James McCoy <jamessan@debian.org>  Fri, 09 Dec 2011 20:24:51 -0500
 
