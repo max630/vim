@@ -1,6 +1,6 @@
-vim (2:7.3.372-1) UNRELEASED; urgency=low
+vim (2:7.3.401-1) UNRELEASED; urgency=low
 
-  * Pull upstream tag v7-3-372
+  * Pull upstream tag v7-3-401
   * Add new education and introspection sections to debcontrol syntax file.
     (Closes: #651381)
   * Update vim-common's mime information to handle only having vim-tiny
