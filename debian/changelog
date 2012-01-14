@@ -7,6 +7,8 @@ vim (2:7.3.401-1) UNRELEASED; urgency=low
     installed.  (Closes: #654674)
     + Add test -x /usr/bin/vim for the vim entries.
     + Add lower-priority vi entries.
+  * Use new --enable-fail-if-missing flag to make configure fail if an
+    interpreter is enabled but configure test fails.
 
  -- James McCoy <jamessan@debian.org>  Fri, 09 Dec 2011 20:24:51 -0500
 

@@ -24,6 +24,7 @@ endif
 CFGFLAGS := --prefix=/usr --mandir='$${prefix}'/share/man --without-local-dir
 CFGFLAGS += --with-modified-by="pkg-vim-maintainers@lists.alioth.debian.org"
 CFGFLAGS += --with-compiledby="$(BUILDER)"
+CFGFLAGS += --enable-fail-if-missing
 
 TINYFLAGS:=--with-features=small
 TINYFLAGS+=--disable-gui
