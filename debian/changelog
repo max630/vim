@@ -10,6 +10,7 @@ vim (2:7.3.401-1) UNRELEASED; urgency=low
     + Add lower-priority vi entries.
   * Use new --enable-fail-if-missing flag to make configure fail if an
     interpreter is enabled but configure test fails.
+  * Add bug script to show what binaries the vi/vim/gvim symlinks point to.
 
  -- James McCoy <jamessan@debian.org>  Fri, 09 Dec 2011 20:24:51 -0500
 
