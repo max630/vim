@@ -2,6 +2,8 @@ vim (2:7.3.421-1) UNRELEASED; urgency=low
 
   * Pull upstream tag v7-3-421
     + Updated sshconfig syntax file.  (Closes: #594296)
+    + 7.3.365: Fix crash when using a large Unicode character with syntax
+      highlighting.  (Closes: #657777)
   * Add new education and introspection sections to debcontrol syntax file.
     (Closes: #651381)
   * Update vim-common's mime information to handle only having vim-tiny
