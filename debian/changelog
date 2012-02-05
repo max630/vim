@@ -13,6 +13,9 @@ vim (2:7.3.421-1) UNRELEASED; urgency=low
   * Use new --enable-fail-if-missing flag to make configure fail if an
     interpreter is enabled but configure test fails.
   * Add bug script to show what binaries the vi/vim/gvim symlinks point to.
+  * Only use /u/s/dpkg/default.mk when available.
+    + Reduce versioned B-D on dpkg-dev
+    + Manually set relevant makefile variables if file isn't present
 
  -- James McCoy <jamessan@debian.org>  Fri, 09 Dec 2011 20:24:51 -0500
 
