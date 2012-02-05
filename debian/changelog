@@ -16,6 +16,7 @@ vim (2:7.3.421-1) UNRELEASED; urgency=low
   * Only use /u/s/dpkg/default.mk when available.
     + Reduce versioned B-D on dpkg-dev
     + Manually set relevant makefile variables if file isn't present
+  * Add alternate libncurses5-dev B-D to ease backporting.
 
  -- James McCoy <jamessan@debian.org>  Fri, 09 Dec 2011 20:24:51 -0500
 
