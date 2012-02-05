@@ -5,7 +5,7 @@ export DH_OPTIONS
 # Upstream handles the _FORTIFY_SOURCE flag on their own
 DEB_BUILD_MAINT_OPTIONS=hardening=-fortify
 
-ifneq $(,$(wildcard /usr/share/dpkg/default.mk))
+ifneq (,$(wildcard /usr/share/dpkg/default.mk))
   include /usr/share/dpkg/default.mk
 else
   DEB_HOST_ARCH_OS ?= $(shell dpkg-architecture -qDEB_HOST_ARCH_OS)
