@@ -1,3 +1,10 @@
+vim (2:7.3.429-2) UNRELEASED; urgency=low
+
+  * Ignore failures in test61 since it is highly sensitive to timing.
+    Slow/heavily loaded systems will cause the test to fail.
+
+ -- James McCoy <jamessan@debian.org>  Fri, 10 Feb 2012 00:16:57 -0500
+
 vim (2:7.3.429-1) unstable; urgency=low
 
   * Pull upstream tag v7-3-429
