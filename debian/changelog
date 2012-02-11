@@ -2,6 +2,9 @@ vim (2:7.3.429-2) unstable; urgency=low
 
   * Ignore failures in test61 since it is highly sensitive to timing.
     Slow/heavily loaded systems will cause the test to fail.
+  * Install bug scripts with correct permissions.
+    + Use dh_bugfiles to simplify process
+    + Bump debhelper B-D to >= 7.2.3~
 
  -- James McCoy <jamessan@debian.org>  Fri, 10 Feb 2012 00:19:29 -0500
 

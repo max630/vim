@@ -432,6 +432,8 @@ install-stamp-vim-basic: build-stamp-vim-basic $(DOT_IN_DEPS)
 	dh_installdocs -pvim-dbg
 	dh_installmime
 	
+	env -u DH_OPTIONS dh_bugfiles -A -pvim
+	
 	touch $@
 
 # the other variants only include the binary
@@ -465,6 +467,7 @@ install-stamp-vim-tiny: build-stamp-vim-tiny $(DOT_IN_DEPS_TINY)
 	dh_install
 	dh_installmenu
 	dh_link
+	dh_bugfiles -A
 	
 	touch $@
 
@@ -509,6 +512,7 @@ install-stamp-%: build-stamp-%
 	dh_install
 	dh_installmenu
 	dh_link
+	dh_bugfiles -A
 	
 	touch $@
 
