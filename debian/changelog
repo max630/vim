@@ -6,7 +6,7 @@ vim (2:7.3.429-2) unstable; urgency=low
     + Use dh_bugfiles to simplify process
     + Bump debhelper B-D to >= 7.2.3~
 
- -- James McCoy <jamessan@debian.org>  Fri, 10 Feb 2012 00:19:29 -0500
+ -- James McCoy <jamessan@debian.org>  Fri, 10 Feb 2012 22:47:19 -0500
 
 vim (2:7.3.429-1) unstable; urgency=low
 
