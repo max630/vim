@@ -1,7 +1,8 @@
 vim (2:7.3.429-2) unstable; urgency=low
 
   * Ignore failures in test61 since it is highly sensitive to timing.
-    Slow/heavily loaded systems will cause the test to fail.
+    Slow/heavily loaded systems will cause the test to fail.  (Closes:
+    #625941)
   * Install bug scripts with correct permissions.
     + Use dh_bugfiles to simplify process
     + Bump debhelper B-D to >= 7.2.3~
@@ -14,6 +15,8 @@ vim (2:7.3.429-1) unstable; urgency=low
     + Updated sshconfig syntax file.  (Closes: #594296)
     + 7.3.365: Fix crash when using a large Unicode character with syntax
       highlighting.  (Closes: #657777)
+    + Updated java indent file handles indentation of annotations.  (Closes:
+      #519240)
   * Add new education and introspection sections to debcontrol syntax file.
     (Closes: #651381)
   * Update vim-common's mime information to handle only having vim-tiny
