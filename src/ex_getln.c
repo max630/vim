@@ -1852,8 +1852,11 @@ cmdline_changed:
 # endif
 		)
 	    /* Always redraw the whole command line to fix shaping and
-	     * right-left typing.  Not efficient, but it works. */
-	    redrawcmd();
+	     * right-left typing.  Not efficient, but it works.
+	     * Do it only when there are no characters left to read
+	     * to avoid useless intermediate redraws. */
+	    if (vpeekc() == NUL)
+		redrawcmd();
 #endif
     }
 
@@ -6443,7 +6446,7 @@ ex_window()
 	/* win_close() may have already wiped the buffer when 'bh' is
 	 * set to 'wipe' */
 	if (buf_valid(bp))
-	    close_buffer(NULL, bp, DOBUF_WIPE);
+	    close_buffer(NULL, bp, DOBUF_WIPE, FALSE);
 
 	/* Restore window sizes. */
 	win_size_restore(&winsizes);
