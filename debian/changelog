@@ -4,6 +4,10 @@ vim (2:7.3.502-1) UNRELEASED; urgency=low
     + Recognize git commit files in submodules. (Closes: #663735)
     + Fix NetRW's munging of options when opening files.  (Closes: #661720)
     + 7.3.485: Use environment's LDFLAGS when building xxd.  (Closes: #663605)
+  * Exclude the tools directory from the install.
+    + Stop shipping scripts which use Perl4 functionality.  (Closes: #659431)
+    + Remove lintian overrides for csh scripts.
+    + Remove patch debian/awk-shebang.patch
 
  -- James McCoy <jamessan@debian.org>  Sat, 03 Mar 2012 14:22:44 -0500
 

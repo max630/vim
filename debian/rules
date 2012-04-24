@@ -166,7 +166,6 @@ DOT_IN_DEPS += debian/vim-runtime.links
 DOT_IN_DEPS += debian/vim-runtime.postrm
 DOT_IN_DEPS += debian/vim-runtime.preinst
 DOT_IN_DEPS += debian/runtime/debian.vim
-DOT_IN_DEPS += debian/lintian/vim-runtime
 DOT_IN_DEPS_TINY := debian/tiny/vimrc.tiny
 
 # nothing to do per default
@@ -395,7 +394,7 @@ install-stamp-vim-basic: build-stamp-vim-basic $(DOT_IN_DEPS)
 	done
 	
 	dh_installman
-	dh_install --fail-missing
+	dh_install --fail-missing -X/tools/
 	# adjust things for vim-gui-common
 	cp debian/vim-common/usr/share/man/man1/vim.1 \
 	   debian/vim-gui-common/usr/share/man/man1/gvim.1
