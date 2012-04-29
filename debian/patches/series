@@ -6,7 +6,7 @@ upstream/po-syntax-cpo.patch
 upstream/extra-rst-detection.patch
 upstream/es.po-recover.patch
 upstream/pythoncomplete-autoload-init.patch
-upstream/debian-runtime-precise.patch
+upstream/debian-runtime-releases.patch
 upstream/debian-runtime-sections.patch
 debian/vim-tiny.patch
 debian/disabled-modelines.patch

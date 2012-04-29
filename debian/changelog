@@ -8,6 +8,8 @@ vim (2:7.3.502-1) UNRELEASED; urgency=low
     + Stop shipping scripts which use Perl4 functionality.  (Closes: #659431)
     + Remove lintian overrides for csh scripts.
     + Remove patch debian/awk-shebang.patch
+  * Remove EOLed Lenny/Maverick releases, add Quantal release to runtime
+    files.
 
  -- James McCoy <jamessan@debian.org>  Sat, 03 Mar 2012 14:22:44 -0500
 
