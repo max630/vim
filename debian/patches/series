@@ -10,5 +10,4 @@ upstream/debian-runtime-releases.patch
 upstream/debian-runtime-sections.patch
 debian/vim-tiny.patch
 debian/disabled-modelines.patch
-debian/awk-shebang.patch
 debian/extra-tex-detection.patch
