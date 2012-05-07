@@ -2,7 +2,6 @@ upstream/fr-manpage-fixes.patch
 upstream/python-ftplugin-include.patch
 upstream/python-ftplugin-keywordprg.patch
 upstream/xdefaults-syntax-define.patch
-upstream/po-syntax-cpo.patch
 upstream/extra-rst-detection.patch
 upstream/es.po-recover.patch
 upstream/pythoncomplete-autoload-init.patch
