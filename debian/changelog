@@ -12,6 +12,8 @@ vim (2:7.3.515-1) UNRELEASED; urgency=low
   * Remove EOLed Lenny/Maverick releases, add Quantal release to runtime
     files.
   * Remove upstream/po-syntax-cpo.patch, merged upstream.
+  * Add lintian override for binaries-have-file-conflict.  vim-runtime diverts
+    vim-tiny's doc/help.txt and doc/tags.
 
  -- James McCoy <jamessan@debian.org>  Sun, 06 May 2012 20:58:26 -0400
 
