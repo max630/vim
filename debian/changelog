@@ -1,6 +1,6 @@
-vim (2:7.3.515-1) UNRELEASED; urgency=low
+vim (2:7.3.524-1) UNRELEASED; urgency=low
 
-  * Merge upstream tag v7-3-502
+  * Merge upstream tag v7-3-524
     + Recognize git commit files in submodules. (Closes: #663735)
     + Fix NetRW's munging of options when opening files.  (Closes: #661720)
     + 7.3.485: Use environment's LDFLAGS when building xxd.  (Closes: #663605)
@@ -12,6 +12,9 @@ vim (2:7.3.515-1) UNRELEASED; urgency=low
   * Remove EOLed Lenny/Maverick releases, add Quantal release to runtime
     files.
   * Remove upstream/po-syntax-cpo.patch, merged upstream.
+  * Remove upstream/debian-runtime-*.patch, merged upstream.
+  * Remove upstream/fr-manpage-fixes.patch, merged upstream.
+  * Remove upstream/xdefaults-syntax-define.patch, merged upstream.
   * Add lintian override for binaries-have-file-conflict.  vim-runtime diverts
     vim-tiny's doc/help.txt and doc/tags.
 
