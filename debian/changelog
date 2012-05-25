@@ -17,6 +17,7 @@ vim (2:7.3.524-1) UNRELEASED; urgency=low
   * Remove upstream/xdefaults-syntax-define.patch, merged upstream.
   * Add lintian override for binaries-have-file-conflict.  vim-runtime diverts
     vim-tiny's doc/help.txt and doc/tags.
+  * Remove unused menu-icon-missing override.
 
  -- James McCoy <jamessan@debian.org>  Sun, 06 May 2012 20:58:26 -0400
 
