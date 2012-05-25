@@ -1,4 +1,4 @@
-vim (2:7.3.524-1) UNRELEASED; urgency=low
+vim (2:7.3.524-1) unstable; urgency=low
 
   * Merge upstream tag v7-3-524
     + Recognize git commit files in submodules. (Closes: #663735)
@@ -19,7 +19,7 @@ vim (2:7.3.524-1) UNRELEASED; urgency=low
     vim-tiny's doc/help.txt and doc/tags.
   * Remove unused menu-icon-missing override.
 
- -- James McCoy <jamessan@debian.org>  Sun, 06 May 2012 20:58:26 -0400
+ -- James McCoy <jamessan@debian.org>  Thu, 24 May 2012 21:37:40 -0400
 
 vim (2:7.3.429-2) unstable; urgency=low
 
