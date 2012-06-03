@@ -107,7 +107,6 @@ ALLINTERPFLAGS+=--enable-perlinterp
 ALLINTERPFLAGS+=--enable-pythoninterp
 ALLINTERPFLAGS+=--disable-python3interp
 ALLINTERPFLAGS+=--enable-rubyinterp
-ALLINTERPFLAGS+=--with-ruby-command=ruby1.8
 ALLINTERPFLAGS+=--enable-tclinterp
 
 # Each vim-xxx package is said to be a vim variant and contains only a vim

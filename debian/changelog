@@ -1,3 +1,10 @@
+vim (2:7.3.524-2) UNRELEASED; urgency=low
+
+  * Change ruby(-dev) Build-Depends to use unversioned package names in order
+    to build with the default ruby version.
+
+ -- James McCoy <jamessan@debian.org>  Sun, 03 Jun 2012 19:53:38 -0400
+
 vim (2:7.3.524-1) unstable; urgency=low
 
   * Merge upstream tag v7-3-524
