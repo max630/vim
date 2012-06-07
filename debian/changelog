@@ -1,11 +1,11 @@
-vim (2:7.3.547-1) UNRELEASED; urgency=low
+vim (2:7.3.547-1) unstable; urgency=low
 
   * Merge upstream tag v7-3-547
   * Change ruby(-dev) Build-Depends to use unversioned package names in order
     to build with the default ruby version.
   * Add spell-check support to Debian control syntax file.
 
- -- James McCoy <jamessan@debian.org>  Wed, 06 Jun 2012 20:14:59 -0400
+ -- James McCoy <jamessan@debian.org>  Wed, 06 Jun 2012 20:20:05 -0400
 
 vim (2:7.3.524-1) unstable; urgency=low
 
