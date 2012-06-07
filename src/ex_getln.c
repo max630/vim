@@ -2764,6 +2764,11 @@ unputcmdline()
     msg_no_more = TRUE;
     if (ccline.cmdlen == ccline.cmdpos)
 	msg_putchar(' ');
+#ifdef FEAT_MBYTE
+    else if (has_mbyte)
+	draw_cmdline(ccline.cmdpos,
+			       (*mb_ptr2len)(ccline.cmdbuff + ccline.cmdpos));
+#endif
     else
 	draw_cmdline(ccline.cmdpos, 1);
     msg_no_more = FALSE;
@@ -5263,7 +5268,7 @@ get_history_arg(xp, idx)
 {
     static char_u compl[2] = { NUL, NUL };
     char *short_names = ":=@>?/";
-    int short_names_count = STRLEN(short_names);
+    int short_names_count = (int)STRLEN(short_names);
     int history_name_count = sizeof(history_names) / sizeof(char *) - 1;
 
     if (idx < short_names_count)
