@@ -2,6 +2,7 @@ vim (2:7.3.524-2) UNRELEASED; urgency=low
 
   * Change ruby(-dev) Build-Depends to use unversioned package names in order
     to build with the default ruby version.
+  * Add spell-check support to Debian control syntax file.
 
  -- James McCoy <jamessan@debian.org>  Sun, 03 Jun 2012 19:53:38 -0400
 
