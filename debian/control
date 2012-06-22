@@ -5,6 +5,8 @@ Maintainer: Debian Vim Maintainers <pkg-vim-maintainers@lists.alioth.debian.org>
 Uploaders: James McCoy <jamessan@debian.org>
 Standards-Version: 3.9.2.0
 Build-Depends: libacl1-dev, libgpmg1-dev [linux-any],
+# Work around #678122
+ gcc-4.6,
 # B-D for dh_bugfiles
  debhelper (>= 7.2.3~),
  libtinfo-dev | libncurses5-dev, libselinux1-dev [linux-any],

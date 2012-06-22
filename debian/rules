@@ -5,6 +5,8 @@ export DH_OPTIONS
 # Upstream handles the _FORTIFY_SOURCE flag on their own
 DEB_BUILD_MAINT_OPTIONS=hardening=-fortify
 
+# Work around GCC 4.7 optimization bug, #678122, by explicitly using gcc-4.6
+export CC=gcc-4.6
 ifneq (,$(wildcard /usr/share/dpkg/default.mk))
   include /usr/share/dpkg/default.mk
 else
