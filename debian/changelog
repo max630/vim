@@ -1,8 +1,8 @@
-vim (2:7.3.547-2) UNRELEASED; urgency=low
+vim (2:7.3.547-2) unstable; urgency=low
 
   * Work around GCC 4.7 optimization bug, #678122, by explicitly using gcc-4.6
 
- -- James McCoy <jamessan@debian.org>  Thu, 21 Jun 2012 22:06:50 -0400
+ -- James McCoy <jamessan@debian.org>  Thu, 21 Jun 2012 22:28:51 -0400
 
 vim (2:7.3.547-1) unstable; urgency=low
 
