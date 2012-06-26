@@ -956,7 +956,7 @@ fun! netrw#NetRead(mode,...)
 "     call Decho("filter input: ".getline('.'))
     endif
 
-    if exists("g:netrw_uid" && g:netrw_uid != ""
+    if exists("g:netrw_uid") && g:netrw_uid != ""
      if exists("g:netrw_ftp") && g:netrw_ftp == 1
       keepj put =g:netrw_uid
 "       call Decho("filter input: ".getline('.'))
