@@ -1,3 +1,10 @@
+vim (2:7.3.547-4) UNRELEASED; urgency=low
+
+  * Add remove-py_config.patch, fixing the dependence on Python's config.c.
+    (Closes: #681599)
+
+ -- James McCoy <jamessan@debian.org>  Wed, 18 Jul 2012 21:10:32 -0400
+
 vim (2:7.3.547-3) unstable; urgency=low
 
   * Add netrw-syntax-fix.patch to fix a syntax error in NetRead's ftp
