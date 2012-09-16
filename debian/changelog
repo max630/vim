@@ -1,6 +1,8 @@
 vim (2:7.3.547-5) UNRELEASED; urgency=low
 
   * Use xz compression for all binary packages.  (Closes: #687265)
+  * Backport patches 7.3.652 and 7.3.661 to fix crash in Python bindings when
+    GCC 4.7 is used to build Vim.  (Closes: #678122)
 
  -- James McCoy <jamessan@debian.org>  Sat, 15 Sep 2012 22:57:21 -0400
 
