@@ -520,8 +520,7 @@ binary-indep: install-stamp-vim-basic install-stamp-indep
 	dh_installdeb
 	dh_gencontrol
 	dh_md5sums
-	dh_builddeb -pvim-runtime -- -Zbzip2
-	dh_builddeb -Nvim-runtime
+	dh_builddeb -- -Zxz
 
 binary-arch: export DH_OPTIONS=-pvim-dbg
 binary-arch: $(foreach v,$(VARIANTS),binary-arch-$(v))
@@ -532,7 +531,7 @@ binary-arch: $(foreach v,$(VARIANTS),binary-arch-$(v))
 	dh_installdeb
 	dh_gencontrol
 	dh_md5sums
-	dh_builddeb
+	dh_builddeb -- -Zxz
 
 binary-arch-vim-basic: export DH_OPTIONS=-pvim-common -pvim
 binary-arch-vim-basic: install-stamp-vim-basic
@@ -545,7 +544,7 @@ binary-arch-vim-basic: install-stamp-vim-basic
 	dh_shlibdeps
 	dh_gencontrol
 	dh_md5sums
-	dh_builddeb
+	dh_builddeb -- -Zxz
 
 binary-arch-%: export DH_OPTIONS=-p$* $(foreach v,$(VARIANTS_SKIP),-N$(v))
 binary-arch-%: install-stamp-%
@@ -558,7 +557,7 @@ binary-arch-%: install-stamp-%
 	dh_shlibdeps
 	dh_gencontrol
 	dh_md5sums
-	dh_builddeb
+	dh_builddeb -- -Zxz
 
 binary: beginlog binary-indep binary-arch endlog
 .PHONY: patch unpatch extract clean build install binary-indep binary-arch binary update-orig quilt-setup

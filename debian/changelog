@@ -1,3 +1,9 @@
+vim (2:7.3.547-5) UNRELEASED; urgency=low
+
+  * Use xz compression for all binary packages.  (Closes: #687265)
+
+ -- James McCoy <jamessan@debian.org>  Sat, 15 Sep 2012 22:57:21 -0400
+
 vim (2:7.3.547-4) unstable; urgency=low
 
   * Add remove-py_config.patch, removing the dependence on Python's config.c.
