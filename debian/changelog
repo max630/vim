@@ -1,3 +1,9 @@
+vim (2:7.3.547-6) UNRELEASED; urgency=low
+
+  * Always enable ACL support.  (Closes: #693462)
+
+ -- James McCoy <jamessan@debian.org>  Mon, 19 Nov 2012 11:40:31 -0500
+
 vim (2:7.3.547-5) unstable; urgency=low
 
   * Use xz compression for all binary packages.  (Closes: #687265)

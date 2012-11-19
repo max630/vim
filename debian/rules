@@ -48,19 +48,22 @@ TINYFLAGS+=--disable-gui
 TINYFLAGS+=--disable-xsmp
 TINYFLAGS+=--disable-xsmp-interact
 TINYFLAGS+=--disable-netbeans
-TINYFLAGS+=--disable-acl
 TINYFLAGS+=--disable-gpm
 TINYFLAGS+=--enable-nls
 TINYFLAGS+=--enable-multibyte
+TINYFLAGS+=--enable-acl
 
 OPTFLAGS:=--enable-cscope
 ifeq ($(DEB_HOST_ARCH_OS),linux)
     OPTFLAGS+=--enable-gpm
+    OPTFLAGS+=--enable-selinux
+    TINYFLAGS+=--enable-selinux
 else
     OPTFLAGS+=--disable-gpm
 endif
 OPTFLAGS+=--with-features=huge
 OPTFLAGS+=--enable-multibyte
+OPTFLAGS+=--enable-acl
 
 NOXFLAGS:=--without-x
 NOXFLAGS+=--enable-gui=no
