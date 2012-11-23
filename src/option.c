@@ -3154,7 +3154,7 @@ set_init_1()
 	{
 #ifdef HAVE_AVAIL_MEM
 	    /* Use amount of memory available at this moment. */
-	    n = (mch_avail_mem(FALSE) >> 11);
+	    n = (mch_avail_mem(FALSE) >> 1);
 #else
 # ifdef HAVE_TOTAL_MEM
 	    /* Use amount of memory available to Vim. */
@@ -6702,7 +6702,7 @@ did_set_string_option(opt_idx, varp, new_value_alloced, oldval, errbuf,
     {
 	for (s = *varp; *s;)
 	{
-	    while(*s == ',' || *s == ' ')
+	    while (*s == ',' || *s == ' ')
 		s++;
 	    if (!*s)
 		break;
@@ -7377,7 +7377,8 @@ check_stl_option(s)
 check_clipboard_option()
 {
     int		new_unnamed = 0;
-    int		new_autoselect = FALSE;
+    int		new_autoselect_star = FALSE;
+    int		new_autoselect_plus = FALSE;
     int		new_autoselectml = FALSE;
     int		new_html = FALSE;
     regprog_T	*new_exclude_prog = NULL;
@@ -7391,20 +7392,26 @@ check_clipboard_option()
 	    new_unnamed |= CLIP_UNNAMED;
 	    p += 7;
 	}
-        else if (STRNCMP(p, "unnamedplus", 11) == 0
+	else if (STRNCMP(p, "unnamedplus", 11) == 0
 					    && (p[11] == ',' || p[11] == NUL))
 	{
 	    new_unnamed |= CLIP_UNNAMED_PLUS;
 	    p += 11;
 	}
 	else if (STRNCMP(p, "autoselect", 10) == 0
-					&& (p[10] == ',' || p[10] == NUL))
+					    && (p[10] == ',' || p[10] == NUL))
 	{
-	    new_autoselect = TRUE;
+	    new_autoselect_star = TRUE;
 	    p += 10;
 	}
+	else if (STRNCMP(p, "autoselectplus", 14) == 0
+					    && (p[14] == ',' || p[14] == NUL))
+	{
+	    new_autoselect_plus = TRUE;
+	    p += 14;
+	}
 	else if (STRNCMP(p, "autoselectml", 12) == 0
-					&& (p[12] == ',' || p[12] == NUL))
+					    && (p[12] == ',' || p[12] == NUL))
 	{
 	    new_autoselectml = TRUE;
 	    p += 12;
@@ -7433,7 +7440,8 @@ check_clipboard_option()
     if (errmsg == NULL)
     {
 	clip_unnamed = new_unnamed;
-	clip_autoselect = new_autoselect;
+	clip_autoselect_star = new_autoselect_star;
+	clip_autoselect_plus = new_autoselect_plus;
 	clip_autoselectml = new_autoselectml;
 	clip_html = new_html;
 	vim_free(clip_exclude_prog);
@@ -7565,24 +7573,30 @@ set_bool_option(opt_idx, varp, value, opt_flags)
     /* 'undofile' */
     else if ((int *)varp == &curbuf->b_p_udf || (int *)varp == &p_udf)
     {
-	char_u	hash[UNDO_HASH_SIZE];
-	buf_T	*save_curbuf = curbuf;
-
-	for (curbuf = firstbuf; curbuf != NULL; curbuf = curbuf->b_next)
+	/* Only take action when the option was set. When reset we do not
+	 * delete the undo file, the option may be set again without making
+	 * any changes in between. */
+	if (curbuf->b_p_udf || p_udf)
 	{
-	    /* When 'undofile' is set globally: for every buffer, otherwise
-	     * only for the current buffer: Try to read in the undofile, if
-	     * one exists and the buffer wasn't changed and the buffer was
-	     * loaded. */
-	    if ((curbuf == save_curbuf
-				|| (opt_flags & OPT_GLOBAL) || opt_flags == 0)
-		    && !curbufIsChanged() && curbuf->b_ml.ml_mfp != NULL)
+	    char_u	hash[UNDO_HASH_SIZE];
+	    buf_T	*save_curbuf = curbuf;
+
+	    for (curbuf = firstbuf; curbuf != NULL; curbuf = curbuf->b_next)
 	    {
-		u_compute_hash(hash);
-		u_read_undo(NULL, hash, curbuf->b_fname);
+		/* When 'undofile' is set globally: for every buffer, otherwise
+		 * only for the current buffer: Try to read in the undofile,
+		 * if one exists, the buffer wasn't changed and the buffer was
+		 * loaded */
+		if ((curbuf == save_curbuf
+				|| (opt_flags & OPT_GLOBAL) || opt_flags == 0)
+			&& !curbufIsChanged() && curbuf->b_ml.ml_mfp != NULL)
+		{
+		    u_compute_hash(hash);
+		    u_read_undo(NULL, hash, curbuf->b_fname);
+		}
 	    }
+	    curbuf = save_curbuf;
 	}
-	curbuf = save_curbuf;
     }
 #endif
 
@@ -8117,7 +8131,7 @@ set_num_option(opt_idx, varp, value, errbuf, errbuflen, opt_flags)
     need_mouse_correct = TRUE;
 #endif
 
-    if (curbuf->b_p_sw <= 0)
+    if (curbuf->b_p_sw < 0)
     {
 	errmsg = e_positive;
 	curbuf->b_p_sw = curbuf->b_p_ts;
@@ -8501,11 +8515,6 @@ set_num_option(opt_idx, varp, value, errbuf, errbuflen, opt_flags)
 	    p_window = Rows - 1;
     }
 
-    if (curbuf->b_p_sts < 0)
-    {
-	errmsg = e_positive;
-	curbuf->b_p_sts = 0;
-    }
     if (curbuf->b_p_ts <= 0)
     {
 	errmsg = e_positive;
@@ -11410,4 +11419,24 @@ check_ff_value(p)
     char_u	*p;
 {
     return check_opt_strings(p, p_ff_values, FALSE);
+}
+
+/*
+ * Return the effective shiftwidth value for current buffer, using the
+ * 'tabstop' value when 'shiftwidth' is zero.
+ */
+    long
+get_sw_value()
+{
+    return curbuf->b_p_sw ? curbuf->b_p_sw : curbuf->b_p_ts;
+}
+
+/*
+ * Return the effective softtabstop value for the current buffer, using the
+ * 'tabstop' value when 'softtabstop' is negative.
+ */
+    long
+get_sts_value()
+{
+    return curbuf->b_p_sts < 0 ? get_sw_value() : curbuf->b_p_sts;
 }

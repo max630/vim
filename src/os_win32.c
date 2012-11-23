@@ -29,7 +29,11 @@
 #include <sys/types.h>
 #include <signal.h>
 #include <limits.h>
-#include <process.h>
+
+/* cproto fails on missing include files */
+#ifndef PROTO
+# include <process.h>
+#endif
 
 #undef chdir
 #ifdef __GNUC__
@@ -40,8 +44,10 @@
 # include <direct.h>
 #endif
 
-#if defined(FEAT_TITLE) && !defined(FEAT_GUI_W32)
-# include <shellapi.h>
+#ifndef PROTO
+# if defined(FEAT_TITLE) && !defined(FEAT_GUI_W32)
+#  include <shellapi.h>
+# endif
 #endif
 
 #ifdef __MINGW32__
@@ -125,6 +131,7 @@ typedef int TRUSTEE;
 typedef int WORD;
 typedef int WCHAR;
 typedef void VOID;
+typedef int BY_HANDLE_FILE_INFORMATION;
 #endif
 
 #ifndef FEAT_GUI_W32
@@ -152,6 +159,8 @@ static PFNGCKLN    s_pfnGetConsoleKeyboardLayoutName = NULL;
 # define wcsicmp(a, b) wcscmpi((a), (b))
 #endif
 
+#ifndef PROTO
+
 /* Enable common dialogs input unicode from IME if posible. */
 #ifdef FEAT_MBYTE
 LRESULT (WINAPI *pDispatchMessage)(LPMSG) = DispatchMessage;
@@ -159,6 +168,8 @@ BOOL (WINAPI *pGetMessage)(LPMSG, HWND, UINT, UINT) = GetMessage;
 BOOL (WINAPI *pIsDialogMessage)(HWND, LPMSG) = IsDialogMessage;
 BOOL (WINAPI *pPeekMessage)(LPMSG, HWND, UINT, UINT, UINT) = PeekMessage;
 #endif
+
+#endif /* PROTO */
 
 #ifndef FEAT_GUI_W32
 /* Win32 Console handles for input and output */
@@ -287,19 +298,40 @@ unescape_shellxquote(char_u *p, char_u *escaped)
     HINSTANCE
 vimLoadLib(char *name)
 {
-    HINSTANCE dll = NULL;
-    char old_dir[MAXPATHL];
+    HINSTANCE	dll = NULL;
+    char	old_dir[MAXPATHL];
 
+    /* NOTE: Do not use mch_dirname() and mch_chdir() here, they may call
+     * vimLoadLib() recursively, which causes a stack overflow. */
     if (exe_path == NULL)
 	get_exe_name();
-    if (exe_path != NULL && mch_dirname(old_dir, MAXPATHL) == OK)
+    if (exe_path != NULL)
     {
-	/* Change directory to where the executable is, both to make sure we
-	 * find a .dll there and to avoid looking for a .dll in the current
-	 * directory. */
-	mch_chdir(exe_path);
-	dll = LoadLibrary(name);
-	mch_chdir(old_dir);
+#ifdef FEAT_MBYTE
+	WCHAR old_dirw[MAXPATHL];
+
+	if (GetCurrentDirectoryW(MAXPATHL, old_dirw) != 0)
+	{
+	    /* Change directory to where the executable is, both to make
+	     * sure we find a .dll there and to avoid looking for a .dll
+	     * in the current directory. */
+	    SetCurrentDirectory(exe_path);
+	    dll = LoadLibrary(name);
+	    SetCurrentDirectoryW(old_dirw);
+	    return dll;
+	}
+	/* Retry with non-wide function (for Windows 98). */
+	if (GetLastError() == ERROR_CALL_NOT_IMPLEMENTED)
+#endif
+	    if (GetCurrentDirectory(MAXPATHL, old_dir) != 0)
+	    {
+		/* Change directory to where the executable is, both to make
+		 * sure we find a .dll there and to avoid looking for a .dll
+		 * in the current directory. */
+		SetCurrentDirectory(exe_path);
+		dll = LoadLibrary(name);
+		SetCurrentDirectory(old_dir);
+	    }
     }
     return dll;
 }
@@ -308,7 +340,7 @@ vimLoadLib(char *name)
 # ifndef GETTEXT_DLL
 #  define GETTEXT_DLL "libintl.dll"
 # endif
-/* Dummy funcitons */
+/* Dummy functions */
 static char *null_libintl_gettext(const char *);
 static char *null_libintl_textdomain(const char *);
 static char *null_libintl_bindtextdomain(const char *, const char *);
@@ -432,7 +464,10 @@ null_libintl_textdomain(const char *domainname)
 DWORD g_PlatformId;
 
 #ifdef HAVE_ACL
-# include <aclapi.h>
+# ifndef PROTO
+#  include <aclapi.h>
+# endif
+
 /*
  * These are needed to dynamically load the ADVAPI DLL, which is not
  * implemented under Windows 95 (and causes VIM to crash)
@@ -1409,7 +1444,7 @@ tgetch(int *pmodifiers, char_u *pch2)
 
 
 /*
- * mch_inchar(): low-level input funcion.
+ * mch_inchar(): low-level input function.
  * Get one or more characters from the keyboard or the mouse.
  * If time == 0, do not wait for characters.
  * If time == n, wait a short time for characters.
@@ -1637,8 +1672,10 @@ theend:
 #endif /* FEAT_GUI_W32 */
 }
 
-#ifndef __MINGW32__
-# include <shellapi.h>	/* required for FindExecutable() */
+#ifndef PROTO
+# ifndef __MINGW32__
+#  include <shellapi.h>	/* required for FindExecutable() */
+# endif
 #endif
 
 /*
@@ -3319,6 +3356,8 @@ mch_system_classic(char *cmd, int options)
 	    {
 		TranslateMessage(&msg);
 		pDispatchMessage(&msg);
+		delay = 1;
+		continue;
 	    }
 	    if (WaitForSingleObject(pi.hProcess, delay) != WAIT_TIMEOUT)
 		break;
@@ -3451,14 +3490,14 @@ dump_pipe(int	    options,
      * to avoid to perform a blocking read */
     ret = PeekNamedPipe(g_hChildStd_OUT_Rd, /* pipe to query */
 			NULL,		    /* optional buffer */
-			0,		    /* buffe size */
+			0,		    /* buffer size */
 			NULL,		    /* number of read bytes */
 			&availableBytes,    /* available bytes total */
 			NULL);		    /* byteLeft */
 
     repeatCount = 0;
     /* We got real data in the pipe, read it */
-    while (ret != 0 && availableBytes > 0 && availableBytes > 0)
+    while (ret != 0 && availableBytes > 0)
     {
 	repeatCount++;
 	toRead =
@@ -3638,7 +3677,7 @@ mch_system_piped(char *cmd, int options)
 		  NULL,			/* Process security attributes */
 		  NULL,			/* Thread security attributes */
 
-		  // this command can be litigeous, handle inheritence was
+		  // this command can be litigious, handle inheritance was
 		  // deactivated for pending temp file, but, if we deactivate
 		  // it, the pipes don't work for some reason.
 		  TRUE,			/* Inherit handles, first deactivated,
@@ -4992,18 +5031,34 @@ mch_breakcheck(void)
 
 
 /*
- * How much memory is available?
+ * How much memory is available in Kbyte?
  * Return sum of available physical and page file memory.
  */
 /*ARGSUSED*/
     long_u
 mch_avail_mem(int special)
 {
-    MEMORYSTATUS	ms;
+#ifdef MEMORYSTATUSEX
+    PlatformId();
+    if (g_PlatformId == VER_PLATFORM_WIN32_NT)
+    {
+	MEMORYSTATUSEX	ms;
 
-    ms.dwLength = sizeof(MEMORYSTATUS);
-    GlobalMemoryStatus(&ms);
-    return (long_u) (ms.dwAvailPhys + ms.dwAvailPageFile);
+	/* Need to use GlobalMemoryStatusEx() when there is more memory than
+	 * what fits in 32 bits. But it's not always available. */
+	ms.dwLength = sizeof(MEMORYSTATUSEX);
+	GlobalMemoryStatusEx(&ms);
+	return (long_u)((ms.ullAvailPhys + ms.ullAvailPageFile) >> 10);
+    }
+    else
+#endif
+    {
+	MEMORYSTATUS	ms;
+
+	ms.dwLength = sizeof(MEMORYSTATUS);
+	GlobalMemoryStatus(&ms);
+	return (long_u)((ms.dwAvailPhys + ms.dwAvailPageFile) >> 10);
+    }
 }
 
 #ifdef FEAT_MBYTE

@@ -960,8 +960,11 @@ getcount:
 #ifdef FEAT_CMDL_INFO
 	    need_flushbuf |= add_to_showcmd(ca.nchar);
 #endif
+	    /* For "gn" from redo, need to get one more char to determine the
+	     * operator */
 	    if (ca.nchar == 'r' || ca.nchar == '\'' || ca.nchar == '`'
-						      || ca.nchar == Ctrl_BSL)
+						       || ca.nchar == Ctrl_BSL
+		  || ((ca.nchar == 'n' || ca.nchar == 'N') && !stuff_empty()))
 	    {
 		cp = &ca.extra_char;	/* need to get a third character */
 		if (ca.nchar != 'r')
@@ -1083,6 +1086,8 @@ getcount:
 		ca.nchar = ca.extra_char;
 		idx = find_command(ca.cmdchar);
 	    }
+	    else if ((ca.nchar == 'n' || ca.nchar == 'N') && ca.cmdchar == 'g')
+		ca.oap->op_type = get_op_type(*cp, NUL);
 	    else if (*cp == Ctrl_BSL)
 	    {
 		long towait = (p_ttm >= 0 ? p_ttm : p_tm);
@@ -1451,7 +1456,7 @@ do_pending_operator(cap, old_col, gui_yank)
      * This could call do_pending_operator() recursively, but that's OK
      * because gui_yank will be TRUE for the nested call.
      */
-    if (clip_star.available
+    if ((clip_star.available || clip_plus.available)
 	    && oap->op_type != OP_NOP
 	    && !gui_yank
 # ifdef FEAT_VISUAL
@@ -1780,10 +1785,18 @@ do_pending_operator(cap, old_col, gui_yank)
 	    {
 		/* Prepare for redoing.  Only use the nchar field for "r",
 		 * otherwise it might be the second char of the operator. */
-		prep_redo(oap->regname, 0L, NUL, 'v',
-				get_op_char(oap->op_type),
-				get_extra_op_char(oap->op_type),
-				oap->op_type == OP_REPLACE ? cap->nchar : NUL);
+		if (cap->cmdchar == 'g' && (cap->nchar == 'n'
+							|| cap->nchar == 'N'))
+		    /* "gn" and "gN" are a bit different */
+		    prep_redo(oap->regname, 0L, NUL, cap->cmdchar, cap->nchar,
+					get_op_char(oap->op_type),
+					get_extra_op_char(oap->op_type));
+		else
+		    prep_redo(oap->regname, 0L, NUL, 'v',
+					get_op_char(oap->op_type),
+					get_extra_op_char(oap->op_type),
+					oap->op_type == OP_REPLACE
+							  ? cap->nchar : NUL);
 		if (!redo_VIsual_busy)
 		{
 		    redo_VIsual_mode = resel_VIsual_mode;
@@ -7778,7 +7791,10 @@ n_start_visual_mode(c)
      * virtualedit.  Recalculate curwin->w_cursor to avoid bad hilighting.
      */
     if (c == Ctrl_V && (ve_flags & VE_BLOCK) && gchar_cursor() == TAB)
+    {
+	validate_virtcol();
 	coladvance(curwin->w_virtcol);
+    }
 #endif
     VIsual = curwin->w_cursor;
 
@@ -7988,6 +8004,18 @@ nv_g_cmd(cap)
 	nv_visual(cap);
 	break;
 #endif /* FEAT_VISUAL */
+
+    /* "gn", "gN" visually select next/previous search match
+     * "gn" selects next match
+     * "gN" selects previous match
+     */
+    case 'N':
+    case 'n':
+#ifdef FEAT_VISUAL
+	if (!current_search(cap->count1, cap->nchar == 'n'))
+#endif
+	    clearopbeep(oap);
+	break;
 
     /*
      * "gj" and "gk" two new funny movement keys -- up and down
@@ -8393,10 +8421,12 @@ nv_g_cmd(cap)
 
 #ifdef FEAT_WINDOWS
     case 't':
-	goto_tabpage((int)cap->count0);
+	if (!checkclearop(oap))
+	    goto_tabpage((int)cap->count0);
 	break;
     case 'T':
-	goto_tabpage(-(int)cap->count1);
+	if (!checkclearop(oap))
+	    goto_tabpage(-(int)cap->count1);
 	break;
 #endif
 

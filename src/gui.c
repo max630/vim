@@ -37,8 +37,7 @@ static void gui_set_fg_color __ARGS((char_u *name));
 static void gui_set_bg_color __ARGS((char_u *name));
 static win_T *xy2win __ARGS((int x, int y));
 
-#if defined(UNIX) && !defined(__BEOS__) && !defined(MACOS_X) \
-	&& !defined(__APPLE__)
+#if defined(UNIX) && !defined(MACOS_X) && !defined(__APPLE__)
 # define MAY_FORK
 static void gui_do_fork __ARGS((void));
 
@@ -784,11 +783,9 @@ error:
 gui_exit(rc)
     int		rc;
 {
-#ifndef __BEOS__
     /* don't free the fonts, it leads to a BUS error
      * richard@whitequeen.com Jul 99 */
     free_highlight_fonts();
-#endif
     gui.in_use = FALSE;
     gui_mch_exit(rc);
 }
@@ -908,13 +905,7 @@ gui_init_font(font_list, fontset)
 # endif
 	    gui_mch_set_font(gui.norm_font);
 #endif
-	gui_set_shellsize(FALSE,
-#ifdef MSWIN
-		TRUE
-#else
-		FALSE
-#endif
-		, RESIZE_BOTH);
+	gui_set_shellsize(FALSE, TRUE, RESIZE_BOTH);
     }
 
     return ret;
@@ -3154,7 +3145,7 @@ button_set:
     }
 
     if (clip_star.state != SELECT_CLEARED && !did_clip)
-	clip_clear_selection();
+	clip_clear_selection(&clip_star);
 #endif
 
     /* Don't put events in the input queue now. */

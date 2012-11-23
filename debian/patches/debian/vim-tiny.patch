@@ -47,7 +47,7 @@ Bug-Debian: http://bugs.debian.org/222138
  	(void)do_source((char_u *)"$VIMRUNTIME/macmap.vim", FALSE, DOSO_NONE);
 --- a/src/os_unix.h
 +++ b/src/os_unix.h
-@@ -233,6 +233,9 @@
+@@ -240,6 +240,9 @@
  /*
   * Unix system-dependent file names
   */
