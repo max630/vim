@@ -7,6 +7,7 @@ vim (2:7.3.725-1) UNRELEASED; urgency=low
     + 7.3.607: Swap fg and bg colors for completion menu.  (Closes: #680772)
   * Mark "DM-Upload-Allowed" in debian/control files as an "Error", since the
     field is no longer supported by the Debian archives.
+  * Re-enable vim-gnome on m68k.
 
  -- James McCoy <jamessan@debian.org>  Fri, 23 Nov 2012 13:37:27 -0500
 

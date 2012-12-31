@@ -121,9 +121,7 @@ ALLINTERPFLAGS+=--enable-tclinterp
 
 VARIANTS+=vim-tiny
 VARIANTS+=vim-gtk
-ifneq (m68k,$(DEB_HOST_ARCH_CPU))
-	VARIANTS+=vim-gnome
-endif
+VARIANTS+=vim-gnome
 VARIANTS+=vim-athena
 VARIANTS+=vim-nox
 VARIANTS+=vim-basic
