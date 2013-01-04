@@ -4,6 +4,7 @@ upstream/extra-rst-detection.patch
 upstream/es.po-recover.patch
 upstream/pythoncomplete-autoload-init.patch
 upstream/debcontrol-syntax-dmua.patch
+upstream/debian-runtime-releases.patch
 debian/vim-tiny.patch
 debian/disabled-modelines.patch
 debian/extra-tex-detection.patch
