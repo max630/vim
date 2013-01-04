@@ -1,10 +1,11 @@
-vim (2:7.3.725-1) UNRELEASED; urgency=low
+vim (2:7.3.762-1) UNRELEASED; urgency=low
 
-  * Merge upstream tag v7-3-725
+  * Merge upstream tag v7-3-762
     + Merged patches:
       - upstream/debian-runtime-spell.patch, upstream/if_py-crash.patch,
         upstream/netrw-syntax-fix.patch, upstream/remove-py_config.patch
     + 7.3.607: Swap fg and bg colors for completion menu.  (Closes: #680772)
+    + 7.3.750: Fix off-by-one error in justify macro.  (Closes: #620106)
   * Mark "DM-Upload-Allowed" in debian/control files as an "Error", since the
     field is no longer supported by the Debian archives.
   * Re-enable vim-gnome on m68k.
