@@ -134,6 +134,11 @@ static char *(features[]) =
 #else
 	"-comments",
 #endif
+#ifdef FEAT_CONCEAL
+	"+conceal",
+#else
+	"-conceal",
+#endif
 #ifdef FEAT_CRYPT
 	"+cryptv",
 #else
@@ -143,6 +148,11 @@ static char *(features[]) =
 	"+cscope",
 #else
 	"-cscope",
+#endif
+#ifdef FEAT_CURSORBIND
+	"+cursorbind",
+#else
+	"-cursorbind",
 #endif
 #ifdef CURSOR_SHAPE
 	"+cursorshape",
@@ -304,6 +314,15 @@ static char *(features[]) =
 #else
 	"-localmap",
 #endif
+#ifdef FEAT_LUA
+# ifdef DYNAMIC_LUA
+	"+lua/dyn",
+# else
+	"+lua",
+# endif
+#else
+	"-lua",
+#endif
 #ifdef FEAT_MENU
 	"+menu",
 #else
@@ -360,6 +379,11 @@ static char *(features[]) =
 # else
 	"-mouse_xterm",
 # endif
+# ifdef FEAT_MOUSE_URXVT
+	"+mouse_urxvt",
+# else
+	"-mouse_urxvt",
+# endif
 #endif
 #ifdef __QNX__
 # ifdef FEAT_MOUSE_PTERM
@@ -407,11 +431,6 @@ static char *(features[]) =
 	"-ole",
 # endif
 #endif
-#ifdef FEAT_OSFILETYPE
-	"+osfiletype",
-#else
-	"-osfiletype",
-#endif
 #ifdef FEAT_PATH_EXTRA
 	"+path_extra",
 #else
@@ -425,6 +444,11 @@ static char *(features[]) =
 # endif
 #else
 	"-perl",
+#endif
+#ifdef FEAT_PERSISTENT_UNDO
+	"+persistent_undo",
+#else
+	"-persistent_undo",
 #endif
 #ifdef FEAT_PRINTER
 # ifdef FEAT_POSTSCRIPT
@@ -449,6 +473,15 @@ static char *(features[]) =
 # endif
 #else
 	"-python",
+#endif
+#ifdef FEAT_PYTHON3
+# ifdef DYNAMIC_PYTHON3
+	"+python3/dyn",
+# else
+	"+python3",
+# endif
+#else
+	"-python3",
 #endif
 #ifdef FEAT_QUICKFIX
 	"+quickfix",
@@ -681,6 +714,210 @@ static char *(features[]) =
 
 static int included_patches[] =
 {   /* Add new patch number below this line */
+/**/
+    547,
+/**/
+    546,
+/**/
+    545,
+/**/
+    544,
+/**/
+    543,
+/**/
+    542,
+/**/
+    541,
+/**/
+    540,
+/**/
+    539,
+/**/
+    538,
+/**/
+    537,
+/**/
+    536,
+/**/
+    535,
+/**/
+    534,
+/**/
+    533,
+/**/
+    532,
+/**/
+    531,
+/**/
+    530,
+/**/
+    529,
+/**/
+    528,
+/**/
+    527,
+/**/
+    526,
+/**/
+    525,
+/**/
+    524,
+/**/
+    523,
+/**/
+    522,
+/**/
+    521,
+/**/
+    520,
+/**/
+    519,
+/**/
+    518,
+/**/
+    517,
+/**/
+    516,
+/**/
+    515,
+/**/
+    514,
+/**/
+    513,
+/**/
+    512,
+/**/
+    511,
+/**/
+    510,
+/**/
+    509,
+/**/
+    508,
+/**/
+    507,
+/**/
+    506,
+/**/
+    505,
+/**/
+    504,
+/**/
+    503,
+/**/
+    502,
+/**/
+    501,
+/**/
+    500,
+/**/
+    499,
+/**/
+    498,
+/**/
+    497,
+/**/
+    496,
+/**/
+    495,
+/**/
+    494,
+/**/
+    493,
+/**/
+    492,
+/**/
+    491,
+/**/
+    490,
+/**/
+    489,
+/**/
+    488,
+/**/
+    487,
+/**/
+    486,
+/**/
+    485,
+/**/
+    484,
+/**/
+    483,
+/**/
+    482,
+/**/
+    481,
+/**/
+    480,
+/**/
+    479,
+/**/
+    478,
+/**/
+    477,
+/**/
+    476,
+/**/
+    475,
+/**/
+    474,
+/**/
+    473,
+/**/
+    472,
+/**/
+    471,
+/**/
+    470,
+/**/
+    469,
+/**/
+    468,
+/**/
+    467,
+/**/
+    466,
+/**/
+    465,
+/**/
+    464,
+/**/
+    463,
+/**/
+    462,
+/**/
+    461,
+/**/
+    460,
+/**/
+    459,
+/**/
+    458,
+/**/
+    457,
+/**/
+    456,
+/**/
+    455,
+/**/
+    454,
+/**/
+    453,
+/**/
+    452,
+/**/
+    451,
+/**/
+    450,
+/**/
+    449,
+/**/
+    448,
+/**/
+    447,
+/**/
+    446,
 /**/
     445,
 /**/
@@ -1690,9 +1927,6 @@ list_version()
 # endif
 #endif
 
-#ifdef RISCOS
-    MSG_PUTS(_("\nRISC OS version"));
-#endif
 #ifdef VMS
     MSG_PUTS(_("\nOpenVMS version"));
 # ifdef HAVE_PATHDEF
@@ -1791,17 +2025,9 @@ list_version()
 #else
 # ifdef FEAT_GUI_GTK
 #  ifdef FEAT_GUI_GNOME
-#   ifdef HAVE_GTK2
     MSG_PUTS(_("with GTK2-GNOME GUI."));
-#   else
-    MSG_PUTS(_("with GTK-GNOME GUI."));
-#   endif
 #  else
-#   ifdef HAVE_GTK2
     MSG_PUTS(_("with GTK2 GUI."));
-#   else
-    MSG_PUTS(_("with GTK GUI."));
-#   endif
 #  endif
 # else
 #  ifdef FEAT_GUI_MOTIF
@@ -1820,13 +2046,13 @@ list_version()
 #      if defined(MSWIN)
     MSG_PUTS(_("with GUI."));
 #      else
-#	if defined (TARGET_API_MAC_CARBON) && TARGET_API_MAC_CARBON
+#	if defined(TARGET_API_MAC_CARBON) && TARGET_API_MAC_CARBON
     MSG_PUTS(_("with Carbon GUI."));
 #	else
-#	 if defined (TARGET_API_MAC_OSX) && TARGET_API_MAC_OSX
+#	 if defined(TARGET_API_MAC_OSX) && TARGET_API_MAC_OSX
     MSG_PUTS(_("with Cocoa GUI."));
 #	 else
-#	  if defined (MACOS)
+#	  if defined(MACOS)
     MSG_PUTS(_("with (classic) GUI."));
 #	  endif
 #	 endif
@@ -2127,14 +2353,11 @@ do_intro_line(row, mesg, add_version, attr)
 	if (highest_patch())
 	{
 	    /* Check for 9.9x or 9.9xx, alpha/beta version */
-	    if (isalpha((int)mediumVersion[3]))
+	    if (isalpha((int)vers[3]))
 	    {
-		if (isalpha((int)mediumVersion[4]))
-		    sprintf((char *)vers + 5, ".%d%s", highest_patch(),
-							   mediumVersion + 5);
-		else
-		    sprintf((char *)vers + 4, ".%d%s", highest_patch(),
-							   mediumVersion + 4);
+		int len = (isalpha((int)vers[4])) ? 5 : 4;
+		sprintf((char *)vers + len, ".%d%s", highest_patch(),
+							 mediumVersion + len);
 	    }
 	    else
 		sprintf((char *)vers + 3, ".%d", highest_patch());

@@ -92,13 +92,13 @@
  */
 #define KS_TEAROFF		244
 
-/* used for JSB term mouse */
+/* Used for JSB term mouse. */
 #define KS_JSBTERM_MOUSE	243
 
-/* used a termcap entry that produces a normal character */
+/* Used a termcap entry that produces a normal character. */
 #define KS_KEY			242
 
-/* Used for the qnx pterm mouse */
+/* Used for the qnx pterm mouse. */
 #define KS_PTERM_MOUSE		241
 
 /* Used for click in a tab pages label. */
@@ -106,6 +106,9 @@
 
 /* Used for menu in a tab pages line. */
 #define KS_TABMENU		239
+
+/* Used for the urxvt mouse. */
+#define KS_URXVT_MOUSE		238
 
 /*
  * Filler used after KS_SPECIAL and others
@@ -228,8 +231,13 @@ enum key_extra
     , KE_S_XF3
     , KE_S_XF4
 
+    /* NOTE: The scroll wheel events are inverted: i.e. UP is the same as
+     * moving the actual scroll wheel down, LEFT is the same as moving the
+     * scroll wheel right. */
     , KE_MOUSEDOWN	/* scroll wheel pseudo-button Down */
     , KE_MOUSEUP	/* scroll wheel pseudo-button Up */
+    , KE_MOUSELEFT	/* scroll wheel pseudo-button Left */
+    , KE_MOUSERIGHT	/* scroll wheel pseudo-button Right */
 
     , KE_KINS		/* keypad Insert key */
     , KE_KDEL		/* keypad Delete key */
@@ -403,6 +411,7 @@ enum key_extra
 #define K_DEC_MOUSE	TERMCAP2KEY(KS_DEC_MOUSE, KE_FILLER)
 #define K_JSBTERM_MOUSE	TERMCAP2KEY(KS_JSBTERM_MOUSE, KE_FILLER)
 #define K_PTERM_MOUSE	TERMCAP2KEY(KS_PTERM_MOUSE, KE_FILLER)
+#define K_URXVT_MOUSE	TERMCAP2KEY(KS_URXVT_MOUSE, KE_FILLER)
 
 #define K_SELECT	TERMCAP2KEY(KS_SELECT, KE_FILLER)
 #define K_TEAROFF	TERMCAP2KEY(KS_TEAROFF, KE_FILLER)
@@ -440,6 +449,8 @@ enum key_extra
 
 #define K_MOUSEDOWN	TERMCAP2KEY(KS_EXTRA, KE_MOUSEDOWN)
 #define K_MOUSEUP	TERMCAP2KEY(KS_EXTRA, KE_MOUSEUP)
+#define K_MOUSELEFT	TERMCAP2KEY(KS_EXTRA, KE_MOUSELEFT)
+#define K_MOUSERIGHT	TERMCAP2KEY(KS_EXTRA, KE_MOUSERIGHT)
 
 #define K_CSI		TERMCAP2KEY(KS_EXTRA, KE_CSI)
 #define K_SNR		TERMCAP2KEY(KS_EXTRA, KE_SNR)

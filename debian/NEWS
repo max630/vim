@@ -1,3 +1,13 @@
+vim (2:7.3.154+hg~74503f6ee649-1) unstable; urgency=low
+
+  The vim-lesstif package has been removed in favor of the new vim-athena
+  package.  The intent behind both packages is to provide a lighter-weight GUI
+  package as well as one that allows using XFLD fonts.  The Athena toolkit,
+  however,  has broader usage and reduces divergences with downstream
+  distributions.
+
+ -- James Vega <jamessan@debian.org>  Sun, 27 Feb 2011 12:45:40 -0500
+
 vim (2:7.2c.000-1) experimental; urgency=low
 
   The autoindent option is no longer enabled by default because:

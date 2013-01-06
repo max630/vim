@@ -16,7 +16,6 @@
 #include <sys/types.h>
 #include <netdb.h>
 #include <netinet/in.h>
-#include <errno.h>
 #include <sys/socket.h>
 #ifdef HAVE_LIBGEN_H
 # include <libgen.h>
@@ -41,18 +40,12 @@ void		 workshop_hotkeys(Boolean);
 
 static Boolean	 isShowing(int);
 static win_T	*get_window(buf_T *);
-#if 0
-static int	 get_buffer_number(buf_T *);
-#endif
 static void	 updatePriority(Boolean);
 static char	*addUniqueMnemonic(char *, char *);
 static char	*fixup(char *);
 static char	*get_selection(buf_T *);
 static char	*append_selection(int, char *, int *, int *);
 static void	 load_buffer_by_name(char *, int);
-#if 0
-static void	 load_buffer_by_number(int, int);
-#endif
 static void	 load_window(char *, int lnum);
 static void	 warp_to_pc(int);
 #ifdef FEAT_BEVAL
@@ -477,22 +470,6 @@ workshop_delete_mark(
     coloncmd(cbuf, TRUE);
 }
 
-#if 0	/* not used */
-    void
-workshop_delete_all_marks(
-    void	*window,
-    Boolean	 doRefresh)
-{
-#ifdef WSDEBUG_TRACE
-    if (WSDLEVEL(WS_TRACE_VERBOSE | WS_TRACE))
-	wstrace("workshop_delete_all_marks(%#x, %s)\n",
-		window, doRefresh ? "True" : "False");
-#endif
-
-    coloncmd("sign unplace *", TRUE);
-}
-#endif
-
     int
 workshop_get_mark_lineno(
 	char	*filename,
@@ -516,19 +493,6 @@ workshop_get_mark_lineno(
     return lineno;
 }
 
-
-#if 0	/* not used */
-    void
-workshop_adjust_marks(Widget *window, int pos,
-			int inserted, int deleted)
-{
-#ifdef WSDEBUG_TRACE
-    if (WSDLEVEL(WS_TRACE_VERBOSE | WS_TRACE))
-	wstrace("XXXworkshop_adjust_marks(%s, %d, %d, %d)\n",
-		window ? XtName(window) : "<None>", pos, inserted, deleted);
-#endif
-}
-#endif
 
 /*
  * Are there any moved marks? If so, call workshop_move_mark on
@@ -820,7 +784,6 @@ workshop_toolbar_button(
     char	namebuf[BUFSIZ];
     static int	tbid = 1;
     char_u	*p;
-    int		len;
 
 #ifdef WSDEBUG_TRACE
     if (WSDLEVEL(WS_TRACE_VERBOSE))
@@ -861,12 +824,10 @@ workshop_toolbar_button(
     if (file != NULL && *file != NUL)
     {
 	p = vim_strsave_escaped((char_u *)file, (char_u *)" ");
-	len = STRLEN(cbuf);
-	vim_snprintf(cbuf + len, sizeof(cbuf) - len, "icon=%s ", p);
+	vim_snprintf_add(cbuf, sizeof(cbuf), "icon=%s ", p);
 	vim_free(p);
     }
-    len = STRLEN(cbuf);
-    vim_snprintf(cbuf + len, sizeof(cbuf) - len,"1.%d %s :wsverb %s<CR>",
+    vim_snprintf_add(cbuf, sizeof(cbuf),"1.%d %s :wsverb %s<CR>",
 							tbpri, namebuf, verb);
 
     /* Define the menu item */
@@ -1304,13 +1265,15 @@ load_window(
     }
     else
     {
+#ifdef FEAT_WINDOWS
 	/* buf is in a window */
 	if (win != curwin)
 	{
 	    win_enter(win, False);
-	    /* wsdebug("load_window: window endter %s\n",
+	    /* wsdebug("load_window: window enter %s\n",
 		    win->w_buffer->b_sfname); */
 	}
+#endif
 	if (lnum > 0 && win->w_cursor.lnum != lnum)
 	{
 	    warp_to_pc(lnum);
@@ -1362,26 +1325,6 @@ get_window(
     return wp;
 }
 
-
-#if 0 /* not used */
-    static int
-get_buffer_number(
-	buf_T		*buf)		/* buffer to get position of */
-{
-    buf_T	*bp;		/* iterate over buffer list */
-    int		 pos;		/* the position in the buffer list */
-
-    pos = 1;
-    for (bp = firstbuf; bp != NULL; bp = bp->b_next)
-    {
-	if (bp == buf)
-	    return pos;
-	pos++;
-    }
-
-    return 1;
-}
-#endif
 
     static void
 updatePriority(
@@ -1826,7 +1769,8 @@ findYourself(
     else if (*argv0 == '.' || strchr(argv0, '/'))
     {
 	runpath = (char *) malloc(MAXPATHLEN);
-	getcwd(runpath, MAXPATHLEN);
+	if (getcwd(runpath, MAXPATHLEN) == NULL)
+	    runpath[0] = NUL;
 	strcat(runpath, "/");
 	strcat(runpath, argv0);
     }

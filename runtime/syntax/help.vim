@@ -1,12 +1,15 @@
 " Vim syntax file
 " Language:	Vim help file
 " Maintainer:	Bram Moolenaar (Bram@vim.org)
-" Last Change:	2009 May 18
+" Last Change:	2012 May 18
 
 " Quit when a (custom) syntax file was already loaded
 if exists("b:current_syntax")
   finish
 endif
+
+let s:cpo_save = &cpo
+set cpo&vim
 
 syn match helpHeadline		"^[-A-Z .][-A-Z0-9 .()]*[ \t]\+\*"me=e-1
 syn match helpSectionDelim	"^=\{3,}.*===$"
@@ -21,16 +24,28 @@ else
   syn match helpHyperTextEntry	"\*[#-)!+-~]\+\*\s"he=e-1 contains=helpStar
   syn match helpHyperTextEntry	"\*[#-)!+-~]\+\*$" contains=helpStar
 endif
-syn match helpBar		contained "|"
-syn match helpStar		contained "\*"
+if has("conceal")
+  syn match helpBar		contained "[|`]" conceal
+  syn match helpStar		contained "\*" conceal
+else
+  syn match helpBar		contained "[|`]"
+  syn match helpStar		contained "\*"
+endif
 syn match helpNormal		"|.*====*|"
+syn match helpNormal		"|||"
 syn match helpNormal		":|vim:|"	" for :help modeline
 syn match helpVim		"Vim version [0-9.a-z]\+"
 syn match helpVim		"VIM REFERENCE.*"
 syn match helpOption		"'[a-z]\{2,\}'"
 syn match helpOption		"'t_..'"
+syn match helpCommand		"`[^` ]*`"hs=s+1,he=e-1 contains=helpBar
 syn match helpHeader		"\s*\zs.\{-}\ze\s\=\~$" nextgroup=helpIgnore
-syn match helpIgnore		"." contained
+syn match helpGraphic		".* \ze`$" nextgroup=helpIgnore
+if has("conceal")
+  syn match helpIgnore		"." contained conceal
+else
+  syn match helpIgnore		"." contained
+endif
 syn keyword helpNote		note Note NOTE note: Note: NOTE: Notes Notes:
 syn match helpSpecial		"\<N\>"
 syn match helpSpecial		"\<N\.$"me=e-1
@@ -116,12 +131,22 @@ if s:i > 0
   exe "runtime syntax/help_" . strpart(expand("%"), s:i + 1, 2) . ".vim"
 endif
 
+" Italian
+if v:lang =~ '\<IT\>' || v:lang =~ '_IT\>' || v:lang =~? "italian"
+  syn keyword helpNote		nota Nota NOTA nota: Nota: NOTA: notare Notare NOTARE notare: Notare: NOTARE:
+  syn match helpSpecial		"Nma"me=e-2
+  syn match helpSpecial		"Nme"me=e-2
+  syn match helpSpecial		"Nmi"me=e-2
+  syn match helpSpecial		"Nmo"me=e-2
+  syn match helpSpecial		"\[interv.]"
+  syn region helpNotVi		start="{non" start="{solo" start="{disponibile" end="}" contains=helpLeadBlank,helpHyperTextJump
+endif
+
 syn sync minlines=40
 
 
 " Define the default highlighting.
 " Only used when an item doesn't have highlighting yet
-hi def link helpExampleStart	helpIgnore
 hi def link helpIgnore		Ignore
 hi def link helpHyperTextJump	Subtitle
 hi def link helpBar		Ignore
@@ -131,6 +156,7 @@ hi def link helpHeadline	Statement
 hi def link helpHeader		PreProc
 hi def link helpSectionDelim	PreProc
 hi def link helpVim		Identifier
+hi def link helpCommand		Comment
 hi def link helpExample		Comment
 hi def link helpOption		Type
 hi def link helpNotVi		Special
@@ -175,4 +201,6 @@ hi def link helpURL		String
 
 let b:current_syntax = "help"
 
+let &cpo = s:cpo_save
+unlet s:cpo_save
 " vim: ts=8 sw=2

@@ -81,7 +81,7 @@ void gui_make_tearoff __ARGS((char_u *path_name));
 void gui_mch_add_menu_item __ARGS((vimmenu_T *menu, int idx));
 void gui_mch_destroy_menu __ARGS((vimmenu_T *menu));
 void gui_mch_menu_grey __ARGS((vimmenu_T *menu, int grey));
-int gui_mch_dialog __ARGS((int type, char_u *title, char_u *message, char_u *buttons, int dfltbutton, char_u *textfield));
+int gui_mch_dialog __ARGS((int type, char_u *title, char_u *message, char_u *buttons, int dfltbutton, char_u *textfield, int ex_cmd));
 void gui_mch_set_foreground __ARGS((void));
 void gui_mch_drawsign __ARGS((int row, int col, int typenr));
 void *gui_mch_register_sign __ARGS((char_u *signfile));
@@ -93,4 +93,5 @@ void gui_mch_post_balloon __ARGS((BalloonEval *beval, char_u *mesg));
 BalloonEval *gui_mch_create_beval_area __ARGS((void *target, char_u *mesg, void (*mesgCB)(BalloonEval *, int), void *clientData));
 void gui_mch_destroy_beval_area __ARGS((BalloonEval *beval));
 void netbeans_draw_multisign_indicator __ARGS((int row));
+void netbeans_init_winsock __ARGS((void));
 /* vim: set ft=c : */

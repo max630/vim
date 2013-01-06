@@ -1,13 +1,13 @@
 " tar.vim: Handles browsing tarfiles
 "            AUTOLOAD PORTION
-" Date:			Dec 28, 2009
-" Version:		24
+" Date:			Jan 17, 2012
+" Version:		28
 " Maintainer:	Charles E Campbell, Jr <NdrOchip@ScampbellPfamily.AbizM-NOSPAM>
 " License:		Vim License  (see vim's :help license)
 "
 "	Contains many ideas from Michael Toren's <tar.vim>
 "
-" Copyright:    Copyright (C) 2005-2009 Charles E. Campbell, Jr. {{{1
+" Copyright:    Copyright (C) 2005-2011 Charles E. Campbell, Jr. {{{1
 "               Permission is hereby granted to use and distribute this code,
 "               with or without modifications, provided that this copyright
 "               notice is copied with it. Like anything else that's free,
@@ -22,7 +22,7 @@
 if &cp || exists("g:loaded_tar")
  finish
 endif
-let g:loaded_tar= "v24"
+let g:loaded_tar= "v28"
 if v:version < 702
  echohl WarningMsg
  echo "***warning*** this version of tar needs vim 7.2"
@@ -47,6 +47,17 @@ endif
 if !exists("g:tar_writeoptions")
  let g:tar_writeoptions= "uf"
 endif
+if !exists("g:netrw_cygwin")
+ if has("win32") || has("win95") || has("win64") || has("win16")
+  if &shell =~ '\%(\<bash\>\|\<zsh\>\)\%(\.exe\)\=$'
+   let g:netrw_cygwin= 1
+  else
+   let g:netrw_cygwin= 0
+  endif
+ else
+  let g:netrw_cygwin= 0
+ endif
+endif
 if !exists("g:tar_copycmd")
  if !exists("g:netrw_localcopycmd")
   if has("win32") || has("win95") || has("win64") || has("win16")
@@ -62,17 +73,6 @@ if !exists("g:tar_copycmd")
   endif
  endif
  let g:tar_copycmd= g:netrw_localcopycmd
-endif
-if !exists("g:netrw_cygwin")
- if has("win32") || has("win95") || has("win64") || has("win16")
-  if &shell =~ '\%(\<bash\>\|\<zsh\>\)\%(\.exe\)\=$'
-   let g:netrw_cygwin= 1
-  else
-   let g:netrw_cygwin= 0
-  endif
- else
-  let g:netrw_cygwin= 0
- endif
 endif
 if !exists("g:tar_extractcmd")
  let g:tar_extractcmd= "tar -xf"
@@ -127,7 +127,7 @@ fun! tar#Browse(tarfile)
   if &ma != 1
    set ma
   endif
-  let w:tarfile= a:tarfile
+  let b:tarfile= a:tarfile
 
   setlocal noswapfile
   setlocal buftype=nofile
@@ -142,9 +142,9 @@ fun! tar#Browse(tarfile)
   call setline(lastline+1,'" tar.vim version '.g:loaded_tar)
   call setline(lastline+2,'" Browsing tarfile '.a:tarfile)
   call setline(lastline+3,'" Select a file with cursor and press ENTER')
-  $put =''
-  0d
-  $
+  keepj $put =''
+  keepj sil! 0d
+  keepj $
 
   let tarfile= a:tarfile
   if has("win32") && executable("cygpath")
@@ -154,23 +154,26 @@ fun! tar#Browse(tarfile)
   let curlast= line("$")
   if tarfile =~# '\.\(gz\|tgz\)$'
 "   call Decho("1: exe silent r! gzip -d -c -- ".shellescape(tarfile,1)." | ".g:tar_cmd." -".g:tar_browseoptions." - ")
-   exe "silent r! gzip -d -c -- ".shellescape(tarfile,1)." | ".g:tar_cmd." -".g:tar_browseoptions." - "
+   exe "sil! r! gzip -d -c -- ".shellescape(tarfile,1)." | ".g:tar_cmd." -".g:tar_browseoptions." - "
   elseif tarfile =~# '\.lrp'
 "   call Decho("2: exe silent r! cat -- ".shellescape(tarfile,1)."|gzip -d -c -|".g:tar_cmd." -".g:tar_browseoptions." - ")
-   exe "silent r! cat -- ".shellescape(tarfile,1)."|gzip -d -c -|".g:tar_cmd." -".g:tar_browseoptions." - "
-  elseif tarfile =~# '\.bz2$'
+   exe "sil! r! cat -- ".shellescape(tarfile,1)."|gzip -d -c -|".g:tar_cmd." -".g:tar_browseoptions." - "
+  elseif tarfile =~# '\.\(bz2\|tbz\|tb2\)$'
 "   call Decho("3: exe silent r! bzip2 -d -c -- ".shellescape(tarfile,1)." | ".g:tar_cmd." -".g:tar_browseoptions." - ")
-   exe "silent r! bzip2 -d -c -- ".shellescape(tarfile,1)." | ".g:tar_cmd." -".g:tar_browseoptions." - "
-  elseif tarfile =~# '\.lzma$'
+   exe "sil! r! bzip2 -d -c -- ".shellescape(tarfile,1)." | ".g:tar_cmd." -".g:tar_browseoptions." - "
+  elseif tarfile =~# '\.\(lzma\|tlz\)$'
 "   call Decho("3: exe silent r! lzma -d -c -- ".shellescape(tarfile,1)." | ".g:tar_cmd." -".g:tar_browseoptions." - ")
-   exe "silent r! lzma -d -c -- ".shellescape(tarfile,1)." | ".g:tar_cmd." -".g:tar_browseoptions." - "
+   exe "sil! r! lzma -d -c -- ".shellescape(tarfile,1)." | ".g:tar_cmd." -".g:tar_browseoptions." - "
+  elseif tarfile =~# '\.\(xz\|txz\)$'
+"   call Decho("3: exe silent r! xz --decompress --stdout -- ".shellescape(tarfile,1)." | ".g:tar_cmd." -".g:tar_browseoptions." - ")
+   exe "sil! r! xz --decompress --stdout -- ".shellescape(tarfile,1)." | ".g:tar_cmd." -".g:tar_browseoptions." - "
   else
    if tarfile =~ '^\s*-'
     " A file name starting with a dash is taken as an option.  Prepend ./ to avoid that.
     let tarfile = substitute(tarfile, '-', './-', '')
    endif
 "   call Decho("4: exe silent r! ".g:tar_cmd." -".g:tar_browseoptions." ".shellescape(tarfile,0))
-   exe "silent r! ".g:tar_cmd." -".g:tar_browseoptions." ".shellescape(tarfile,1)
+   exe "sil! r! ".g:tar_cmd." -".g:tar_browseoptions." ".shellescape(tarfile,1)
   endif
   if v:shell_error != 0
    redraw!
@@ -181,12 +184,12 @@ fun! tar#Browse(tarfile)
   if line("$") == curlast || ( line("$") == (curlast + 1) && getline("$") =~ '\c\%(warning\|error\|inappropriate\|unrecognized\)')
    redraw!
    echohl WarningMsg | echo "***warning*** (tar#Browse) ".a:tarfile." doesn't appear to be a tar file" | echohl None
-   silent %d
+   keepj sil! %d
    let eikeep= &ei
    set ei=BufReadCmd,FileReadCmd
    exe "r ".fnameescape(a:tarfile)
    let &ei= eikeep
-   1d
+   keepj sil! 1d
 "   call Dret("tar#Browse : a:tarfile<".a:tarfile.">")
    return
   endif
@@ -195,13 +198,13 @@ fun! tar#Browse(tarfile)
   noremap <silent> <buffer> <cr> :call <SID>TarBrowseSelect()<cr>
 
   let &report= repkeep
-"  call Dret("tar#Browse : w:tarfile<".w:tarfile.">")
+"  call Dret("tar#Browse : b:tarfile<".b:tarfile.">")
 endfun
 
 " ---------------------------------------------------------------------
 " TarBrowseSelect: {{{2
 fun! s:TarBrowseSelect()
-"  call Dfunc("TarBrowseSelect() w:tarfile<".w:tarfile."> curfile<".expand("%").">")
+"  call Dfunc("TarBrowseSelect() b:tarfile<".b:tarfile."> curfile<".expand("%").">")
   let repkeep= &report
   set report=10
   let fname= getline(".")
@@ -221,8 +224,8 @@ fun! s:TarBrowseSelect()
    return
   endif
 
-  " about to make a new window, need to use w:tarfile
-  let tarfile= w:tarfile
+  " about to make a new window, need to use b:tarfile
+  let tarfile= b:tarfile
   let curfile= expand("%")
   if has("win32") && executable("cygpath")
    " assuming cygwin
@@ -265,10 +268,13 @@ fun! tar#Read(fname,mode)
   elseif  fname =~ '\.lzma$' && executable("lzcat")
    let decmp= "|lzcat"
    let doro = 1
+  elseif  fname =~ '\.xz$' && executable("xzcat")
+   let decmp= "|xzcat"
+   let doro = 1
   else
    let decmp=""
    let doro = 0
-   if fname =~ '\.bz2$\|\.gz$\|\.lzma$\|\.zip$\|\.Z$'
+   if fname =~ '\.bz2$\|\.gz$\|\.lzma$\|\.xz$\|\.zip$\|\.Z$'
     setlocal bin
    endif
   endif
@@ -280,16 +286,19 @@ fun! tar#Read(fname,mode)
   endif
   if tarfile =~# '\.bz2$'
 "   call Decho("7: exe silent r! bzip2 -d -c ".shellescape(tarfile,1)."| ".g:tar_cmd." -".g:tar_readoptions." - ".tar_secure.shellescape(fname,1).decmp)
-   exe "silent r! bzip2 -d -c -- ".shellescape(tarfile,1)."| ".g:tar_cmd." -".g:tar_readoptions." - ".tar_secure.shellescape(fname,1).decmp
+   exe "sil! r! bzip2 -d -c -- ".shellescape(tarfile,1)."| ".g:tar_cmd." -".g:tar_readoptions." - ".tar_secure.shellescape(fname,1).decmp
   elseif tarfile =~# '\.\(gz\|tgz\)$'
 "   call Decho("5: exe silent r! gzip -d -c -- ".shellescape(tarfile,1)."| ".g:tar_cmd.' -'.g:tar_readoptions.' - '.tar_secure.shellescape(fname,1))
-   exe "silent r! gzip -d -c -- ".shellescape(tarfile,1)."| ".g:tar_cmd." -".g:tar_readoptions." - ".tar_secure.shellescape(fname,1).decmp
+   exe "sil! r! gzip -d -c -- ".shellescape(tarfile,1)."| ".g:tar_cmd." -".g:tar_readoptions." - ".tar_secure.shellescape(fname,1).decmp
   elseif tarfile =~# '\.lrp$'
 "   call Decho("6: exe silent r! cat ".shellescape(tarfile,1)." | gzip -d -c - | ".g:tar_cmd." -".g:tar_readoptions." - ".tar_secure.shellescape(fname,1).decmp)
-   exe "silent r! cat -- ".shellescape(tarfile,1)." | gzip -d -c - | ".g:tar_cmd." -".g:tar_readoptions." - ".tar_secure.shellescape(fname,1).decmp
+   exe "sil! r! cat -- ".shellescape(tarfile,1)." | gzip -d -c - | ".g:tar_cmd." -".g:tar_readoptions." - ".tar_secure.shellescape(fname,1).decmp
   elseif tarfile =~# '\.lzma$'
 "   call Decho("7: exe silent r! lzma -d -c ".shellescape(tarfile,1)."| ".g:tar_cmd." -".g:tar_readoptions." - ".tar_secure.shellescape(fname,1).decmp)
-   exe "silent r! lzma -d -c -- ".shellescape(tarfile,1)."| ".g:tar_cmd." -".g:tar_readoptions." - ".tar_secure.shellescape(fname,1).decmp
+   exe "sil! r! lzma -d -c -- ".shellescape(tarfile,1)."| ".g:tar_cmd." -".g:tar_readoptions." - ".tar_secure.shellescape(fname,1).decmp
+  elseif tarfile =~# '\.\(xz\|txz\)$'
+"   call Decho("3: exe silent r! xz --decompress --stdout -- ".shellescape(tarfile,1)." | ".g:tar_cmd." -".g:tar_readoptions." - ".tar_secure.shellescape(fname,1).decmp)
+   exe "sil! r! xz --decompress --stdout -- ".shellescape(tarfile,1)." | ".g:tar_cmd." -".g:tar_readoptions." - ".tar_secure.shellescape(fname,1).decmp
   else
    if tarfile =~ '^\s*-'
     " A file name starting with a dash is taken as an option.  Prepend ./ to avoid that.
@@ -304,21 +313,21 @@ fun! tar#Read(fname,mode)
    setlocal ro
   endif
 
-  let w:tarfile= a:fname
+  let b:tarfile= a:fname
   exe "file tarfile::".fnameescape(fname)
 
   " cleanup
-  0d
+  keepj sil! 0d
   set nomod
 
   let &report= repkeep
-"  call Dret("tar#Read : w:tarfile<".w:tarfile.">")
+"  call Dret("tar#Read : b:tarfile<".b:tarfile.">")
 endfun
 
 " ---------------------------------------------------------------------
 " tar#Write: {{{2
 fun! tar#Write(fname)
-"  call Dfunc("tar#Write(fname<".a:fname.">) w:tarfile<".w:tarfile."> tblfile_".winnr()."<".s:tblfile_{winnr()}.">")
+"  call Dfunc("tar#Write(fname<".a:fname.">) b:tarfile<".b:tarfile."> tblfile_".winnr()."<".s:tblfile_{winnr()}.">")
   let repkeep= &report
   set report=10
 
@@ -374,8 +383,8 @@ fun! tar#Write(fname)
   cd _ZIPVIM_
 "  call Decho("current directory now: ".getcwd())
 
-  let tarfile = substitute(w:tarfile,'tarfile:\(.\{-}\)::.*$','\1','')
-  let fname   = substitute(w:tarfile,'tarfile:.\{-}::\(.*\)$','\1','')
+  let tarfile = substitute(b:tarfile,'tarfile:\(.\{-}\)::.*$','\1','')
+  let fname   = substitute(b:tarfile,'tarfile:.\{-}::\(.*\)$','\1','')
 
   " handle compressed archives
   if tarfile =~# '\.bz2'
@@ -388,16 +397,21 @@ fun! tar#Write(fname)
    let tarfile = substitute(tarfile,'\.gz','','e')
    let compress= "gzip -- ".shellescape(tarfile,0)
 "   call Decho("compress<".compress.">")
-  elseif tarfile =~# '\.lzma'
-   call system("lzma -d -- ".shellescape(tarfile,0))
-   let tarfile = substitute(tarfile,'\.lzma','','e')
-   let compress= "lzma -- ".shellescape(tarfile,0)
-"   call Decho("compress<".compress.">")
   elseif tarfile =~# '\.tgz'
    call system("gzip -d -- ".shellescape(tarfile,0))
    let tarfile = substitute(tarfile,'\.tgz','.tar','e')
    let compress= "gzip -- ".shellescape(tarfile,0)
    let tgz     = 1
+"   call Decho("compress<".compress.">")
+  elseif tarfile =~# '\.xz'
+   call system("xz -d -- ".shellescape(tarfile,0))
+   let tarfile = substitute(tarfile,'\.xz','','e')
+   let compress= "xz -- ".shellescape(tarfile,0)
+"   call Decho("compress<".compress.">")
+  elseif tarfile =~# '\.lzma'
+   call system("lzma -d -- ".shellescape(tarfile,0))
+   let tarfile = substitute(tarfile,'\.lzma','','e')
+   let compress= "lzma -- ".shellescape(tarfile,0)
 "   call Decho("compress<".compress.">")
   endif
 "  call Decho("tarfile<".tarfile.">")

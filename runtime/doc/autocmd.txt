@@ -1,4 +1,4 @@
-*autocmd.txt*   For Vim version 7.2.  Last change: 2010 May 14
+*autocmd.txt*   For Vim version 7.3.  Last change: 2012 Feb 22
 
 
 		  VIM REFERENCE MANUAL    by Bram Moolenaar
@@ -33,7 +33,7 @@ files matching *.c.  You can also use autocommands to implement advanced
 features, such as editing compressed files (see |gzip-example|).  The usual
 place to put autocommands is in your .vimrc or .exrc file.
 
-							*E203* *E204* *E143*
+						*E203* *E204* *E143* *E855*
 WARNING: Using autocommands is very powerful, and may lead to unexpected side
 effects.  Be careful not to destroy your text.
 - It's a good idea to do some testing on an expendable copy of a file first.
@@ -299,6 +299,8 @@ Name			triggered by ~
 |InsertEnter|		starting Insert mode
 |InsertChange|		when typing <Insert> while in Insert or Replace mode
 |InsertLeave|		when leaving Insert mode
+|InsertCharPre|		when a character was typed in Insert mode, before
+			inserting it
 
 |ColorScheme|		after loading a color scheme
 
@@ -401,6 +403,8 @@ BufUnload			Before unloading a buffer.  This is when the
 				buffer being unloaded "<afile>".
 				Don't change to another buffer, it will cause
 				problems.
+				When exiting and v:dying is 2 or more this
+				event is not triggered.
 							*BufWinEnter*
 BufWinEnter			After a buffer is displayed in a window.  This
 				can be when the buffer is loaded (after
@@ -422,6 +426,8 @@ BufWinLeave			Before a buffer is removed from a window.
 				NOTE: When this autocommand is executed, the
 				current buffer "%" may be different from the
 				buffer being unloaded "<afile>".
+				When exiting and v:dying is 2 or more this
+				event is not triggered.
 							*BufWipeout*
 BufWipeout			Before completely deleting a buffer.  The
 				BufUnload and BufDelete events may be called
@@ -442,6 +448,9 @@ BufWriteCmd			Before writing the whole buffer to a file.
 				'modified' if successful, unless '+' is in
 				'cpo' and writing to another file |cpo-+|.
 				The buffer contents should not be changed.
+				When the command resets 'modified' the undo
+				information is adjusted to mark older undo
+				states as 'modified', like |:write| does.
 				|Cmd-event|
 							*BufWritePost*
 BufWritePost			After writing the whole buffer to a file
@@ -502,6 +511,7 @@ CursorMoved			After the cursor was moved in Normal mode.
 				not expect or that is slow.
 							*CursorMovedI*
 CursorMovedI			After the cursor was moved in Insert mode.
+				Not triggered when the popup menu is visible.
 				Otherwise the same as CursorMoved.
 							*EncodingChanged*
 EncodingChanged			Fires off after the 'encoding' option has been
@@ -653,6 +663,17 @@ InsertChange			When typing <Insert> while in Insert or
 				indicates the new mode.
 				Be careful not to move the cursor or do
 				anything else that the user does not expect.
+							*InsertCharPre*
+InsertCharPre			When a character is typed in Insert mode,
+				before inserting the char.
+				The |v:char| variable indicates the char typed
+				and can be changed during the event to insert
+				a different character.  When |v:char| is set
+				to more than one character this text is
+				inserted literally.
+				It is not allowed to change the text |textlock|.
+				The event is not triggered when 'paste' is
+				set.
 							*InsertEnter*
 InsertEnter			Just before starting Insert mode.  Also for
 				Replace mode and Virtual Replace mode.  The
@@ -678,7 +699,10 @@ MenuPopup			Just before showing the popup menu (under the
 QuickFixCmdPre			Before a quickfix command is run (|:make|,
 				|:lmake|, |:grep|, |:lgrep|, |:grepadd|,
 				|:lgrepadd|, |:vimgrep|, |:lvimgrep|,
-				|:vimgrepadd|, |:lvimgrepadd|, |:cscope|).
+				|:vimgrepadd|, |:lvimgrepadd|, |:cscope|,
+				|:cfile|, |:cgetfile|, |:caddfile|, |:lfile|,
+				|:lgetfile|, |:laddfile|, |:helpgrep|,
+				|:lhelpgrep|).
 				The pattern is matched against the command
 				being run.  When |:grep| is used but 'grepprg'
 				is set to "internal" it still matches "grep".
@@ -689,7 +713,10 @@ QuickFixCmdPre			Before a quickfix command is run (|:make|,
 							*QuickFixCmdPost*
 QuickFixCmdPost			Like QuickFixCmdPre, but after a quickfix
 				command is run, before jumping to the first
-				location.  See |QuickFixCmdPost-example|.
+				location. For |:cfile| and |:lfile| commands
+				it is run after error file is read and before
+				moving to the first error. 
+				See |QuickFixCmdPost-example|.
 							*RemoteReply*
 RemoteReply			When a reply from a Vim that functions as
 				server was received |server2client()|.  The
@@ -782,7 +809,10 @@ TermChanged			After the value of 'term' has changed.  Useful
 TermResponse			After the response to |t_RV| is received from
 				the terminal.  The value of |v:termresponse|
 				can be used to do things depending on the
-				terminal version.
+				terminal version.  Note that this event may be
+				triggered halfway executing another event,
+				especially if file I/O, a shell command or
+				anything else that takes time is involved.
 							*User*
 User				Never executed automatically.  To be used for
 				autocommands that are only executed with
@@ -799,6 +829,8 @@ VimLeave			Before exiting Vim, just after writing the
 				.viminfo file.  Executed only once, like
 				VimLeavePre.
 				To detect an abnormal exit use |v:dying|.
+				When v:dying is 2 or more this event is not
+				triggered.
 							*VimLeavePre*
 VimLeavePre			Before exiting Vim, just before writing the
 				.viminfo file.  This is executed only once,
@@ -807,6 +839,8 @@ VimLeavePre			Before exiting Vim, just before writing the
 				Mostly useful with a "*" pattern. >
 	:autocmd VimLeavePre * call CleanupStuff()
 <				To detect an abnormal exit use |v:dying|.
+				When v:dying is 2 or more this event is not
+				triggered.
 							*VimResized*
 VimResized			After the Vim window was resized, thus 'lines'
 				and/or 'columns' changed.  Not when starting
@@ -1024,7 +1058,7 @@ Note that the 'eventignore' option applies here too.  Events listed in this
 option will not cause any commands to be executed.
 
 					*:do* *:doau* *:doautocmd* *E217*
-:do[autocmd] [group] {event} [fname]
+:do[autocmd] [<nomodeline>] [group] {event} [fname]
 			Apply the autocommands matching [fname] (default:
 			current file name) for {event} to the current buffer.
 			You can use this when the current file name does not
@@ -1033,8 +1067,8 @@ option will not cause any commands to be executed.
 			It's possible to use this inside an autocommand too,
 			so you can base the autocommands for one extension on
 			another extension.  Example: >
-				:au Bufenter *.cpp so ~/.vimrc_cpp
-				:au Bufenter *.cpp doau BufEnter x.c
+				:au BufEnter *.cpp so ~/.vimrc_cpp
+				:au BufEnter *.cpp doau BufEnter x.c
 <			Be careful to avoid endless loops.  See
 			|autocmd-nested|.
 
@@ -1043,14 +1077,17 @@ option will not cause any commands to be executed.
 			argument is included, Vim executes only the matching
 			autocommands for that group.  Note: if you use an
 			undefined group name, Vim gives you an error message.
-
+							*<nomodeline>*
 			After applying the autocommands the modelines are
 			processed, so that their settings overrule the
 			settings from autocommands, like what happens when
-			editing a file.
+			editing a file. This is skipped when the <nomodeline>
+			argument is present. You probably want to use
+			<nomodeline> for events that are not used when loading
+			a buffer, such as |User|.
 
 						*:doautoa* *:doautoall*
-:doautoa[ll] [group] {event} [fname]
+:doautoa[ll] [<nomodeline>] [group] {event} [fname]
 			Like ":doautocmd", but apply the autocommands to each
 			loaded buffer.  Note that [fname] is used to select
 			the autocommands, not the buffers to which they are
@@ -1272,7 +1309,7 @@ and "++ff=" argument that are effective.  These should be used for the command
 that reads/writes the file.  The |v:cmdbang| variable is one when "!" was
 used, zero otherwise.
 
-See the $VIMRUNTIME/plugin/netrw.vim for examples.
+See the $VIMRUNTIME/plugin/netrwPlugin.vim for examples.
 
 ==============================================================================
 11. Disabling autocommands				*autocmd-disable*

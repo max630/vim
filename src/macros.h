@@ -135,7 +135,7 @@
 # ifdef FEAT_MBYTE
 #  define LANGMAP_ADJUST(c, condition) \
     do { \
-        if (*p_langmap && (condition) && !KeyStuffed && (c) >= 0) \
+	if (*p_langmap && (condition) && !KeyStuffed && (c) >= 0) \
 	{ \
 	    if ((c) < 256) \
 		c = langmap_mapchar[c]; \
@@ -146,8 +146,8 @@
 # else
 #  define LANGMAP_ADJUST(c, condition) \
     do { \
-        if (*p_langmap && (condition) && !KeyStuffed && (c) >= 0 && (c) < 256) \
-            c = langmap_mapchar[c]; \
+	if (*p_langmap && (condition) && !KeyStuffed && (c) >= 0 && (c) < 256) \
+	    c = langmap_mapchar[c]; \
     } while (0)
 # endif
 #else
@@ -227,21 +227,6 @@
 # endif
 #endif
 
-/*
- * Encryption macros.  Mohsin Ahmed, mosh@sasi.com 98-09-24
- * Based on zip/crypt sources.
- */
-
-#ifdef FEAT_CRYPT
-
-/* encode byte c, using temp t.  Warning: c must not have side effects. */
-# define ZENCODE(c, t)  (t = decrypt_byte(), update_keys(c), t^(c))
-
-/* decode byte c in place */
-# define ZDECODE(c)   update_keys(c ^= decrypt_byte())
-
-#endif
-
 #ifdef STARTUPTIME
 # define TIME_MSG(s) { if (time_fd != NULL) time_msg(s, NULL); }
 #else
@@ -299,4 +284,18 @@
 # define DO_AUTOCHDIR if (p_acd) do_autochdir();
 #else
 # define DO_AUTOCHDIR
+#endif
+
+#if defined(FEAT_SCROLLBIND) && defined(FEAT_CURSORBIND)
+# define RESET_BINDING(wp)  (wp)->w_p_scb = FALSE; (wp)->w_p_crb = FALSE
+#else
+# if defined(FEAT_SCROLLBIND)
+#  define RESET_BINDING(wp)  (wp)->w_p_scb = FALSE
+# else
+#  if defined(FEAT_CURSORBIND)
+#   define RESET_BINDING(wp)  (wp)->w_p_crb = FALSE
+#  else
+#   define RESET_BINDING(wp)
+#  endif
+# endif
 #endif

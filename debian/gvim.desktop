@@ -1,5 +1,7 @@
 [Desktop Entry]
-Name=GVim Text Editor
+Name=GVim
+GenericName=Text Editor
+GenericName[de]=Texteditor
 Comment=Edit text files
 Comment[af]=Redigeer tekslêers
 Comment[am]=የጽሑፍ ፋይሎች ያስተካክሉ
@@ -72,7 +74,7 @@ TryExec=gvim
 Exec=gvim -f %F
 Terminal=false
 Type=Application
-Icon=/usr/share/pixmaps/vim.svg
+Icon=vim
 Categories=Utility;TextEditor;
 StartupNotify=true
 MimeType=text/plain;

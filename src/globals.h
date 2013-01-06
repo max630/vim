@@ -50,6 +50,7 @@ EXTERN char_u	*LineWraps INIT(= NULL);	/* line wraps to next line */
  * ScreenLinesUC[] contains the Unicode for the character at this position, or
  * NUL when the character in ScreenLines[] is to be used (ASCII char).
  * The composing characters are to be drawn on top of the original character.
+ * ScreenLinesC[0][off] is only to be used when ScreenLinesUC[off] != 0.
  * Note: These three are only allocated when enc_utf8 is set!
  */
 EXTERN u8char_T	*ScreenLinesUC INIT(= NULL);	/* decoded UTF-8 characters */
@@ -104,13 +105,17 @@ EXTERN int	exec_from_reg INIT(= FALSE);	/* executing register */
 
 EXTERN int	screen_cleared INIT(= FALSE);	/* screen has been cleared */
 
+#ifdef FEAT_CRYPT
+EXTERN int      use_crypt_method INIT(= 0);
+#endif
+
 /*
  * When '$' is included in 'cpoptions' option set:
  * When a change command is given that deletes only part of a line, a dollar
  * is put at the end of the changed text. dollar_vcol is set to the virtual
- * column of this '$'.
+ * column of this '$'.  -1 is used to indicate no $ is being displayed.
  */
-EXTERN colnr_T	dollar_vcol INIT(= 0);
+EXTERN colnr_T	dollar_vcol INIT(= -1);
 
 #ifdef FEAT_INS_EXPAND
 /*
@@ -505,8 +510,13 @@ EXTERN VimClipboard clip_star;	/* PRIMARY selection in X11 */
 EXTERN VimClipboard clip_plus;	/* CLIPBOARD selection in X11 */
 # else
 #  define clip_plus clip_star	/* there is only one clipboard */
+#  define ONE_CLIPBOARD
 # endif
-EXTERN int	clip_unnamed INIT(= FALSE);
+
+#define CLIP_UNNAMED      1
+#define CLIP_UNNAMED_PLUS 2
+EXTERN int	clip_unnamed INIT(= 0); /* above two values or'ed */
+
 EXTERN int	clip_autoselect INIT(= FALSE);
 EXTERN int	clip_autoselectml INIT(= FALSE);
 EXTERN int	clip_html INIT(= FALSE);
@@ -525,6 +535,10 @@ EXTERN win_T	*lastwin;		/* last window */
 EXTERN win_T	*prevwin INIT(= NULL);	/* previous window */
 # define W_NEXT(wp) ((wp)->w_next)
 # define FOR_ALL_WINDOWS(wp) for (wp = firstwin; wp != NULL; wp = wp->w_next)
+/*
+ * When using this macro "break" only breaks out of the inner loop. Use "goto"
+ * to break out of the tabpage loop.
+ */
 # define FOR_ALL_TAB_WINDOWS(tp, wp) \
     for ((tp) = first_tabpage; (tp) != NULL; (tp) = (tp)->tp_next) \
 	for ((wp) = ((tp) == curtab) \
@@ -842,13 +856,7 @@ EXTERN int* (*iconv_errno) (void);
 
 #ifdef FEAT_XIM
 # ifdef FEAT_GUI_GTK
-#  ifdef HAVE_GTK2
 EXTERN GtkIMContext	*xic INIT(= NULL);
-#  else
-EXTERN GdkICAttr	*xic_attr INIT(= NULL);
-EXTERN GdkIC		*xic INIT(= NULL);
-EXTERN char		*draw_feedback INIT(= NULL);
-#  endif
 /*
  * Start and end column of the preedit area in virtual columns from the start
  * of the text line.  When there is no preedit area they are set to MAXCOL.
@@ -1053,10 +1061,6 @@ EXTERN pos_T	last_cursormoved	    /* for CursorMoved event */
 			;
 #endif
 
-EXTERN linenr_T	write_no_eol_lnum INIT(= 0); /* non-zero lnum when last line
-						of next binary write should
-						not have an end-of-line */
-
 #ifdef FEAT_WINDOWS
 EXTERN int	postponed_split INIT(= 0);  /* for CTRL-W CTRL-] command */
 EXTERN int	postponed_split_flags INIT(= 0);  /* args for win_split() */
@@ -1146,6 +1150,9 @@ EXTERN int	lcs_nbsp INIT(= NUL);
 EXTERN int	lcs_tab1 INIT(= NUL);
 EXTERN int	lcs_tab2 INIT(= NUL);
 EXTERN int	lcs_trail INIT(= NUL);
+#ifdef FEAT_CONCEAL
+EXTERN int	lcs_conceal INIT(= '-');
+#endif
 
 #if defined(FEAT_WINDOWS) || defined(FEAT_WILDMENU) || defined(FEAT_STL_OPT) \
 	|| defined(FEAT_FOLDING)
@@ -1341,6 +1348,11 @@ EXTERN disptick_T	display_tick INIT(= 0);
 EXTERN linenr_T		spell_redraw_lnum INIT(= 0);
 #endif
 
+#ifdef FEAT_CONCEAL
+/* Set when the cursor line needs to be redrawn. */
+EXTERN int		need_cursor_line_redraw INIT(= FALSE);
+#endif
+
 #ifdef ALT_X_INPUT
 /* we need to be able to go into the dispatch loop while processing a command
  * received via alternate input. However, we don't want to process another
@@ -1364,7 +1376,6 @@ EXTERN int netbeansFireChanges INIT(= 1); /* send buffer changes if != 0 */
 EXTERN int netbeansForcedQuit INIT(= 0);/* don't write modified files */
 EXTERN int netbeansReadFile INIT(= 1);	/* OK to read from disk if != 0 */
 EXTERN int netbeansSuppressNoLines INIT(= 0); /* skip "No lines in buffer" */
-EXTERN int usingNetbeans INIT(= 0);	/* set if -nb flag is used */
 #endif
 
 /*
@@ -1395,7 +1406,7 @@ EXTERN char_u e_fontset[]	INIT(= N_("E234: Unknown fontset: %s"));
 	|| defined(FEAT_GUI_PHOTON) || defined(FEAT_GUI_MSWIN)
 EXTERN char_u e_font[]		INIT(= N_("E235: Unknown font: %s"));
 #endif
-#if (defined(FEAT_GUI_X11) || defined(FEAT_GUI_GTK)) && !defined(HAVE_GTK2)
+#if defined(FEAT_GUI_X11) && !defined(FEAT_GUI_GTK)
 EXTERN char_u e_fontwidth[]	INIT(= N_("E236: Font \"%s\" is not fixed-width"));
 #endif
 EXTERN char_u e_internal[]	INIT(= N_("E473: Internal error"));
@@ -1408,15 +1419,20 @@ EXTERN char_u e_invexpr2[]	INIT(= N_("E15: Invalid expression: %s"));
 #endif
 EXTERN char_u e_invrange[]	INIT(= N_("E16: Invalid range"));
 EXTERN char_u e_invcmd[]	INIT(= N_("E476: Invalid command"));
-#if defined(UNIX) || defined(FEAT_SYN_HL)
+#if defined(UNIX) || defined(FEAT_SYN_HL) || defined(FEAT_SPELL)
 EXTERN char_u e_isadir2[]	INIT(= N_("E17: \"%s\" is a directory"));
 #endif
 #ifdef FEAT_LIBCALL
 EXTERN char_u e_libcall[]	INIT(= N_("E364: Library call failed for \"%s()\""));
 #endif
-#if defined(DYNAMIC_PERL) || defined(DYNAMIC_PYTHON) || defined(DYNAMIC_RUBY) \
-	|| defined(DYNAMIC_TCL) || defined(DYNAMIC_ICONV) \
-	|| defined(DYNAMIC_GETTEXT) || defined(DYNAMIC_MZSCHEME)
+#if defined(DYNAMIC_PERL) \
+	|| defined(DYNAMIC_PYTHON) || defined(DYNAMIC_PYTHON3) \
+	|| defined(DYNAMIC_RUBY) \
+	|| defined(DYNAMIC_TCL) \
+	|| defined(DYNAMIC_ICONV) \
+	|| defined(DYNAMIC_GETTEXT) \
+	|| defined(DYNAMIC_MZSCHEME) \
+	|| defined(DYNAMIC_LUA)
 EXTERN char_u e_loadlib[]	INIT(= N_("E370: Could not load library %s"));
 EXTERN char_u e_loadfunc[]	INIT(= N_("E448: Could not load library function %s"));
 #endif
@@ -1501,13 +1517,13 @@ EXTERN char_u e_readerrf[]	INIT(= N_("E47: Error while reading errorfile"));
 EXTERN char_u e_sandbox[]	INIT(= N_("E48: Not allowed in sandbox"));
 #endif
 EXTERN char_u e_secure[]	INIT(= N_("E523: Not allowed here"));
-#if defined(AMIGA) || defined(MACOS) || defined(MSWIN) || defined(RISCOS) \
+#if defined(AMIGA) || defined(MACOS) || defined(MSWIN)  \
 	|| defined(UNIX) || defined(VMS) || defined(OS2)
 EXTERN char_u e_screenmode[]	INIT(= N_("E359: Screen mode setting not supported"));
 #endif
 EXTERN char_u e_scroll[]	INIT(= N_("E49: Invalid scroll size"));
 EXTERN char_u e_shellempty[]	INIT(= N_("E91: 'shell' option is empty"));
-#if defined(FEAT_SIGN_ICONS) && !defined(HAVE_GTK2)
+#if defined(FEAT_SIGN_ICONS) && !defined(FEAT_GUI_GTK)
 EXTERN char_u e_signdata[]	INIT(= N_("E255: Couldn't read in sign data!"));
 #endif
 EXTERN char_u e_swapclose[]	INIT(= N_("E72: Close error on swap file"));
@@ -1549,6 +1565,9 @@ EXTERN char_u e_bufloaded[]	INIT(= N_("E139: File is loaded in another buffer"))
 	(defined(FEAT_INS_EXPAND) && defined(FEAT_COMPL_FUNC))
 EXTERN char_u e_notset[]	INIT(= N_("E764: Option '%s' is not set"));
 #endif
+#ifndef FEAT_CLIPBOARD
+EXTERN char_u e_invalidreg[]    INIT(= N_("E850: Invalid register name"));
+#endif
 
 #ifdef MACOS_X_UNIX
 EXTERN short disallow_gui	INIT(= FALSE);
@@ -1556,6 +1575,10 @@ EXTERN short disallow_gui	INIT(= FALSE);
 
 EXTERN char top_bot_msg[] INIT(= N_("search hit TOP, continuing at BOTTOM"));
 EXTERN char bot_top_msg[] INIT(= N_("search hit BOTTOM, continuing at TOP"));
+
+#ifdef FEAT_CRYPT
+EXTERN char need_key_msg[] INIT(= N_("Need encryption key for \"%s\""));
+#endif
 
 /*
  * Comms. with the session manager (XSMP)

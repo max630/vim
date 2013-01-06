@@ -56,10 +56,10 @@ static char_u *menu_skip_part __ARGS((char_u *p));
 #endif
 #ifdef FEAT_MULTI_LANG
 static char_u *menutrans_lookup __ARGS((char_u *name, int len));
+static void menu_unescape_name  __ARGS((char_u	*p));
 #endif
 
 static char_u *menu_translate_tab_and_shift __ARGS((char_u *arg_start));
-static void menu_unescape_name  __ARGS((char_u	*p));
 
 /* The character for each menu mode */
 static char_u	menu_mode_chars[] = {'n', 'v', 's', 'o', 'i', 'c', 't'};
@@ -462,7 +462,7 @@ add_menu_path(menu_path, menuarg, pri_tab, call_data
 	 * name (without mnemonic and accelerator text). */
 	next_name = menu_name_skip(name);
 #ifdef	FEAT_MULTI_LANG
-	map_to = menutrans_lookup(name,STRLEN(name));
+	map_to = menutrans_lookup(name, (int)STRLEN(name));
 	if (map_to != NULL)
 	{
 	    en_name = name;
@@ -1365,7 +1365,7 @@ get_menu_name(xp, idx)
 	    str = menu->dname;
 #ifdef FEAT_MULTI_LANG
 	    if (menu->en_dname == NULL)
-                should_advance = TRUE;
+		should_advance = TRUE;
 	}
 #endif
     else
@@ -1374,8 +1374,8 @@ get_menu_name(xp, idx)
 #ifdef FEAT_MULTI_LANG
     if (should_advance)
 #endif
-        /* Advance to next menu entry. */
-        menu = menu->next;
+	/* Advance to next menu entry. */
+	menu = menu->next;
 
 #ifdef FEAT_MULTI_LANG
     should_advance = !should_advance;
@@ -1394,7 +1394,8 @@ get_menu_names(xp, idx)
     int		idx;
 {
     static vimmenu_T	*menu = NULL;
-    static char_u	tbuffer[256]; /*hack*/
+#define TBUFFER_LEN 256
+    static char_u	tbuffer[TBUFFER_LEN]; /*hack*/
     char_u		*str;
 #ifdef FEAT_MULTI_LANG
     static  int		should_advance = FALSE;
@@ -1428,11 +1429,11 @@ get_menu_names(xp, idx)
 	{
 #ifdef FEAT_MULTI_LANG
 	    if (should_advance)
-		STRCPY(tbuffer, menu->en_dname);
+		vim_strncpy(tbuffer, menu->en_dname, TBUFFER_LEN - 2);
 	    else
 	    {
 #endif
-		STRCPY(tbuffer, menu->dname);
+		vim_strncpy(tbuffer, menu->dname,  TBUFFER_LEN - 2);
 #ifdef FEAT_MULTI_LANG
 		if (menu->en_dname == NULL)
 		    should_advance = TRUE;
@@ -1445,18 +1446,18 @@ get_menu_names(xp, idx)
 	}
 	else
 #ifdef FEAT_MULTI_LANG
-        {
-            if (should_advance)
-                str = menu->en_dname;
-            else
-            {
+	{
+	    if (should_advance)
+		str = menu->en_dname;
+	    else
+	    {
 #endif
-                str = menu->dname;
+		str = menu->dname;
 #ifdef FEAT_MULTI_LANG
-                if (menu->en_dname == NULL)
-                    should_advance = TRUE;
-            }
-        }
+		if (menu->en_dname == NULL)
+		    should_advance = TRUE;
+	    }
+	}
 #endif
     }
     else
@@ -1465,8 +1466,8 @@ get_menu_names(xp, idx)
 #ifdef FEAT_MULTI_LANG
     if (should_advance)
 #endif
-        /* Advance to next menu entry. */
-        menu = menu->next;
+	/* Advance to next menu entry. */
+	menu = menu->next;
 
 #ifdef FEAT_MULTI_LANG
     should_advance = !should_advance;
@@ -1512,9 +1513,9 @@ menu_name_equal(name, menu)
 {
 #ifdef FEAT_MULTI_LANG
     if (menu->en_name != NULL
-	    && (menu_namecmp(name,menu->en_name)
-		|| menu_namecmp(name,menu->en_dname)))
-        return TRUE;
+	    && (menu_namecmp(name, menu->en_name)
+		|| menu_namecmp(name, menu->en_dname)))
+	return TRUE;
 #endif
     return menu_namecmp(name, menu->name) || menu_namecmp(name, menu->dname);
 }
@@ -2342,7 +2343,7 @@ gui_find_menu(path_name)
 
 	while (menu != NULL)
 	{
-	    if (STRCMP(name, menu->name) == 0 || STRCMP(name, menu->dname) == 0)
+	    if (menu_name_equal(name, menu))
 	    {
 		if (menu->children == NULL)
 		{
@@ -2525,7 +2526,6 @@ menutrans_lookup(name, len)
 
     return NULL;
 }
-#endif /* FEAT_MULTI_LANG */
 
 /*
  * Unescape the name in the translate dictionary table.
@@ -2540,6 +2540,7 @@ menu_unescape_name(name)
 	if (*p == '\\')
 	    STRMOVE(p, p + 1);
 }
+#endif /* FEAT_MULTI_LANG */
 
 /*
  * Isolate the menu name.

@@ -52,7 +52,7 @@
 
 /*
  * Here are the builtin termcap entries.  They are not stored as complete
- * Tcarr structures, as such a structure is too big.
+ * structures with all entries, as such a structure is too big.
  *
  * The entries are compact, therefore they normally are included even when
  * HAVE_TGETENT is defined. When HAVE_TGETENT is defined, the builtin entries
@@ -199,71 +199,6 @@ static struct builtin_term builtin_termcaps[] =
 #endif
 
 #ifndef NO_BUILTIN_TCAPS
-# if defined(RISCOS) || defined(ALL_BUILTIN_TCAPS)
-/*
- * Default for the Acorn.
- */
-    {(int)KS_NAME,	"riscos"},
-    {(int)KS_CL,	"\014"},		/* Cls and Home Cursor */
-    {(int)KS_CM,	"\001%d\001%d\002"},	/* Position cursor */
-
-    {(int)KS_CCO,	"16"},			/* Allow 16 colors */
-
-    {(int)KS_CAF,	"\001%d\021"},		/* Set foreground colour */
-    {(int)KS_CAB,	"\001%d\022"},		/* Set background colour */
-
-
-    {(int)KS_ME,	"\004"},		/* Normal mode */
-    {(int)KS_MR,	"\005"},		/* Reverse */
-
-    {(int)KS_VI,	"\016"},		/* Cursor invisible */
-    {(int)KS_VE,	"\017"},		/* Cursor visible */
-    {(int)KS_VS,	"\020"},		/* Cursor very visible */
-
-    {(int)KS_CS,	"\001%d\001%d\003"},	/* Set scroll region */
-    {(int)KS_SR,	"\023"},		/* Scroll text down */
-    {K_UP,		"\217"},
-    {K_DOWN,		"\216"},
-    {K_LEFT,		"\214"},
-    {K_RIGHT,		"\215"},
-    {K_S_UP,		"\237"},
-    {K_S_DOWN,		"\236"},
-    {K_S_LEFT,		"\234"},
-    {K_S_RIGHT,		"\235"},
-
-    {K_F1,		"\201"},
-    {K_F2,		"\202"},
-    {K_F3,		"\203"},
-    {K_F4,		"\204"},
-    {K_F5,		"\205"},
-    {K_F6,		"\206"},
-    {K_F7,		"\207"},
-    {K_F8,		"\210"},
-    {K_F9,		"\211"},
-    {K_F10,		"\312"},
-    {K_F11,		"\313"},
-    {K_F12,		"\314"},
-    {K_S_F1,		"\221"},
-    {K_S_F2,		"\222"},
-    {K_S_F3,		"\223"},
-    {K_S_F4,		"\224"},
-    {K_S_F5,		"\225"},
-    {K_S_F6,		"\226"},
-    {K_S_F7,		"\227"},
-    {K_S_F8,		"\230"},
-    {K_S_F9,		"\231"},
-    {K_S_F10,		"\332"},
-    {K_S_F11,		"\333"},
-    {K_S_F12,		"\334"},
-    {K_BS,		"\010"},
-    {K_INS,		"\315"},
-    {K_DEL,		"\177"},
-    {K_HOME,		"\036"},
-    {K_END,		"\213"},
-    {K_PAGEUP,		"\237"},
-    {K_PAGEDOWN,	"\236"},
-# endif	/* Acorn terminal */
-
 
 # if defined(AMIGA) || defined(ALL_BUILTIN_TCAPS)
 /*
@@ -1399,10 +1334,6 @@ static struct builtin_term builtin_termcaps[] =
 /*
  * DEFAULT_TERM is used, when no terminal is specified with -T option or $TERM.
  */
-#ifdef RISCOS
-# define DEFAULT_TERM	(char_u *)"riscos"
-#endif
-
 #ifdef AMIGA
 # define DEFAULT_TERM	(char_u *)"amiga"
 #endif
@@ -2065,6 +1996,7 @@ set_termname(term)
 #  define HMT_DEC	4
 #  define HMT_JSBTERM	8
 #  define HMT_PTERM	16
+#  define HMT_URXVT	32
 static int has_mouse_termcode = 0;
 # endif
 
@@ -2098,6 +2030,11 @@ set_mouse_termcode(n, s)
 #   ifdef FEAT_MOUSE_PTERM
     if (n == KS_PTERM_MOUSE)
 	has_mouse_termcode |= HMT_PTERM;
+    else
+#   endif
+#   ifdef FEAT_MOUSE_URXVT
+    if (n == KS_URXVT_MOUSE)
+	has_mouse_termcode |= HMT_URXVT;
     else
 #   endif
 	has_mouse_termcode |= HMT_NORMAL;
@@ -2135,6 +2072,11 @@ del_mouse_termcode(n)
 #   ifdef FEAT_MOUSE_PTERM
     if (n == KS_PTERM_MOUSE)
 	has_mouse_termcode &= ~HMT_PTERM;
+    else
+#   endif
+#   ifdef FEAT_MOUSE_URXVT
+    if (n == KS_URXVT_MOUSE)
+	has_mouse_termcode &= ~HMT_URXVT;
     else
 #   endif
 	has_mouse_termcode &= ~HMT_NORMAL;
@@ -2609,6 +2551,8 @@ out_char_nf(c)
 	out_flush();
 }
 
+#if defined(FEAT_TITLE) || defined(FEAT_MOUSE_TTY) || defined(FEAT_GUI) \
+    || defined(FEAT_TERMRESPONSE) || defined(PROTO)
 /*
  * A never-padding out_str.
  * use this whenever you don't want to run the string through tputs.
@@ -2631,6 +2575,7 @@ out_str_nf(s)
     if (p_wd)
 	out_flush();
 }
+#endif
 
 /*
  * out_str(s): Put a character string a byte at a time into the output buffer.
@@ -3050,10 +2995,13 @@ shell_resized_check()
     int		old_Rows = Rows;
     int		old_Columns = Columns;
 
-    (void)ui_get_shellsize();
-    check_shellsize();
-    if (old_Rows != Rows || old_Columns != Columns)
-	shell_resized();
+    if (!exiting)
+    {
+	(void)ui_get_shellsize();
+	check_shellsize();
+	if (old_Rows != Rows || old_Columns != Columns)
+	    shell_resized();
+    }
 }
 
 /*
@@ -3080,11 +3028,19 @@ set_shellsize(width, height, mustset)
     if (width < 0 || height < 0)    /* just checking... */
 	return;
 
-    if (State == HITRETURN || State == SETWSIZE) /* postpone the resizing */
+    if (State == HITRETURN || State == SETWSIZE)
     {
+	/* postpone the resizing */
 	State = SETWSIZE;
 	return;
     }
+
+    /* curwin->w_buffer can be NULL when we are closing a window and the
+     * buffer has already been closed and removing a scrollbar causes a resize
+     * event. Don't resize then, it will happen after entering another buffer.
+     */
+    if (curwin->w_buffer == NULL)
+	return;
 
     ++busy;
 
@@ -3825,23 +3781,27 @@ set_mouse_topline(wp)
  * Check from typebuf.tb_buf[typebuf.tb_off] to typebuf.tb_buf[typebuf.tb_off
  * + max_offset].
  * Return 0 for no match, -1 for partial match, > 0 for full match.
+ * Return KEYLEN_REMOVED when a key code was deleted.
  * With a match, the match is removed, the replacement code is inserted in
  * typebuf.tb_buf[] and the number of characters in typebuf.tb_buf[] is
  * returned.
- * When "buf" is not NULL, it is used instead of typebuf.tb_buf[]. "buflen" is
- * then the length of the string in buf[].
+ * When "buf" is not NULL, buf[bufsize] is used instead of typebuf.tb_buf[].
+ * "buflen" is then the length of the string in buf[] and is updated for
+ * inserts and deletes.
  */
     int
-check_termcode(max_offset, buf, buflen)
+check_termcode(max_offset, buf, bufsize, buflen)
     int		max_offset;
     char_u	*buf;
-    int		buflen;
+    int		bufsize;
+    int		*buflen;
 {
     char_u	*tp;
     char_u	*p;
     int		slen = 0;	/* init for GCC */
     int		modslen;
     int		len;
+    int		retval = 0;
     int		offset;
     char_u	key_name[2];
     int		modifiers;
@@ -3906,10 +3866,10 @@ check_termcode(max_offset, buf, buflen)
 	}
 	else
 	{
-	    if (offset >= buflen)
+	    if (offset >= *buflen)
 		break;
 	    tp = buf + offset;
-	    len = buflen - offset;
+	    len = *buflen - offset;
 	}
 
 	/*
@@ -4061,7 +4021,9 @@ check_termcode(max_offset, buf, buflen)
 	}
 
 #ifdef FEAT_TERMRESPONSE
-	if (key_name[0] == NUL)
+	if (key_name[0] == NUL
+	    /* URXVT mouse uses <ESC>[#;#;#M, but we are matching <ESC>[ */
+	    || key_name[0] == KS_URXVT_MOUSE)
 	{
 	    /* Check for xterm version string: "<Esc>[>{x};{vers};{y}c".  Also
 	     * eat other possible responses to t_RV, rxvt returns
@@ -4100,7 +4062,11 @@ check_termcode(max_offset, buf, buflen)
 		    if (tp[1 + (tp[0] != CSI)] == '>' && j == 2)
 		    {
 			/* if xterm version >= 95 use mouse dragging */
-			if (extra >= 95)
+			if (extra >= 95
+# ifdef TTYM_URXVT
+				&& ttym_flags != TTYM_URXVT
+# endif
+				)
 			    set_option_value((char_u *)"ttym", 0L,
 						       (char_u *)"xterm2", 0);
 			/* if xterm version >= 141 try to get termcap codes */
@@ -4164,6 +4130,8 @@ check_termcode(max_offset, buf, buflen)
 		&& key_name[0] == (int)KS_EXTRA
 		&& (key_name[1] == (int)KE_X1MOUSE
 		    || key_name[1] == (int)KE_X2MOUSE
+		    || key_name[1] == (int)KE_MOUSELEFT
+		    || key_name[1] == (int)KE_MOUSERIGHT
 		    || key_name[1] == (int)KE_MOUSEDOWN
 		    || key_name[1] == (int)KE_MOUSEUP))
 	{
@@ -4191,6 +4159,9 @@ check_termcode(max_offset, buf, buflen)
 # endif
 # ifdef FEAT_MOUSE_PTERM
 		|| key_name[0] == (int)KS_PTERM_MOUSE
+# endif
+# ifdef FEAT_MOUSE_URXVT
+		|| key_name[0] == (int)KS_URXVT_MOUSE
 # endif
 		)
 	{
@@ -4270,7 +4241,69 @@ check_termcode(max_offset, buf, buflen)
 		    else
 			break;
 		}
+	    }
 
+# ifdef FEAT_MOUSE_URXVT
+	    if (key_name[0] == (int)KS_URXVT_MOUSE)
+	    {
+		for (;;)
+		{
+		    /* URXVT 1015 mouse reporting mode:
+		     * Almost identical to xterm mouse mode, except the values
+		     * are decimal instead of bytes.
+		     *
+		     * \033[%d;%d;%dM
+		     *		  ^-- row
+		     *	       ^----- column
+		     *	    ^-------- code
+		     */
+		    p = tp + slen;
+
+		    mouse_code = getdigits(&p);
+		    if (*p++ != ';')
+			return -1;
+
+		    mouse_col = getdigits(&p) - 1;
+		    if (*p++ != ';')
+			return -1;
+
+		    mouse_row = getdigits(&p) - 1;
+		    if (*p++ != 'M')
+			return -1;
+
+		    slen += (int)(p - (tp + slen));
+
+		    /* skip this one if next one has same code (like xterm
+		     * case) */
+		    j = termcodes[idx].len;
+		    if (STRNCMP(tp, tp + slen, (size_t)j) == 0) {
+			/* check if the command is complete by looking for the
+			 * M */
+			int slen2;
+			int cmd_complete = 0;
+			for (slen2 = slen; slen2 < len; slen2++) {
+			    if (tp[slen2] == 'M') {
+				cmd_complete = 1;
+				break;
+			    }
+			}
+			p += j;
+			if (cmd_complete && getdigits(&p) == mouse_code) {
+			    slen += j; /* skip the \033[ */
+			    continue;
+			}
+		    }
+		    break;
+		}
+	    }
+# endif
+
+	if (key_name[0] == (int)KS_MOUSE
+#ifdef FEAT_MOUSE_URXVT
+	    || key_name[0] == (int)KS_URXVT_MOUSE
+#endif
+	    )
+	{
 #  if !defined(MSWIN) && !defined(MSDOS)
 		/*
 		 * Handle mouse events.
@@ -4361,7 +4394,7 @@ check_termcode(max_offset, buf, buflen)
 		 *  ###   Y cursor position padded to 3 digits
 		 * (s-x)  SHIFT key pressed - not pressed x not reporting
 		 * (c-x)  CTRL key pressed - not pressed x not reporting
-		 * \033\\ terminateing sequence
+		 * \033\\ terminating sequence
 		 */
 
 		p = tp + slen;
@@ -4607,7 +4640,7 @@ check_termcode(max_offset, buf, buflen)
 # ifdef FEAT_MOUSE_PTERM
 	    if (key_name[0] == (int)KS_PTERM_MOUSE)
 	    {
-		int button, num_clicks, action, mc, mr;
+		int button, num_clicks, action;
 
 		p = tp + slen;
 
@@ -4772,8 +4805,14 @@ check_termcode(max_offset, buf, buflen)
 	    /* Work out our pseudo mouse event */
 	    key_name[0] = (int)KS_EXTRA;
 	    if (wheel_code != 0)
+	    {
+		if (wheel_code & MOUSE_CTRL)
+		    modifiers |= MOD_MASK_CTRL;
+		if (wheel_code & MOUSE_ALT)
+		    modifiers |= MOD_MASK_ALT;
 		key_name[1] = (wheel_code & 1)
 					? (int)KE_MOUSEUP : (int)KE_MOUSEDOWN;
+	    }
 	    else
 		key_name[1] = get_pseudo_mouse_code(current_button,
 							   is_click, is_drag);
@@ -4929,6 +4968,13 @@ check_termcode(max_offset, buf, buflen)
 #endif
 		string[new_slen++] = key_name[1];
 	}
+	else if (new_slen == 0 && key_name[0] == KS_EXTRA
+						  && key_name[1] == KE_IGNORE)
+	{
+	    /* Do not put K_IGNORE into the buffer, do return KEYLEN_REMOVED
+	     * to indicate what happened. */
+	    retval = KEYLEN_REMOVED;
+	}
 	else
 	{
 	    string[new_slen++] = K_SPECIAL;
@@ -4958,14 +5004,20 @@ check_termcode(max_offset, buf, buflen)
 	    if (extra < 0)
 		/* remove matched characters */
 		mch_memmove(buf + offset, buf + offset - extra,
-					   (size_t)(buflen + offset + extra));
+					   (size_t)(*buflen + offset + extra));
 	    else if (extra > 0)
-		/* insert the extra space we need */
+	    {
+		/* Insert the extra space we need.  If there is insufficient
+		 * space return -1. */
+		if (*buflen + extra + new_slen >= bufsize)
+		    return -1;
 		mch_memmove(buf + offset + extra, buf + offset,
-						   (size_t)(buflen - offset));
+						   (size_t)(*buflen - offset));
+	    }
 	    mch_memmove(buf + offset, string, (size_t)new_slen);
+	    *buflen = *buflen + extra + new_slen;
 	}
-	return (len + extra + offset);
+	return retval == 0 ? (len + extra + offset) : retval;
     }
 
     return 0;			    /* no match found */
@@ -5045,7 +5097,7 @@ replace_termcodes(from, bufp, from_part, do_lt, special)
     {
 	/*
 	 * If 'cpoptions' does not contain '<', check for special key codes,
-	 * like "<C-S-MouseLeft>"
+	 * like "<C-S-LeftMouse>"
 	 */
 	if (do_special && (do_lt || STRNCMP(src, "<lt>", 4) != 0))
 	{
@@ -5208,12 +5260,12 @@ find_term_bykeys(src)
     char_u	*src;
 {
     int		i;
-    int		slen;
+    int		slen = (int)STRLEN(src);
 
     for (i = 0; i < tc_len; ++i)
     {
-	slen = termcodes[i].len;
-	if (slen > 1 && STRNCMP(termcodes[i].code, src, (size_t)slen) == 0)
+	if (slen == termcodes[i].len
+			&& STRNCMP(termcodes[i].code, src, (size_t)slen) == 0)
 	    return i;
     }
     return -1;

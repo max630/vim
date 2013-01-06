@@ -1,4 +1,4 @@
-*motion.txt*    For Vim version 7.2.  Last change: 2010 May 14
+*motion.txt*    For Vim version 7.3.  Last change: 2011 Jul 19
 
 
 		  VIM REFERENCE MANUAL    by Bram Moolenaar
@@ -269,11 +269,11 @@ T{char}			Till after [count]'th occurrence of {char} to the
 			{char} can be entered like with the |f| command.
 
 							*;*
-;			Repeat latest f, t, F or T [count] times.
+;			Repeat latest f, t, F or T [count] times. See |cpo-;|
 
 							*,*
 ,			Repeat latest f, t, F or T in opposite direction
-			[count] times.
+			[count] times. See also |cpo-;|
 
 ==============================================================================
 3. Up-down motions					*up-down-motions*
@@ -344,6 +344,8 @@ gg			Goto line [count], default first line, on the first
 			last number in it used as the byte count.  End-of-line
 			characters are counted depending on the current
 			'fileformat' setting.
+			Also see the |line2byte()| function, and the 'o'
+			option in 'statusline'.
 			{not in Vi}
 			{not available when compiled without the
 			|+byte_offset| feature}
@@ -1010,43 +1012,41 @@ unless the line containing that position was changed or deleted.
 							*CTRL-O*
 CTRL-O			Go to [count] Older cursor position in jump list
 			(not a motion command).  {not in Vi}
-			{not available without the +jumplist feature}
+			{not available without the |+jumplist| feature}
 
 <Tab>		or					*CTRL-I* *<Tab>*
 CTRL-I			Go to [count] newer cursor position in jump list
 			(not a motion command).
-			In a |quickfix-window| it takes you to the position of
-			the error under the cursor.
 			{not in Vi}
-			{not available without the +jumplist feature}
+			{not available without the |+jumplist| feature}
 
 							*:ju* *:jumps*
 :ju[mps]		Print the jump list (not a motion command).  {not in
-			Vi} {not available without the +jumplist feature}
+			Vi} {not available without the |+jumplist| feature}
 
 							*jumplist*
 Jumps are remembered in a jump list.  With the CTRL-O and CTRL-I command you
 can go to cursor positions before older jumps, and back again.  Thus you can
 move up and down the list.  There is a separate jump list for each window.
 The maximum number of entries is fixed at 100.
-{not available without the +jumplist feature}
+{not available without the |+jumplist| feature}
 
 For example, after three jump commands you have this jump list:
 
-  jump line  col file/line ~
+  jump line  col file/text ~
     3	  1    0 some text ~
     2	 70    0 another line ~
     1  1154   23 end. ~
  > ~
 
-The "file/line" column shows the file name, or the text at the jump if it is
+The "file/text" column shows the file name, or the text at the jump if it is
 in the current file (an indent is removed and a long line is truncated to fit
 in the window).
 
 You are currently in line 1167.  If you then use the CTRL-O command, the
 cursor is put in line 1154.  This results in:
 
-  jump line  col file/line ~
+  jump line  col file/text ~
     2	  1    0 some text ~
     1	 70    0 another line ~
  >  0  1154   23 end. ~
@@ -1076,7 +1076,7 @@ command.  You can explicitly add a jump by setting the ' mark.
 After the CTRL-O command that got you into line 1154 you could give another
 jump command (e.g., "G").  The jump list would then become:
 
-  jump line  col file/line ~
+  jump line  col file/text ~
     4	  1    0 some text ~
     3	 70    0 another line ~
     2  1167    0 foo bar ~
@@ -1106,14 +1106,14 @@ g;			Go to [count] older position in change list.
 			If there is no older change an error message is given.
 			(not a motion command)
 			{not in Vi}
-			{not available without the +jumplist feature}
+			{not available without the |+jumplist| feature}
 
 							*g,* *E663*
 g,			Go to [count] newer cursor position in change list.
 			Just like |g;| but in the opposite direction.
 			(not a motion command)
 			{not in Vi}
-			{not available without the +jumplist feature}
+			{not available without the |+jumplist| feature}
 
 When using a count you jump as far back or forward as possible.  Thus you can
 use "999g;" to go to the first change for which the position is still

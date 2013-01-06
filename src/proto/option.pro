@@ -19,6 +19,7 @@ void clear_string_option __ARGS((char_u **pp));
 void set_term_option_alloced __ARGS((char_u **p));
 int was_set_insecurely __ARGS((char_u *opt, int opt_flags));
 void set_string_option_direct __ARGS((char_u *name, int opt_idx, char_u *val, int opt_flags, int set_sid));
+char_u *check_colorcolumn __ARGS((win_T *wp));
 char_u *check_stl_option __ARGS((char_u *s));
 int get_option_value __ARGS((char_u *name, long *numval, char_u **stringval, int opt_flags));
 void set_option_value __ARGS((char_u *name, long number, char_u *string, int opt_flags));
@@ -53,6 +54,6 @@ void change_compatible __ARGS((int on));
 int option_was_set __ARGS((char_u *name));
 int can_bs __ARGS((int what));
 void save_file_ff __ARGS((buf_T *buf));
-int file_ff_differs __ARGS((buf_T *buf));
+int file_ff_differs __ARGS((buf_T *buf, int ignore_empty));
 int check_ff_value __ARGS((char_u *p));
 /* vim: set ft=c : */

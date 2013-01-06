@@ -21,6 +21,12 @@
  *
  */
 
+/* Win16 doesn't use the "W" methods. */
+#define pDispatchMessage DispatchMessage
+#define pGetMessage GetMessage
+#define pIsDialogMessage IsDialogMessage
+#define pPeekMessage PeekMessage
+
 /*
  * Include the common stuff for MS-Windows GUI.
  */
@@ -664,12 +670,8 @@ gui_mch_draw_string(
 #ifdef FEAT_MBYTE
 	if (has_mbyte)
 	{
-	    int cell_len = 0;
-
 	    /* Compute the length in display cells. */
-	    for (n = 0; n < len; n += MB_BYTE2LEN(text[n]))
-		cell_len += (*mb_ptr2cells)(text + n);
-	    rc.right = FILL_X(col + cell_len);
+	    rc.right = FILL_X(col + mb_string2cells(text, len));
 	}
 	else
 #endif
@@ -1102,7 +1104,8 @@ gui_mch_dialog(
     char_u	*message,
     char_u	*buttons,
     int		 dfltbutton,
-    char_u	*textfield)
+    char_u	*textfield,
+    int		ex_cmd)
 {
     FARPROC	dp;
     LPWORD	p, pnumitems;

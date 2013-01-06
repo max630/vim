@@ -1,4 +1,4 @@
-*gui_w32.txt*   For Vim version 7.2.  Last change: 2007 Aug 30
+*gui_w32.txt*   For Vim version 7.3.  Last change: 2011 Jul 23
 
 
 		  VIM REFERENCE MANUAL    by Bram Moolenaar
@@ -137,6 +137,9 @@ options:
 And if there already is a gvim running:
 "Edit with existing gvim"   -- edit the file with the running gvim
 
+The "edit with existing Vim" entries can be disabled by adding an entry in the
+registry under HKLM\Software\Vim\Gvim, named DisableEditWithExisting, and with
+any value.
 						*install-registry*
 You can add the "Edit with Vim" menu entry in an easy way by using the
 "install.exe" program.  It will add several registry entries for you.
@@ -293,7 +296,9 @@ Normally, Vim waits for a command to complete before continuing (this makes
 sense for most shell commands which produce output for Vim to use).  If you
 want Vim to start a program and return immediately, you can use the following
 syntax on W95 & NT: >
-	:!start {command}
+	:!start [/min] {command}
+The optional "/min" causes the window to be minimized.
+
 On Win32s, you will have to go to another window instead.  Don't forget that
 you must tell Windows 3.1x to keep executing a DOS command in the background
 while you switch back to Vim.

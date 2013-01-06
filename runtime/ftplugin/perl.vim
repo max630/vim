@@ -1,8 +1,8 @@
 " Vim filetype plugin file
-" Language:	Perl
-" Maintainer:	Dan Sharp <dwsharp at users dot sourceforge dot net>
-" Last Change:  20 Jan 2009
-" URL:		http://dwsharp.users.sourceforge.net/vim/ftplugin
+" Language:     Perl
+" Maintainer:   Andy Lester <andy@petdance.com>
+" URL:          http://github.com/petdance/vim-perl
+" Last Change:  2012 Mar 11
 
 if exists("b:did_ftplugin") | finish | endif
 let b:did_ftplugin = 1
@@ -69,3 +69,4 @@ let b:undo_ftplugin = "setlocal fo< com< cms< inc< inex< def< isf< kp<" .
 
 " Restore the saved compatibility options.
 let &cpo = s:save_cpo
+unlet s:save_cpo

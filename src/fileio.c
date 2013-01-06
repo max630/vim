@@ -11,14 +11,6 @@
  * fileio.c: read from and write to a file
  */
 
-#if defined(MSDOS) || defined(WIN16) || defined(WIN32) || defined(_WIN64)
-# include "vimio.h"	/* for lseek(), must be before vim.h */
-#endif
-
-#if defined __EMX__
-# include "vimio.h"	/* for mktemp(), CJW 1997-12-03 */
-#endif
-
 #include "vim.h"
 
 #if defined(__TANDEM) || defined(__MINT__)
@@ -33,8 +25,17 @@
 #define SMBUFSIZE	256	/* size of emergency write buffer */
 
 #ifdef FEAT_CRYPT
-# define CRYPT_MAGIC		"VimCrypt~01!"	/* "01" is the version nr */
+/* crypt_magic[0] is pkzip crypt, crypt_magic[1] is sha2+blowfish */
+static char	*crypt_magic[] = {"VimCrypt~01!", "VimCrypt~02!"};
+static char	crypt_magic_head[] = "VimCrypt~";
 # define CRYPT_MAGIC_LEN	12		/* must be multiple of 4! */
+
+/* For blowfish, after the magic header, we store 8 bytes of salt and then 8
+ * bytes of seed (initialisation vector). */
+static int	crypt_salt_len[] = {0, 8};
+static int	crypt_seed_len[] = {0, 8};
+#define CRYPT_SALT_LEN_MAX 8
+#define CRYPT_SEED_LEN_MAX 8
 #endif
 
 /* Is there any system that doesn't have access()? */
@@ -54,7 +55,8 @@ static char_u *readfile_charconvert __ARGS((char_u *fname, char_u *fenc, int *fd
 static void check_marks_read __ARGS((void));
 #endif
 #ifdef FEAT_CRYPT
-static char_u *check_for_cryptkey __ARGS((char_u *cryptkey, char_u *ptr, long *sizep, long *filesizep, int newfile));
+static int crypt_method_from_magic __ARGS((char *ptr, int len));
+static char_u *check_for_cryptkey __ARGS((char_u *cryptkey, char_u *ptr, long *sizep, off_t *filesizep, int newfile, char_u *fname, int *did_ask));
 #endif
 #ifdef UNIX
 static void set_file_time __ARGS((char_u *fname, time_t atime, time_t mtime));
@@ -209,6 +211,7 @@ filemess(buf, name, s, attr)
  * READ_BUFFER	read from curbuf instead of a file (converting after reading
  *		stdin)
  * READ_DUMMY	read into a dummy buffer (to check if file contents changed)
+ * READ_KEEP_UNDO  don't clear undo info or read it from a file
  *
  * return FAIL for failure, OK otherwise
  */
@@ -242,10 +245,16 @@ readfile(fname, sfname, from, lines_to_skip, lines_to_read, eap, flags)
     colnr_T	len;
     long	size = 0;
     char_u	*p;
-    long	filesize = 0;
+    off_t	filesize = 0;
     int		skip_read = FALSE;
 #ifdef FEAT_CRYPT
     char_u	*cryptkey = NULL;
+    int		did_ask_for_key = FALSE;
+    int		crypt_method_used;
+#endif
+#ifdef FEAT_PERSISTENT_UNDO
+    context_sha256_T sha_ctx;
+    int		read_undo_file = FALSE;
 #endif
     int		split = 0;		/* number of split lines */
 #define UNKNOWN	 0x0fffffff		/* file size is unknown */
@@ -301,21 +310,15 @@ readfile(fname, sfname, from, lines_to_skip, lines_to_read, eap, flags)
     char_u	conv_rest[CONV_RESTLEN];
     int		conv_restlen = 0;	/* nr of bytes in conv_rest[] */
 #endif
-
 #ifdef FEAT_AUTOCMD
-    /* Remember the initial values of curbuf, curbuf->b_ffname and
-     * curbuf->b_fname to detect whether they are altered as a result of
-     * executing nasty autocommands.  Also check if "fname" and "sfname"
-     * point to one of these values. */
-    buf_T   *old_curbuf = curbuf;
-    char_u  *old_b_ffname = curbuf->b_ffname;
-    char_u  *old_b_fname = curbuf->b_fname;
-    int     using_b_ffname = (fname == curbuf->b_ffname)
-					      || (sfname == curbuf->b_ffname);
-    int     using_b_fname = (fname == curbuf->b_fname)
-					       || (sfname == curbuf->b_fname);
+    buf_T	*old_curbuf;
+    char_u	*old_b_ffname;
+    char_u	*old_b_fname;
+    int		using_b_ffname;
+    int		using_b_fname;
 #endif
-    write_no_eol_lnum = 0;	/* in case it was set by the previous read */
+
+    curbuf->b_no_eol_lnum = 0;	/* in case it was set by the previous read */
 
     /*
      * If there is no file name yet, use the one for the read file.
@@ -332,6 +335,19 @@ readfile(fname, sfname, from, lines_to_skip, lines_to_read, eap, flags)
 	if (set_rw_fname(fname, sfname) == FAIL)
 	    return FAIL;
     }
+
+#ifdef FEAT_AUTOCMD
+    /* Remember the initial values of curbuf, curbuf->b_ffname and
+     * curbuf->b_fname to detect whether they are altered as a result of
+     * executing nasty autocommands.  Also check if "fname" and "sfname"
+     * point to one of these values. */
+    old_curbuf = curbuf;
+    old_b_ffname = curbuf->b_ffname;
+    old_b_fname = curbuf->b_fname;
+    using_b_ffname = (fname == curbuf->b_ffname)
+					      || (sfname == curbuf->b_ffname);
+    using_b_fname = (fname == curbuf->b_fname) || (sfname == curbuf->b_fname);
+#endif
 
     /* After reading a file the cursor line changes but we don't want to
      * display the line. */
@@ -488,18 +504,11 @@ readfile(fname, sfname, from, lines_to_skip, lines_to_read, eap, flags)
 
     if (newfile && !read_stdin && !read_buffer)
     {
-	/* Remember time of file.
-	 * For RISCOS, also remember the filetype.
-	 */
+	/* Remember time of file. */
 	if (mch_stat((char *)fname, &st) >= 0)
 	{
 	    buf_store_time(curbuf, &st, fname);
 	    curbuf->b_mtime_read = curbuf->b_mtime;
-
-#if defined(RISCOS) && defined(FEAT_OSFILETYPE)
-	    /* Read the filetype into the buffer local filetype option. */
-	    mch_read_filetype(fname);
-#endif
 #ifdef UNIX
 	    /*
 	     * Use the protection bits of the original file for the swap file.
@@ -541,7 +550,6 @@ readfile(fname, sfname, from, lines_to_skip, lines_to_read, eap, flags)
 
 /*
  * for UNIX: check readonly with perm and mch_access()
- * for RISCOS: same as Unix, otherwise file gets re-datestamped!
  * for MSDOS and Amiga: check readonly by trying to open the file for writing
  */
     file_readonly = FALSE;
@@ -895,7 +903,7 @@ readfile(fname, sfname, from, lines_to_skip, lines_to_read, eap, flags)
 	    {
 		/* Read the first line (and a bit more).  Immediately rewind to
 		 * the start of the file.  If the read() fails "len" is -1. */
-		len = vim_read(fd, firstline, 80);
+		len = read_eintr(fd, firstline, 80);
 		lseek(fd, (off_t)0L, SEEK_SET);
 		for (p = firstline; p < firstline + len; ++p)
 		    if (*p >= 0x80)
@@ -979,6 +987,13 @@ retry:
 	conv_error = 0;
 #endif
     }
+
+#ifdef FEAT_CRYPT
+    if (cryptkey != NULL)
+	/* Need to reset the state, but keep the key, don't want to ask for it
+	 * again. */
+	crypt_pop_state();
+#endif
 
     /*
      * When retrying with another "fenc" and the first time "fileformat"
@@ -1172,6 +1187,16 @@ retry:
 #ifdef FEAT_MBYTE
 	conv_restlen = 0;
 #endif
+#ifdef FEAT_PERSISTENT_UNDO
+	read_undo_file = (newfile && (flags & READ_KEEP_UNDO) == 0
+				  && curbuf->b_ffname != NULL
+				  && curbuf->b_p_udf
+				  && !filtering
+				  && !read_stdin
+				  && !read_buffer);
+	if (read_undo_file)
+	    sha256_start(&sha_ctx);
+#endif
     }
 
     while (!error && !got_int)
@@ -1333,7 +1358,7 @@ retry:
 		    /*
 		     * Read bytes from the file.
 		     */
-		    size = vim_read(fd, ptr, size);
+		    size = read_eintr(fd, ptr, size);
 		}
 
 		if (size <= 0)
@@ -1405,13 +1430,13 @@ retry:
 		 */
 		if (filesize == 0)
 		    cryptkey = check_for_cryptkey(cryptkey, ptr, &size,
-							  &filesize, newfile);
+					&filesize, newfile, sfname,
+					&did_ask_for_key);
 		/*
 		 * Decrypt the read bytes.
 		 */
 		if (cryptkey != NULL && size > 0)
-		    for (p = ptr; p < ptr + size; ++p)
-			ZDECODE(*p);
+		    crypt_decode(ptr, size);
 #endif
 	    }
 	    skip_read = FALSE;
@@ -1425,7 +1450,10 @@ retry:
 	     */
 	    if ((filesize == 0
 # ifdef FEAT_CRYPT
-			|| (filesize == CRYPT_MAGIC_LEN && cryptkey != NULL)
+		   || (filesize == (CRYPT_MAGIC_LEN
+					   + crypt_salt_len[use_crypt_method]
+					   + crypt_seed_len[use_crypt_method])
+							  && cryptkey != NULL)
 # endif
 		       )
 		    && (fio_flags == FIO_UCSBOM
@@ -2125,6 +2153,10 @@ rewind_retry:
 			    error = TRUE;
 			    break;
 			}
+#ifdef FEAT_PERSISTENT_UNDO
+			if (read_undo_file)
+			    sha256_update(&sha_ctx, line_start, len);
+#endif
 			++lnum;
 			if (--read_count == 0)
 			{
@@ -2189,6 +2221,10 @@ rewind_retry:
 			    error = TRUE;
 			    break;
 			}
+#ifdef FEAT_PERSISTENT_UNDO
+			if (read_undo_file)
+			    sha256_update(&sha_ctx, line_start, len);
+#endif
 			++lnum;
 			if (--read_count == 0)
 			{
@@ -2229,19 +2265,32 @@ failed:
 	if (set_options)
 	    curbuf->b_p_eol = FALSE;
 	*ptr = NUL;
-	if (ml_append(lnum, line_start,
-			(colnr_T)(ptr - line_start + 1), newfile) == FAIL)
+	len = (colnr_T)(ptr - line_start + 1);
+	if (ml_append(lnum, line_start, len, newfile) == FAIL)
 	    error = TRUE;
 	else
+	{
+#ifdef FEAT_PERSISTENT_UNDO
+	    if (read_undo_file)
+		sha256_update(&sha_ctx, line_start, len);
+#endif
 	    read_no_eol_lnum = ++lnum;
+	}
     }
 
     if (set_options)
 	save_file_ff(curbuf);		/* remember the current file format */
 
 #ifdef FEAT_CRYPT
-    if (cryptkey != curbuf->b_p_key)
-	vim_free(cryptkey);
+    crypt_method_used = use_crypt_method;
+    if (cryptkey != NULL)
+    {
+	crypt_pop_state();
+	if (cryptkey != curbuf->b_p_key)
+	    free_crypt_key(cryptkey);
+	/* don't set cryptkey to NULL, it's used below as a flag that
+	 * encryption was used */
+    }
 #endif
 
 #ifdef FEAT_MBYTE
@@ -2428,7 +2477,10 @@ failed:
 #ifdef FEAT_CRYPT
 	    if (cryptkey != NULL)
 	    {
-		STRCAT(IObuff, _("[crypted]"));
+		if (crypt_method_used == 1)
+		    STRCAT(IObuff, _("[blowfish]"));
+		else
+		    STRCAT(IObuff, _("[crypted]"));
 		c = TRUE;
 	    }
 #endif
@@ -2456,7 +2508,10 @@ failed:
 		c = TRUE;
 #ifdef FEAT_CRYPT
 	    if (cryptkey != NULL)
-		msg_add_lines(c, (long)linecnt, filesize - CRYPT_MAGIC_LEN);
+		msg_add_lines(c, (long)linecnt, filesize
+			- CRYPT_MAGIC_LEN
+			- crypt_salt_len[use_crypt_method]
+			- crypt_seed_len[use_crypt_method]);
 	    else
 #endif
 		msg_add_lines(c, (long)linecnt, filesize);
@@ -2541,10 +2596,29 @@ failed:
 
     /*
      * Trick: We remember if the last line of the read didn't have
-     * an eol for when writing it again.  This is required for
+     * an eol even when 'binary' is off, for when writing it again with
+     * 'binary' on.  This is required for
      * ":autocmd FileReadPost *.gz set bin|'[,']!gunzip" to work.
      */
-    write_no_eol_lnum = read_no_eol_lnum;
+    curbuf->b_no_eol_lnum = read_no_eol_lnum;
+
+    /* When reloading a buffer put the cursor at the first line that is
+     * different. */
+    if (flags & READ_KEEP_UNDO)
+	u_find_first_changed();
+
+#ifdef FEAT_PERSISTENT_UNDO
+    /*
+     * When opening a new file locate undo info and read it.
+     */
+    if (read_undo_file)
+    {
+	char_u	hash[UNDO_HASH_SIZE];
+
+	sha256_finish(&sha_ctx, hash);
+	u_read_undo(NULL, hash, fname);
+    }
+#endif
 
 #ifdef FEAT_AUTOCMD
     if (!read_stdin && !read_buffer)
@@ -2574,10 +2648,10 @@ failed:
 							    FALSE, NULL, eap);
 	if (msg_scrolled == n)
 	    msg_scroll = m;
-#ifdef FEAT_EVAL
+# ifdef FEAT_EVAL
 	if (aborting())	    /* autocmds may abort script processing */
 	    return FAIL;
-#endif
+# endif
     }
 #endif
 
@@ -2781,33 +2855,72 @@ check_marks_read()
 }
 #endif
 
-#ifdef FEAT_CRYPT
+#if defined(FEAT_CRYPT) || defined(PROTO)
 /*
- * Check for magic number used for encryption.
+ * Get the crypt method used for a file from "ptr[len]", the magic text at the
+ * start of the file.
+ * Returns -1 when no encryption used.
+ */
+    static int
+crypt_method_from_magic(ptr, len)
+    char  *ptr;
+    int   len;
+{
+    int i;
+
+    for (i = 0; i < (int)(sizeof(crypt_magic) / sizeof(crypt_magic[0])); i++)
+    {
+	if (len < (CRYPT_MAGIC_LEN + crypt_salt_len[i] + crypt_seed_len[i]))
+	    continue;
+	if (memcmp(ptr, crypt_magic[i], CRYPT_MAGIC_LEN) == 0)
+	    return i;
+    }
+
+    i = (int)STRLEN(crypt_magic_head);
+    if (len >= i && memcmp(ptr, crypt_magic_head, i) == 0)
+	EMSG(_("E821: File is encrypted with unknown method"));
+
+    return -1;
+}
+
+/*
+ * Check for magic number used for encryption.  Applies to the current buffer.
  * If found, the magic number is removed from ptr[*sizep] and *sizep and
  * *filesizep are updated.
  * Return the (new) encryption key, NULL for no encryption.
  */
     static char_u *
-check_for_cryptkey(cryptkey, ptr, sizep, filesizep, newfile)
+check_for_cryptkey(cryptkey, ptr, sizep, filesizep, newfile, fname, did_ask)
     char_u	*cryptkey;	/* previous encryption key or NULL */
     char_u	*ptr;		/* pointer to read bytes */
     long	*sizep;		/* length of read bytes */
-    long	*filesizep;	/* nr of bytes used from file */
+    off_t	*filesizep;	/* nr of bytes used from file */
     int		newfile;	/* editing a new buffer */
+    char_u	*fname;		/* file name to display */
+    int		*did_ask;	/* flag: whether already asked for key */
 {
-    if (*sizep >= CRYPT_MAGIC_LEN
-	    && STRNCMP(ptr, CRYPT_MAGIC, CRYPT_MAGIC_LEN) == 0)
+    int method = crypt_method_from_magic((char *)ptr, *sizep);
+
+    if (method >= 0)
     {
-	if (cryptkey == NULL)
+	set_crypt_method(curbuf, method);
+	if (method > 0)
+	    (void)blowfish_self_test();
+	if (cryptkey == NULL && !*did_ask)
 	{
 	    if (*curbuf->b_p_key)
 		cryptkey = curbuf->b_p_key;
 	    else
 	    {
-		/* When newfile is TRUE, store the typed key
-		 * in the 'key' option and don't free it. */
+		/* When newfile is TRUE, store the typed key in the 'key'
+		 * option and don't free it.  bf needs hash of the key saved.
+		 * Don't ask for the key again when first time Enter was hit.
+		 * Happens when retrying to detect encoding. */
+		smsg((char_u *)_(need_key_msg), fname);
+		msg_scroll = TRUE;
 		cryptkey = get_crypt_key(newfile, FALSE);
+		*did_ask = TRUE;
+
 		/* check if empty key entered */
 		if (cryptkey != NULL && *cryptkey == NUL)
 		{
@@ -2820,23 +2933,113 @@ check_for_cryptkey(cryptkey, ptr, sizep, filesizep, newfile)
 
 	if (cryptkey != NULL)
 	{
-	    crypt_init_keys(cryptkey);
+	    int seed_len = crypt_seed_len[method];
+	    int salt_len = crypt_salt_len[method];
+
+	    crypt_push_state();
+	    use_crypt_method = method;
+	    if (method == 0)
+		crypt_init_keys(cryptkey);
+	    else
+	    {
+		bf_key_init(cryptkey, ptr + CRYPT_MAGIC_LEN, salt_len);
+		bf_ofb_init(ptr + CRYPT_MAGIC_LEN + salt_len, seed_len);
+	    }
 
 	    /* Remove magic number from the text */
-	    *filesizep += CRYPT_MAGIC_LEN;
-	    *sizep -= CRYPT_MAGIC_LEN;
-	    mch_memmove(ptr, ptr + CRYPT_MAGIC_LEN, (size_t)*sizep);
+	    *filesizep += CRYPT_MAGIC_LEN + salt_len + seed_len;
+	    *sizep -= CRYPT_MAGIC_LEN + salt_len + seed_len;
+	    mch_memmove(ptr, ptr + CRYPT_MAGIC_LEN + salt_len + seed_len,
+							      (size_t)*sizep);
 	}
     }
-    /* When starting to edit a new file which does not have
-     * encryption, clear the 'key' option, except when
-     * starting up (called with -x argument) */
-    else if (newfile && *curbuf->b_p_key && !starting)
+    /* When starting to edit a new file which does not have encryption, clear
+     * the 'key' option, except when starting up (called with -x argument) */
+    else if (newfile && *curbuf->b_p_key != NUL && !starting)
 	set_option_value((char_u *)"key", 0L, (char_u *)"", OPT_LOCAL);
 
     return cryptkey;
 }
-#endif
+
+/*
+ * Check for magic number used for encryption.  Applies to the current buffer.
+ * If found and decryption is possible returns OK;
+ */
+    int
+prepare_crypt_read(fp)
+    FILE	*fp;
+{
+    int		method;
+    char_u	buffer[CRYPT_MAGIC_LEN + CRYPT_SALT_LEN_MAX
+						    + CRYPT_SEED_LEN_MAX + 2];
+
+    if (fread(buffer, CRYPT_MAGIC_LEN, 1, fp) != 1)
+	return FAIL;
+    method = crypt_method_from_magic((char *)buffer,
+					CRYPT_MAGIC_LEN +
+					CRYPT_SEED_LEN_MAX +
+					CRYPT_SALT_LEN_MAX);
+    if (method < 0 || method != get_crypt_method(curbuf))
+	return FAIL;
+
+    crypt_push_state();
+    if (method == 0)
+	crypt_init_keys(curbuf->b_p_key);
+    else
+    {
+	int salt_len = crypt_salt_len[method];
+	int seed_len = crypt_seed_len[method];
+
+	if (fread(buffer, salt_len + seed_len, 1, fp) != 1)
+	    return FAIL;
+	bf_key_init(curbuf->b_p_key, buffer, salt_len);
+	bf_ofb_init(buffer + salt_len, seed_len);
+    }
+    return OK;
+}
+
+/*
+ * Prepare for writing encrypted bytes for buffer "buf".
+ * Returns a pointer to an allocated header of length "*lenp".
+ * When out of memory returns NULL.
+ * Otherwise calls crypt_push_state(), call crypt_pop_state() later.
+ */
+    char_u *
+prepare_crypt_write(buf, lenp)
+    buf_T *buf;
+    int   *lenp;
+{
+    char_u  *header;
+    int	    seed_len = crypt_seed_len[get_crypt_method(buf)];
+    int     salt_len = crypt_salt_len[get_crypt_method(buf)];
+    char_u  *salt;
+    char_u  *seed;
+
+    header = alloc_clear(CRYPT_MAGIC_LEN + CRYPT_SALT_LEN_MAX
+						    + CRYPT_SEED_LEN_MAX + 2);
+    if (header != NULL)
+    {
+	crypt_push_state();
+	use_crypt_method = get_crypt_method(buf);  /* select zip or blowfish */
+	vim_strncpy(header, (char_u *)crypt_magic[use_crypt_method],
+							     CRYPT_MAGIC_LEN);
+	if (use_crypt_method == 0)
+	    crypt_init_keys(buf->b_p_key);
+	else
+	{
+	    /* Using blowfish, add salt and seed. */
+	    salt = header + CRYPT_MAGIC_LEN;
+	    seed = salt + salt_len;
+	    sha2_seed(salt, salt_len, seed, seed_len);
+	    bf_key_init(buf->b_p_key, salt, salt_len);
+	    bf_ofb_init(seed, seed_len);
+	}
+    }
+    *lenp = CRYPT_MAGIC_LEN + salt_len + seed_len;
+    return header;
+}
+
+#endif  /* FEAT_CRYPT */
 
 #ifdef UNIX
     static void
@@ -2985,6 +3188,13 @@ buf_write(buf, fname, sfname, start, end, eap, append, forceit,
     vim_acl_T	    acl = NULL;		/* ACL copied from original file to
 					   backup or new file */
 #endif
+#ifdef FEAT_PERSISTENT_UNDO
+    int		    write_undo_file = FALSE;
+    context_sha256_T sha_ctx;
+#endif
+#ifdef FEAT_CRYPT
+    int		    crypt_method_used;
+#endif
 
     if (fname == NULL || *fname == NUL)	/* safety check */
 	return FAIL;
@@ -3128,8 +3338,22 @@ buf_write(buf, fname, sfname, start, end, eap, append, forceit,
 	}
 	else if (reset_changed && whole)
 	{
-	    if (!(did_cmd = apply_autocmds_exarg(EVENT_BUFWRITECMD,
-					 sfname, sfname, FALSE, curbuf, eap)))
+	    int was_changed = curbufIsChanged();
+
+	    did_cmd = apply_autocmds_exarg(EVENT_BUFWRITECMD,
+					  sfname, sfname, FALSE, curbuf, eap);
+	    if (did_cmd)
+	    {
+		if (was_changed && !curbufIsChanged())
+		{
+		    /* Written everything correctly and BufWriteCmd has reset
+		     * 'modified': Correct the undo information so that an
+		     * undo now sets 'modified'. */
+		    u_unchanged(curbuf);
+		    u_update_save_nr(curbuf);
+		}
+	    }
+	    else
 	    {
 #ifdef FEAT_QUICKFIX
 		if (overwriting && bt_nofile(curbuf))
@@ -3256,7 +3480,7 @@ buf_write(buf, fname, sfname, start, end, eap, append, forceit,
 #endif
 
 #ifdef FEAT_NETBEANS_INTG
-    if (usingNetbeans && isNetbeansBuffer(buf))
+    if (netbeans_active() && isNetbeansBuffer(buf))
     {
 	if (whole)
 	{
@@ -3534,6 +3758,22 @@ buf_write(buf, fname, sfname, start, end, eap, append, forceit,
 		     * can't delete an open file. */
 		    close(fd);
 		    mch_remove(IObuff);
+# ifdef MSWIN
+		    /* MS-Windows may trigger a virus scanner to open the
+		     * file, we can't delete it then.  Keep trying for half a
+		     * second. */
+		    {
+			int try;
+
+			for (try = 0; try < 10; ++try)
+			{
+			    if (mch_lstat((char *)IObuff, &st) < 0)
+				break;
+			    ui_delay(50L, TRUE);  /* wait 50 msec */
+			    mch_remove(IObuff);
+			}
+		    }
+# endif
 		}
 	    }
 	}
@@ -3566,13 +3806,7 @@ buf_write(buf, fname, sfname, start, end, eap, append, forceit,
 
 	/* make sure we have a valid backup extension to use */
 	if (*p_bex == NUL)
-	{
-#ifdef RISCOS
-	    backup_ext = (char_u *)"/bak";
-#else
 	    backup_ext = (char_u *)".bak";
-#endif
-	}
 	else
 	    backup_ext = p_bex;
 
@@ -3767,7 +4001,7 @@ buf_write(buf, fname, sfname, start, end, eap, append, forceit,
 #ifdef HAS_BW_FLAGS
 			write_info.bw_flags = FIO_NOCONVERT;
 #endif
-			while ((write_info.bw_len = vim_read(fd, copybuf,
+			while ((write_info.bw_len = read_eintr(fd, copybuf,
 								BUFSIZE)) > 0)
 			{
 			    if (buf_write_bytes(&write_info) == FAIL)
@@ -4227,18 +4461,27 @@ restore_backup:
     write_info.bw_fd = fd;
 
 #ifdef FEAT_CRYPT
-    if (*buf->b_p_key && !filtering)
+    if (*buf->b_p_key != NUL && !filtering)
     {
-	crypt_init_keys(buf->b_p_key);
-	/* Write magic number, so that Vim knows that this file is encrypted
-	 * when reading it again.  This also undergoes utf-8 to ucs-2/4
-	 * conversion when needed. */
-	write_info.bw_buf = (char_u *)CRYPT_MAGIC;
-	write_info.bw_len = CRYPT_MAGIC_LEN;
-	write_info.bw_flags = FIO_NOCONVERT;
-	if (buf_write_bytes(&write_info) == FAIL)
+	char_u *header;
+	int    header_len;
+
+	header = prepare_crypt_write(buf, &header_len);
+	if (header == NULL)
 	    end = 0;
-	wb_flags |= FIO_ENCRYPTED;
+	else
+	{
+	    /* Write magic number, so that Vim knows that this file is
+	     * encrypted when reading it again.  This also undergoes utf-8 to
+	     * ucs-2/4 conversion when needed. */
+	    write_info.bw_buf = header;
+	    write_info.bw_len = header_len;
+	    write_info.bw_flags = FIO_NOCONVERT;
+	    if (buf_write_bytes(&write_info) == FAIL)
+		end = 0;
+	    wb_flags |= FIO_ENCRYPTED;
+	    vim_free(header);
+	}
     }
 #endif
 
@@ -4273,6 +4516,14 @@ restore_backup:
     write_info.bw_start_lnum = start;
 #endif
 
+#ifdef FEAT_PERSISTENT_UNDO
+    write_undo_file = (buf->b_p_udf && overwriting && !append
+					      && !filtering && reset_changed);
+    if (write_undo_file)
+	/* Prepare for computing the hash value of the text. */
+	sha256_start(&sha_ctx);
+#endif
+
     write_info.bw_len = bufsize;
 #ifdef HAS_BW_FLAGS
     write_info.bw_flags = wb_flags;
@@ -4287,6 +4538,10 @@ restore_backup:
 	 * Keep it fast!
 	 */
 	ptr = ml_get_buf(buf, lnum, FALSE) - 1;
+#ifdef FEAT_PERSISTENT_UNDO
+	if (write_undo_file)
+	    sha256_update(&sha_ctx, ptr + 1, (UINT32_T)(STRLEN(ptr + 1) + 1));
+#endif
 	while ((c = *++ptr) != NUL)
 	{
 	    if (c == NL)
@@ -4314,7 +4569,7 @@ restore_backup:
 	if (end == 0
 		|| (lnum == end
 		    && write_bin
-		    && (lnum == write_no_eol_lnum
+		    && (lnum == buf->b_no_eol_lnum
 			|| (lnum == buf->b_ml.ml_line_count && !buf->b_p_eol))))
 	{
 	    ++lnum;			/* written the line, count it */
@@ -4465,16 +4720,16 @@ restore_backup:
 #endif
     if (perm >= 0)		/* set perm. of new file same as old file */
 	(void)mch_setperm(wfname, perm);
-#ifdef RISCOS
-    if (!append && !filtering)
-	/* Set the filetype after writing the file. */
-	mch_set_filetype(wfname, buf->b_p_oft);
-#endif
 #ifdef HAVE_ACL
     /* Probably need to set the ACL before changing the user (can't set the
      * ACL on a file the user doesn't own). */
     if (!backup_copy)
 	mch_set_acl(wfname, acl);
+#endif
+#ifdef FEAT_CRYPT
+    crypt_method_used = use_crypt_method;
+    if (wb_flags & FIO_ENCRYPTED)
+	crypt_pop_state();
 #endif
 
 
@@ -4555,7 +4810,7 @@ restore_backup:
 #ifdef HAS_BW_FLAGS
 			write_info.bw_flags = FIO_NOCONVERT;
 #endif
-			while ((write_info.bw_len = vim_read(fd, smallbuf,
+			while ((write_info.bw_len = read_eintr(fd, smallbuf,
 						      SMBUFSIZE)) > 0)
 			    if (buf_write_bytes(&write_info) == FAIL)
 				break;
@@ -4592,11 +4847,8 @@ restore_backup:
 	    STRCAT(IObuff, _(" CONVERSION ERROR"));
 	    c = TRUE;
 	    if (write_info.bw_conv_error_lnum != 0)
-	    {
-		size_t l = STRLEN(IObuff);
-		vim_snprintf((char *)IObuff + l, IOSIZE - l, _(" in line %ld;"),
+		vim_snprintf_add((char *)IObuff, IOSIZE, _(" in line %ld;"),
 			(long)write_info.bw_conv_error_lnum);
-	    }
 	}
 	else if (notconverted)
 	{
@@ -4630,7 +4882,10 @@ restore_backup:
 #ifdef FEAT_CRYPT
 	if (wb_flags & FIO_ENCRYPTED)
 	{
-	    STRCAT(IObuff, _("[crypted]"));
+	    if (crypt_method_used == 1)
+		STRCAT(IObuff, _("[blowfish]"));
+	    else
+		STRCAT(IObuff, _("[crypted]"));
 	    c = TRUE;
 	}
 #endif
@@ -4657,6 +4912,7 @@ restore_backup:
     {
 	unchanged(buf, TRUE);
 	u_unchanged(buf);
+	u_update_save_nr(buf);
     }
 
     /*
@@ -4815,6 +5071,20 @@ nofail:
     }
     msg_scroll = msg_save;
 
+#ifdef FEAT_PERSISTENT_UNDO
+    /*
+     * When writing the whole file and 'undofile' is set, also write the undo
+     * file.
+     */
+    if (retval == OK && write_undo_file)
+    {
+	char_u	    hash[UNDO_HASH_SIZE];
+
+	sha256_finish(&sha_ctx, hash);
+	u_write_undo(NULL, FALSE, buf, hash);
+    }
+#endif
+
 #ifdef FEAT_AUTOCMD
 #ifdef FEAT_EVAL
     if (!should_abort(retval))
@@ -4824,7 +5094,7 @@ nofail:
     {
 	aco_save_T	aco;
 
-	write_no_eol_lnum = 0;	/* in case it was set by the previous read */
+	curbuf->b_no_eol_lnum = 0;  /* in case it was set by the previous read */
 
 	/*
 	 * Apply POST autocommands.
@@ -4971,7 +5241,7 @@ msg_add_fileformat(eol_type)
 msg_add_lines(insert_space, lnum, nchars)
     int	    insert_space;
     long    lnum;
-    long    nchars;
+    off_t   nchars;
 {
     char_u  *p;
 
@@ -4980,7 +5250,14 @@ msg_add_lines(insert_space, lnum, nchars)
     if (insert_space)
 	*p++ = ' ';
     if (shortmess(SHM_LINES))
-	sprintf((char *)p, "%ldL, %ldC", lnum, nchars);
+	sprintf((char *)p,
+#ifdef LONG_LONG_OFF_T
+		"%ldL, %lldC", lnum, nchars
+#else
+		/* Explicit typecast avoids warning on Mac OS X 10.6 */
+		"%ldL, %ldC", lnum, (long)nchars
+#endif
+		);
     else
     {
 	if (lnum == 1)
@@ -4991,7 +5268,14 @@ msg_add_lines(insert_space, lnum, nchars)
 	if (nchars == 1)
 	    STRCPY(p, _("1 character"));
 	else
-	    sprintf((char *)p, _("%ld characters"), nchars);
+	    sprintf((char *)p,
+#ifdef LONG_LONG_OFF_T
+		    _("%lld characters"), nchars
+#else
+		    /* Explicit typecast avoids warning on Mac OS X 10.6 */
+		    _("%ld characters"), (long)nchars
+#endif
+		    );
     }
 }
 
@@ -5046,7 +5330,7 @@ time_differs(t1, t2)
 
 /*
  * Call write() to write a number of bytes to the file.
- * Also handles encryption and 'encoding' conversion.
+ * Handles encryption and 'encoding' conversion.
  *
  * Return FAIL for failure, OK otherwise.
  */
@@ -5415,27 +5699,11 @@ buf_write_bytes(ip)
 
 #ifdef FEAT_CRYPT
     if (flags & FIO_ENCRYPTED)		/* encrypt the data */
-    {
-	int ztemp, t, i;
-
-	for (i = 0; i < len; i++)
-	{
-	    ztemp  = buf[i];
-	    buf[i] = ZENCODE(ztemp, t);
-	}
-    }
+	crypt_encode(buf, len, buf);
 #endif
 
-    /* Repeat the write(), it may be interrupted by a signal. */
-    while (len > 0)
-    {
-	wlen = vim_write(ip->bw_fd, buf, len);
-	if (wlen <= 0)		    /* error! */
-	    return FAIL;
-	len -= wlen;
-	buf += wlen;
-    }
-    return OK;
+    wlen = write_eintr(ip->bw_fd, buf, len);
+    return (wlen < len) ? FAIL : OK;
 }
 
 #ifdef FEAT_MBYTE
@@ -5537,7 +5805,10 @@ need_conversion(fenc)
     int		fenc_flags;
 
     if (*fenc == NUL || STRCMP(p_enc, fenc) == 0)
+    {
 	same_encoding = TRUE;
+	fenc_flags = 0;
+    }
     else
     {
 	/* Ignore difference between "ansi" and "latin1", "ucs-4" and
@@ -5745,15 +6016,19 @@ make_bom(buf, name)
 shorten_fname1(full_path)
     char_u	*full_path;
 {
-    char_u	dirname[MAXPATHL];
+    char_u	*dirname;
     char_u	*p = full_path;
 
+    dirname = alloc(MAXPATHL);
+    if (dirname == NULL)
+	return full_path;
     if (mch_dirname(dirname, MAXPATHL) == OK)
     {
 	p = shorten_fname(full_path, dirname);
 	if (p == NULL || *p == NUL)
 	    p = full_path;
     }
+    vim_free(dirname);
     return p;
 }
 #endif
@@ -5980,19 +6255,17 @@ buf_modname(shortname, fname, ext, prepend_dot)
      */
     for (ptr = retval + fnamelen; ptr > retval; mb_ptr_back(retval, ptr))
     {
-#ifndef RISCOS
 	if (*ext == '.'
-# ifdef USE_LONG_FNAME
+#ifdef USE_LONG_FNAME
 		    && (!USE_LONG_FNAME || shortname)
-# else
-#  ifndef SHORT_FNAME
+#else
+# ifndef SHORT_FNAME
 		    && shortname
-#  endif
 # endif
+#endif
 								)
 	    if (*ptr == '.')	/* replace '.' by '_' */
 		*ptr = '_';
-#endif
 	if (vim_ispathsep(*ptr))
 	{
 	    ++ptr;
@@ -6027,23 +6300,14 @@ buf_modname(shortname, fname, ext, prepend_dot)
 	if (fname == NULL || *fname == NUL
 				   || vim_ispathsep(fname[STRLEN(fname) - 1]))
 	{
-#ifdef RISCOS
-	    if (*ext == '/')
-#else
 	    if (*ext == '.')
-#endif
 		*s++ = '_';
 	}
 	/*
 	 * If the extension starts with '.', truncate the base name at 8
 	 * characters
 	 */
-#ifdef RISCOS
-	/* We normally use '/', but swap files are '_' */
-	else if (*ext == '/' || *ext == '_')
-#else
 	else if (*ext == '.')
-#endif
 	{
 	    if ((size_t)(s - ptr) > (size_t)8)
 	    {
@@ -6055,13 +6319,8 @@ buf_modname(shortname, fname, ext, prepend_dot)
 	 * If the extension doesn't start with '.', and the file name
 	 * doesn't have an extension yet, append a '.'
 	 */
-#ifdef RISCOS
-	else if ((e = vim_strchr(ptr, '/')) == NULL)
-	    *s++ = '/';
-#else
 	else if ((e = vim_strchr(ptr, '.')) == NULL)
 	    *s++ = '.';
-#endif
 	/*
 	 * If the extension doesn't start with '.', and there already is an
 	 * extension, it may need to be truncated
@@ -6089,23 +6348,14 @@ buf_modname(shortname, fname, ext, prepend_dot)
     /*
      * Prepend the dot.
      */
-    if (prepend_dot && !shortname && *(e = gettail(retval)) !=
-#ifdef RISCOS
-	    '/'
-#else
-	    '.'
-#endif
+    if (prepend_dot && !shortname && *(e = gettail(retval)) != '.'
 #ifdef USE_LONG_FNAME
 	    && USE_LONG_FNAME
 #endif
 				)
     {
 	STRMOVE(e + 1, e);
-#ifdef RISCOS
-	*e = '/';
-#else
 	*e = '.';
-#endif
     }
 #endif
 
@@ -6273,6 +6523,21 @@ vim_rename(from, to)
 	    use_tmp_file = TRUE;
     }
 #endif
+#ifdef WIN3264
+    {
+	BY_HANDLE_FILE_INFORMATION info1, info2;
+
+	/* It's possible for the source and destination to be the same file.
+	 * In that case go through a temp file name.  This makes rename("foo",
+	 * "./foo") a no-op (in a complicated way). */
+	if (win32_fileinfo(from, &info1) == FILEINFO_OK
+		&& win32_fileinfo(to, &info2) == FILEINFO_OK
+		&& info1.dwVolumeSerialNumber == info2.dwVolumeSerialNumber
+		&& info1.nFileIndexHigh == info2.nFileIndexHigh
+		&& info1.nFileIndexLow == info2.nFileIndexLow)
+	    use_tmp_file = TRUE;
+    }
+#endif
 
 #if defined(UNIX) || defined(CASE_INSENSITIVE_FILENAME)
     if (use_tmp_file)
@@ -6383,8 +6648,8 @@ vim_rename(from, to)
 	return -1;
     }
 
-    while ((n = vim_read(fd_in, buffer, BUFSIZE)) > 0)
-	if (vim_write(fd_out, buffer, n) != n)
+    while ((n = read_eintr(fd_in, buffer, BUFSIZE)) > 0)
+	if (write_eintr(fd_out, buffer, n) != n)
 	{
 	    errmsg = _("E208: Error writing to \"%s\"");
 	    break;
@@ -6559,7 +6824,7 @@ buf_check_timestamp(buf, focus)
 #if defined(FEAT_CON_DIALOG) || defined(FEAT_GUI_DIALOG)
     int		can_reload = FALSE;
 #endif
-    size_t	orig_size = buf->b_orig_size;
+    off_t	orig_size = buf->b_orig_size;
     int		orig_mode = buf->b_orig_mode;
 #ifdef FEAT_GUI
     int		save_mouse_correct = need_mouse_correct;
@@ -6745,7 +7010,7 @@ buf_check_timestamp(buf, focus)
 		    STRCAT(tbuf, mesg2);
 		}
 		if (do_dialog(VIM_WARNING, (char_u *)_("Warning"), tbuf,
-				(char_u *)_("&OK\n&Load File"), 1, NULL) == 2)
+			  (char_u *)_("&OK\n&Load File"), 1, NULL, TRUE) == 2)
 		    reload = TRUE;
 	    }
 	    else
@@ -6831,6 +7096,7 @@ buf_reload(buf, orig_mode)
     buf_T	*savebuf;
     int		saved = OK;
     aco_save_T	aco;
+    int		flags = READ_NEW;
 
     /* set curwin/curbuf for "buf" and save some things */
     aucmd_prepbuf(&aco, buf);
@@ -6843,6 +7109,15 @@ buf_reload(buf, orig_mode)
 	old_cursor = curwin->w_cursor;
 	old_topline = curwin->w_topline;
 
+	if (p_ur < 0 || curbuf->b_ml.ml_line_count <= p_ur)
+	{
+	    /* Save all the text, so that the reload can be undone.
+	     * Sync first so that this is a separate undo-able action. */
+	    u_sync(FALSE);
+	    saved = u_savecommon(0, curbuf->b_ml.ml_line_count + 1, 0, TRUE);
+	    flags |= READ_KEEP_UNDO;
+	}
+
 	/*
 	 * To behave like when a new file is edited (matters for
 	 * BufReadPost autocommands) we first need to delete the current
@@ -6850,7 +7125,7 @@ buf_reload(buf, orig_mode)
 	 * the old contents.  Can't use memory only, the file might be
 	 * too big.  Use a hidden buffer to move the buffer contents to.
 	 */
-	if (bufempty())
+	if (bufempty() || saved == FAIL)
 	    savebuf = NULL;
 	else
 	{
@@ -6882,7 +7157,7 @@ buf_reload(buf, orig_mode)
 #endif
 	    if (readfile(buf->b_ffname, buf->b_fname, (linenr_T)0,
 			(linenr_T)0,
-			(linenr_T)MAXLNUM, &ea, READ_NEW) == FAIL)
+			(linenr_T)MAXLNUM, &ea, flags) == FAIL)
 	    {
 #if defined(FEAT_AUTOCMD) && defined(FEAT_EVAL)
 		if (!aborting())
@@ -6898,12 +7173,20 @@ buf_reload(buf, orig_mode)
 		    (void)move_lines(savebuf, buf);
 		}
 	    }
-	    else if (buf == curbuf)
+	    else if (buf == curbuf)  /* "buf" still valid */
 	    {
 		/* Mark the buffer as unmodified and free undo info. */
 		unchanged(buf, TRUE);
-		u_blockfree(buf);
-		u_clearall(buf);
+		if ((flags & READ_KEEP_UNDO) == 0)
+		{
+		    u_blockfree(buf);
+		    u_clearall(buf);
+		}
+		else
+		{
+		    /* Mark all undo states as changed. */
+		    u_unchanged(curbuf);
+		}
 	    }
 	}
 	vim_free(ea.cmd);
@@ -6959,7 +7242,7 @@ buf_store_time(buf, st, fname)
     char_u	*fname UNUSED;
 {
     buf->b_mtime = (long)st->st_mtime;
-    buf->b_orig_size = (size_t)st->st_size;
+    buf->b_orig_size = st->st_size;
 #ifdef HAVE_ST_MODE
     buf->b_orig_mode = (int)st->st_mode;
 #else
@@ -6975,8 +7258,8 @@ buf_store_time(buf, st, fname)
 write_lnum_adjust(offset)
     linenr_T	offset;
 {
-    if (write_no_eol_lnum != 0)		/* only if there is a missing eol */
-	write_no_eol_lnum += offset;
+    if (curbuf->b_no_eol_lnum != 0)	/* only if there is a missing eol */
+	curbuf->b_no_eol_lnum += offset;
 }
 
 #if defined(TEMPDIRNAMES) || defined(PROTO)
@@ -7178,7 +7461,10 @@ vim_tempname(extra_char)
 
     STRCPY(itmp, "");
     if (GetTempPath(_MAX_PATH, szTempFile) == 0)
-	szTempFile[0] = NUL;	/* GetTempPath() failed, use current dir */
+    {
+	szTempFile[0] = '.';	/* GetTempPath() failed, use current dir */
+	szTempFile[1] = NUL;
+    }
     strcpy(buf4, "VIM");
     buf4[2] = extra_char;   /* make it "VIa", "VIb", etc. */
     if (GetTempFileName(szTempFile, buf4, 0, itmp) == 0)
@@ -7199,8 +7485,11 @@ vim_tempname(extra_char)
 # else /* WIN3264 */
 
 #  ifdef USE_TMPNAM
+    char_u	*p;
+
     /* tmpnam() will make its own name */
-    if (*tmpnam((char *)itmp) == NUL)
+    p = tmpnam((char *)itmp);
+    if (p == NULL || *p == NUL)
 	return NULL;
 #  else
     char_u	*p;
@@ -7385,9 +7674,11 @@ static struct event_name
     {"InsertChange",	EVENT_INSERTCHANGE},
     {"InsertEnter",	EVENT_INSERTENTER},
     {"InsertLeave",	EVENT_INSERTLEAVE},
+    {"InsertCharPre",	EVENT_INSERTCHARPRE},
     {"MenuPopup",	EVENT_MENUPOPUP},
     {"QuickFixCmdPost",	EVENT_QUICKFIXCMDPOST},
     {"QuickFixCmdPre",	EVENT_QUICKFIXCMDPRE},
+    {"QuitPre",		EVENT_QUITPRE},
     {"RemoteReply",	EVENT_REMOTEREPLY},
     {"SessionLoadPost",	EVENT_SESSIONLOADPOST},
     {"ShellCmdPost",	EVENT_SHELLCMDPOST},
@@ -8447,6 +8738,8 @@ ex_doautoall(eap)
     int		retval;
     aco_save_T	aco;
     buf_T	*buf;
+    char_u	*arg = eap->arg;
+    int		call_do_modelines = check_nomodeline(&arg);
 
     /*
      * This is a bit tricky: For some commands curwin->w_buffer needs to be
@@ -8463,11 +8756,15 @@ ex_doautoall(eap)
 	    aucmd_prepbuf(&aco, buf);
 
 	    /* execute the autocommands for this buffer */
-	    retval = do_doautocmd(eap->arg, FALSE);
+	    retval = do_doautocmd(arg, FALSE);
 
-	    /* Execute the modeline settings, but don't set window-local
-	     * options if we are using the current window for another buffer. */
-	    do_modelines(curwin == aucmd_win ? OPT_NOWIN : 0);
+	    if (call_do_modelines)
+	    {
+		/* Execute the modeline settings, but don't set window-local
+		 * options if we are using the current window for another
+		 * buffer. */
+		do_modelines(curwin == aucmd_win ? OPT_NOWIN : 0);
+	    }
 
 	    /* restore the current window */
 	    aucmd_restbuf(&aco);
@@ -8479,6 +8776,23 @@ ex_doautoall(eap)
     }
 
     check_cursor();	    /* just in case lines got deleted */
+}
+
+/*
+ * Check *argp for <nomodeline>.  When it is present return FALSE, otherwise
+ * return TRUE and advance *argp to after it.
+ * Thus return TRUE when do_modelines() should be called.
+ */
+    int
+check_nomodeline(argp)
+    char_u **argp;
+{
+    if (STRNCMP(*argp, "<nomodeline>", 12) == 0)
+    {
+	*argp = skipwhite(*argp + 12);
+	return FALSE;
+    }
+    return TRUE;
 }
 
 /*
@@ -8542,6 +8856,7 @@ aucmd_prepbuf(aco, buf)
 	aco->use_aucmd_win = TRUE;
 	aucmd_win_used = TRUE;
 	aucmd_win->w_buffer = buf;
+	aucmd_win->w_s = &buf->b_s;
 	++buf->b_nwindows;
 	win_init_empty(aucmd_win); /* set cursor and topline to safe values */
 	vim_free(aucmd_win->w_localdir);
@@ -8605,10 +8920,11 @@ aucmd_restbuf(aco)
 		    if (tp != curtab)
 			goto_tabpage_tp(tp);
 		    win_goto(aucmd_win);
-		    break;
+		    goto win_found;
 		}
 	    }
 	}
+win_found:
 
 	/* Remove the window and frame from the tree of frames. */
 	(void)winframe_remove(curwin, &dummy, NULL);
@@ -8667,6 +8983,10 @@ aucmd_restbuf(aco)
 		    && buf_valid(aco->new_curbuf)
 		    && aco->new_curbuf->b_ml.ml_mfp != NULL)
 	    {
+# if defined(FEAT_SYN_HL) || defined(FEAT_SPELL)
+		if (curwin->w_s == &curbuf->b_s)
+		    curwin->w_s = &aco->new_curbuf->b_s;
+# endif
 		--curbuf->b_nwindows;
 		curbuf = aco->new_curbuf;
 		curwin->w_buffer = curbuf;
@@ -8765,7 +9085,10 @@ trigger_cursorhold()
 {
     int		state;
 
-    if (!did_cursorhold && has_cursorhold() && !Recording
+    if (!did_cursorhold
+	    && has_cursorhold()
+	    && !Recording
+	    && typebuf.tb_len == 0
 #ifdef FEAT_INS_EXPAND
 	    && !ins_compl_active()
 #endif
@@ -8794,6 +9117,15 @@ has_cursormoved()
 has_cursormovedI()
 {
     return (first_autopat[(int)EVENT_CURSORMOVEDI] != NULL);
+}
+
+/*
+ * Return TRUE when there is an InsertCharPre autocommand defined.
+ */
+    int
+has_insertcharpre()
+{
+    return (first_autopat[(int)EVENT_INSERTCHARPRE] != NULL);
 }
 
     static int
@@ -9656,6 +9988,8 @@ match_file_pat(pattern, prog, fname, sfname, tail, allow_dirs)
 	    if ((c == ';' || c == '>') && match == FALSE)
 	    {
 		*pattern = NUL;	    /* Terminate the string */
+		/* TODO: match with 'filetype' of buffer that "fname" comes
+		 * from. */
 		match = mch_check_filetype(fname, type_start);
 		*pattern = c;	    /* Restore the terminator */
 		type_start = pattern + 1;
@@ -9883,19 +10217,11 @@ file_pat_to_reg_pat(pat, pat_end, allow_dirs, no_bslash)
 		    ++p;
 		break;
 	    case '.':
-#ifdef RISCOS
-		if (allow_dirs != NULL)
-		     *allow_dirs = TRUE;
-		/* FALLTHROUGH */
-#endif
 	    case '~':
 		reg_pat[i++] = '\\';
 		reg_pat[i++] = *p;
 		break;
 	    case '?':
-#ifdef RISCOS
-	    case '#':
-#endif
 		reg_pat[i++] = '.';
 		break;
 	    case '\\':
@@ -9923,6 +10249,13 @@ file_pat_to_reg_pat(pat, pat_end, allow_dirs, no_bslash)
 		    }
 		}
 #endif
+		/* Undo escaping from ExpandEscape():
+		 * foo\?bar -> foo?bar
+		 * foo\%bar -> foo%bar
+		 * foo\,bar -> foo,bar
+		 * foo\ bar -> foo bar
+		 * Don't unescape \, * and others that are also special in a
+		 * regexp. */
 		if (*++p == '?'
 #ifdef BACKSLASH_IN_FILENAME
 			&& no_bslash
@@ -9930,8 +10263,8 @@ file_pat_to_reg_pat(pat, pat_end, allow_dirs, no_bslash)
 			)
 		    reg_pat[i++] = '?';
 		else
-		    if (*p == ',')
-			reg_pat[i++] = ',';
+		    if (*p == ',' || *p == '%' || *p == '#' || *p == ' ')
+			reg_pat[i++] = *p;
 		    else
 		    {
 			if (allow_dirs != NULL && vim_ispathsep(*p)
@@ -9999,3 +10332,55 @@ file_pat_to_reg_pat(pat, pat_end, allow_dirs, no_bslash)
     }
     return reg_pat;
 }
+
+#if defined(EINTR) || defined(PROTO)
+/*
+ * Version of read() that retries when interrupted by EINTR (possibly
+ * by a SIGWINCH).
+ */
+    long
+read_eintr(fd, buf, bufsize)
+    int	    fd;
+    void    *buf;
+    size_t  bufsize;
+{
+    long ret;
+
+    for (;;)
+    {
+	ret = vim_read(fd, buf, bufsize);
+	if (ret >= 0 || errno != EINTR)
+	    break;
+    }
+    return ret;
+}
+
+/*
+ * Version of write() that retries when interrupted by EINTR (possibly
+ * by a SIGWINCH).
+ */
+    long
+write_eintr(fd, buf, bufsize)
+    int	    fd;
+    void    *buf;
+    size_t  bufsize;
+{
+    long    ret = 0;
+    long    wlen;
+
+    /* Repeat the write() so long it didn't fail, other than being interrupted
+     * by a signal. */
+    while (ret < (long)bufsize)
+    {
+	wlen = vim_write(fd, (char *)buf + ret, bufsize - ret);
+	if (wlen < 0)
+	{
+	    if (errno != EINTR)
+		break;
+	}
+	else
+	    ret += wlen;
+    }
+    return ret;
+}
+#endif

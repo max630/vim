@@ -14,6 +14,10 @@
  * It has been modified to work better with Vim.
  * The parts that are not used in Vim have been deleted.
  * See the "screen" sources for the complete stuff.
+ *
+ * This specific version is distibuted under the Vim license (attribution by
+ * Juergen Weigert), the GPL applies to the original version, see the
+ * copyright notice below.
  */
 
 /* Copyright (c) 1993
@@ -36,8 +40,6 @@
  * Free Software Foundation, Inc.,
  * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
  */
-
-/* RCS_ID("$Id$ FAU") */
 
 #include "vim.h"
 
@@ -125,8 +127,7 @@
 static void initmaster __ARGS((int));
 
 /*
- *  Open all ptys with O_NOCTTY, just to be on the safe side
- *  (RISCos mips breaks otherwise)
+ *  Open all ptys with O_NOCTTY, just to be on the safe side.
  */
 #ifndef O_NOCTTY
 # define O_NOCTTY 0
@@ -134,7 +135,7 @@ static void initmaster __ARGS((int));
 
     static void
 initmaster(f)
-    int f;
+    int f UNUSED;
 {
 #ifndef VMS
 # ifdef POSIX
@@ -211,8 +212,8 @@ OpenPTY(ttyn)
 #ifdef _SEQUENT_
     fvhangup(s);
 #endif
-    strncpy(PtyName, m, sizeof(PtyName));
-    strncpy(TtyName, s, sizeof(TtyName));
+    vim_strncpy((char_u *)PtyName, (char_u *)m, sizeof(PtyName) - 1);
+    vim_strncpy((char_u *)TtyName, (char_u *)s, sizeof(TtyName) - 1);
     initmaster(f);
     *ttyn = TtyName;
     return f;
@@ -280,8 +281,10 @@ OpenPTY(ttyn)
     char **ttyn;
 {
     int		f;
-    char	*m, *ptsname();
-    int unlockpt __ARGS((int)), grantpt __ARGS((int));
+    char	*m;
+    char	*(ptsname __ARGS((int)));
+    int		unlockpt __ARGS((int));
+    int		grantpt __ARGS((int));
     RETSIGTYPE (*sigcld)__ARGS(SIGPROTOARG);
     /* used for opening a new pty-pair: */
     static char TtyName[32];
@@ -301,7 +304,7 @@ OpenPTY(ttyn)
 	return -1;
     }
     signal(SIGCHLD, sigcld);
-    strncpy(TtyName, m, sizeof(TtyName));
+    vim_strncpy((char_u *)TtyName, (char_u *)m, sizeof(TtyName) - 1);
     initmaster(f);
     *ttyn = TtyName;
     return f;
@@ -326,7 +329,7 @@ OpenPTY(ttyn)
     /* a dumb looking loop replaced by mycrofts code: */
     if ((f = open("/dev/ptc", O_RDWR | O_NOCTTY | O_EXTRA)) < 0)
 	return -1;
-    strncpy(TtyName, ttyname(f), sizeof(TtyName));
+    vim_strncpy((char_u *)TtyName, (char_u *)ttyname(f), sizeof(TtyName) - 1);
     if (geteuid() != ROOT_UID && mch_access(TtyName, R_OK | W_OK))
     {
 	close(f);

@@ -29,7 +29,7 @@
 #	- Uncomment the line "CONF_OPT_X = --without-x" if you have X11 but
 #	  want to disable using X11 libraries.	This speeds up starting Vim,
 #	  but the window title will not be set and the X11 selection can not
-#	  used.
+#	  be used.
 #	- Uncomment the line "CONF_OPT_XSMP = --disable-xsmp" if you have the
 #	  X11 Session Management Protocol (XSMP) library (libSM) but do not
 #	  want to use it.
@@ -38,7 +38,10 @@
 #	  could be lost.
 #	- Uncomment one or more of these lines to include an interface;
 #	  each makes Vim quite a bit bigger:
+#		--enable-luainterp	for Lua interpreter
+#		--enable-mzschemeinterp	for MzScheme interpreter
 #		--enable-perlinterp	for Perl interpreter
+#		--enable-python3interp	for Python3 interpreter
 #		--enable-pythoninterp	for Python interpreter
 #		--enable-rubyinterp	for Ruby interpreter
 #		--enable-tclinterp	for Tcl interpreter
@@ -280,12 +283,13 @@ CC=
 
 ######################## auto/config.mk ######################## {{{1
 # At this position auto/config.mk is included. When starting from the
-# distribution it is almost empty. After running auto/configure it contains
-# settings that have been discovered for your system. Settings below this
-# include override settings in auto/config.mk!
+# toplevel Makefile it is almost empty. After running auto/configure it
+# contains settings that have been discovered for your system. Settings below
+# this include override settings in auto/config.mk!
 
-# Note: if auto/config.mk is lost somehow (e.g., because configure was
-# interrupted), create an empty auto/config.mk file and do "make config".
+# Note: If make fails because auto/config.mk does not exist (it is not
+# included in the repository), do:
+#    cp config.mk.dist auto/config.mk
 
 # (X) How to include auto/config.mk depends on the version of "make" you have,
 #     if the current choice doesn't work, try the other one.
@@ -325,9 +329,7 @@ CClink = $(CC)
 # Uncomment one of these lines if you have that GUI but don't want to use it.
 # The automatic check will use another one that can be found.
 # Gnome is disabled by default, it may cause trouble.
-#CONF_OPT_GUI = --disable-gtk-check
 #CONF_OPT_GUI = --disable-gtk2-check
-#CONF_OPT_GUI = --enable-gnome-check
 #CONF_OPT_GUI = --enable-gnome2-check
 #CONF_OPT_GUI = --disable-motif-check
 #CONF_OPT_GUI = --disable-athena-check
@@ -339,6 +341,7 @@ CClink = $(CC)
 #
 # GTK versions that are known not to work 100% are rejected.
 # Use "--disable-gtktest" to accept them anyway.
+# Only GTK 2 is supported, for GTK 1 use Vim 7.2.
 #
 # GNOME means GTK with Gnome support.  If using GTK and --enable-gnome-check
 # is used then GNOME will automatically be used if it is found.  If you have
@@ -346,17 +349,17 @@ CClink = $(CC)
 # --enable-gui=gtk or leave out --enable-gnome-check.
 #
 # If the selected GUI isn't found, the GUI is disabled automatically
-#CONF_OPT_GUI = --enable-gui=gtk
-#CONF_OPT_GUI = --enable-gui=gtk --disable-gtktest
 #CONF_OPT_GUI = --enable-gui=gtk2
 #CONF_OPT_GUI = --enable-gui=gtk2 --disable-gtktest
-#CONF_OPT_GUI = --enable-gui=gnome
 #CONF_OPT_GUI = --enable-gui=gnome2
 #CONF_OPT_GUI = --enable-gui=gnome2 --disable-gtktest
 #CONF_OPT_GUI = --enable-gui=motif
 #CONF_OPT_GUI = --enable-gui=motif --with-motif-lib="-static -lXm -shared"
 #CONF_OPT_GUI = --enable-gui=athena
 #CONF_OPT_GUI = --enable-gui=nextaw
+
+# Carbon GUI for Mac OS X
+#CONF_OPT_GUI = --enable-gui=carbon
 
 # DARWIN - detecting Mac OS X
 # Uncomment this line when you want to compile a Unix version of Vim on
@@ -370,34 +373,13 @@ CClink = $(CC)
 #CONF_OPT_DARWIN = --with-mac-arch=ppc
 #CONF_OPT_DARWIN = --with-mac-arch=both
 
-# PERL
-# Uncomment this when you want to include the Perl interface.
-# The Perl option sometimes causes problems, because it adds extra flags
-# to the command line.	If you see strange flags during compilation, check in
-# auto/config.mk where they come from.  If it's PERL_CFLAGS, try commenting
-# the next line.
-# When you get an error for a missing "perl.exp" file, try creating an emtpy
-# one: "touch perl.exp".
-# This requires at least "small" features, "tiny" doesn't work.
-#CONF_OPT_PERL = --enable-perlinterp
-
-# PYTHON
-# Uncomment this when you want to include the Python interface.
-# NOTE: This may cause threading to be enabled, which has side effects (such
-# as using different libraries and debugging becomes more difficult).
-# NOTE: Using this together with Perl may cause a crash in initialization.
-#CONF_OPT_PYTHON = --enable-pythoninterp
-
-# TCL
-# Uncomment this when you want to include the Tcl interface.
-#CONF_OPT_TCL = --enable-tclinterp
-#CONF_OPT_TCL = --enable-tclinterp --with-tclsh=tclsh8.4
-
-# RUBY
-# Uncomment this when you want to include the Ruby interface.
-# Note: you need the development package (e.g., ruby1.9.1-dev on Ubuntu).
-# CONF_OPT_RUBY = --enable-rubyinterp
-# CONF_OPT_RUBY = --enable-rubyinterp --with-ruby-command=ruby1.9.1
+# LUA
+# Uncomment one of these when you want to include the Lua interface.
+# First one is for static linking, second one for dynamic loading.
+#CONF_OPT_LUA = --enable-luainterp
+#CONF_OPT_LUA = --enable-luainterp=dynamic
+# Lua installation dir (when not set uses $LUA_PREFIX or defaults to /usr)
+#CONF_OPT_LUA_PREFIX = --with-lua-prefix=/usr/local
 
 # MZSCHEME
 # Uncomment this when you want to include the MzScheme interface.
@@ -406,6 +388,54 @@ CClink = $(CC)
 #CONF_OPT_PLTHOME  = --with-plthome=/usr/local/plt
 #CONF_OPT_PLTHOME  = --with-plthome=/usr/local/drscheme
 #CONF_OPT_PLTHOME  = --with-plthome=/home/me/mz
+
+# Uncomment the next line to fail if one of the requested language interfaces
+# cannot be configured.  Without this Vim will be build anyway, without
+# the failing interfaces.
+#CONF_OPT_FAIL = --enable-fail-if-missing
+
+# PERL
+# Uncomment one of these when you want to include the Perl interface.
+# First one is for static linking, second one for dynamic loading.
+# The Perl option sometimes causes problems, because it adds extra flags
+#
+# to the command line.	If you see strange flags during compilation, check in
+# auto/config.mk where they come from.  If it's PERL_CFLAGS, try commenting
+# the next line.
+# When you get an error for a missing "perl.exp" file, try creating an emtpy
+# one: "touch perl.exp".
+# This requires at least "small" features, "tiny" doesn't work.
+#CONF_OPT_PERL = --enable-perlinterp
+#CONF_OPT_PERL = --enable-perlinterp=dynamic
+
+# PYTHON
+# Uncomment this when you want to include the Python interface.
+# NOTE: This may cause threading to be enabled, which has side effects (such
+# as using different libraries and debugging becomes more difficult).
+# NOTE: Using this together with Perl may cause a crash in initialization.
+# For Python3 support make a symbolic link in /usr/local/bin: 
+#	ln -s python3 python3.1
+# If both python2.x and python3.x are enabled then the linking will be via
+# dlopen(), dlsym(), dlclose(), i.e. pythonX.Y.so must be available
+# However, this may still cause problems, such as "import termios" failing.
+# Build two separate versions of Vim in that case.
+#CONF_OPT_PYTHON = --enable-pythoninterp
+#CONF_OPT_PYTHON = --enable-pythoninterp=dynamic
+#CONF_OPT_PYTHON3 = --enable-python3interp
+#CONF_OPT_PYTHON3 = --enable-python3interp=dynamic
+
+# RUBY
+# Uncomment this when you want to include the Ruby interface.
+# First one for static linking, second one for loading when used.
+# Note: you need the development package (e.g., ruby1.9.1-dev on Ubuntu).
+#CONF_OPT_RUBY = --enable-rubyinterp
+#CONF_OPT_RUBY = --enable-rubyinterp=dynamic
+#CONF_OPT_RUBY = --enable-rubyinterp --with-ruby-command=ruby1.9.1
+
+# TCL
+# Uncomment this when you want to include the Tcl interface.
+#CONF_OPT_TCL = --enable-tclinterp
+#CONF_OPT_TCL = --enable-tclinterp --with-tclsh=tclsh8.4
 
 # CSCOPE
 # Uncomment this when you want to include the Cscope interface.
@@ -536,7 +566,8 @@ CClink = $(CC)
 #CFLAGS = -g -O2 '-DSTARTUPTIME="vimstartup"' -fno-strength-reduce -Wall -Wmissing-prototypes
 
 # Use this with GCC to check for mistakes, unused arguments, etc.
-#CFLAGS = -g -Wall -Wextra -Wmissing-prototypes -Wunreachable-code
+#CFLAGS = -g -Wall -Wextra -Wmissing-prototypes -Wunreachable-code -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1
+#CFLAGS = -g -O2 -Wall -Wextra -Wmissing-prototypes -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -DU_DEBUG
 #PYTHON_CFLAGS_EXTRA = -Wno-missing-field-initializers
 #MZSCHEME_CFLAGS_EXTRA = -Wno-unreachable-code -Wno-unused-parameter
 
@@ -568,8 +599,9 @@ LINT_OPTIONS = -beprxzF
 
 # PROFILING - Uncomment the next two lines to do profiling with gcc and gprof.
 # Might not work with GUI or Perl.
-# For unknown reasons adding "-lc" fixes a linking problem with GCC.  That's
-# probably a bug in the "-pg" implementation.
+# For unknown reasons adding "-lc" fixes a linking problem with some versions
+# of GCC.  That's probably a bug in the "-pg" implementation.
+# After running Vim see the profile result with: gmon vim gmon.out | vim -
 # Need to recompile everything after changing this: "make clean" "make".
 #PROFILE_CFLAGS = -pg -g -DWE_ARE_PROFILING
 #PROFILE_LIBS = -pg
@@ -580,8 +612,8 @@ LINT_OPTIONS = -beprxzF
 # Configuration is in the .ccmalloc or ~/.ccmalloc file.
 # Doesn't work very well, since memory linked to from global variables
 # (in libraries) is also marked as leaked memory.
-#PROFILE_CFLAGS = -DEXITFREE
-#PROFILE_LIBS = -lccmalloc
+#LEAK_CFLAGS = -DEXITFREE
+#LEAK_LIBS = -lccmalloc
 
 #####################################################
 ###  Specific systems, check if yours is listed!  ### {{{
@@ -702,12 +734,6 @@ LINT_OPTIONS = -beprxzF
 
 ### USL for Unix Systems Laboratories (SYSV 4.2)
 #EXTRA_DEFS = -DUSL
-
-### RISCos on MIPS without X11
-#EXTRA_DEFS = -DMIPS
-
-### RISCos on MIPS with X11
-#EXTRA_LIBS = -lsun
 
 ### (6)  A/UX 3.1.1 with gcc (Jim Jagielski)
 #CC= gcc -D_POSIX_SOURCE
@@ -914,7 +940,7 @@ MAN1DIR = /man1
 
 ### Vim version (adjusted by a script)
 VIMMAJOR = 7
-VIMMINOR = 2
+VIMMINOR = 3
 
 ### Location of Vim files (should not need to be changed, and  {{{1
 ### some things might not work when they are changed!)
@@ -1026,8 +1052,9 @@ INSTALL_PROG	= cp
 INSTALL_DATA	= cp
 INSTALL_DATA_R	= cp -r
 
-### Program to run on installed binary
+### Program to run on installed binary.  Use the second one to disable strip.
 #STRIP = strip
+#STRIP = /bin/true
 
 ### Permissions for binaries  {{{1
 BINMOD = 755
@@ -1283,10 +1310,6 @@ CPP_DEPEND = $(CC) -I$(srcdir) -M$(CPP_MM) \
 #     -D"foo()=" is not supported by all compilers so do not use it
 NO_ATTR=
 #
-#     maybe the "/usr/bin/cc -E" has to be adjusted for some systems
-# This is for cproto 3.5 patchlevel 3:
-# PROTO_FLAGS = -f4 -m__ARGS -d -E"$(CPP)" $(NO_ATTR)
-#
 # Use this for cproto 3 patchlevel 6 or below (use "cproto -V" to check):
 # PROTO_FLAGS = -f4 -m__ARGS -d -E"$(CPP)" $(NO_ATTR)
 #
@@ -1304,27 +1327,39 @@ SHELL = /bin/sh
 .SUFFIXES: .c .o .pro
 
 PRE_DEFS = -Iproto $(DEFS) $(GUI_DEFS) $(GUI_IPATH) $(CPPFLAGS) $(EXTRA_IPATHS)
-POST_DEFS = $(X_CFLAGS) $(MZSCHEME_CFLAGS) $(PERL_CFLAGS) $(PYTHON_CFLAGS) $(TCL_CFLAGS) $(RUBY_CFLAGS) $(EXTRA_DEFS)
+POST_DEFS = $(X_CFLAGS) $(MZSCHEME_CFLAGS) $(TCL_CFLAGS) $(EXTRA_DEFS)
 
-ALL_CFLAGS = $(PRE_DEFS) $(CFLAGS) $(PROFILE_CFLAGS) $(POST_DEFS)
+ALL_CFLAGS = $(PRE_DEFS) $(CFLAGS) $(PROFILE_CFLAGS) $(LEAK_CFLAGS) $(POST_DEFS)
 
 # Exclude $CFLAGS for osdef.sh, for Mac 10.4 some flags don't work together
 # with "-E".
 OSDEF_CFLAGS = $(PRE_DEFS) $(POST_DEFS)
 
-LINT_CFLAGS = -DLINT -I. $(PRE_DEFS) $(POST_DEFS) -Dinline= -D__extension__= -Dalloca=alloca
+LINT_CFLAGS = -DLINT -I. $(PRE_DEFS) $(POST_DEFS) $(RUBY_CFLAGS) $(LUA_CFLAGS) $(PERL_CFLAGS) $(PYTHON_CFLAGS) -Dinline= -D__extension__= -Dalloca=alloca
 
 LINT_EXTRA = -DUSE_SNIFF -DHANGUL_INPUT -D"__attribute__(x)="
 
 DEPEND_CFLAGS = -DPROTO -DDEPEND -DFEAT_GUI $(LINT_CFLAGS)
 
-# If you have problems with flags that cproto doesn't support, and you are
-# using GNU make, you can try using the other line to filter out arguments.
-#PFLAGS = $(PROTO_FLAGS) -DPROTO $(filter -D% -I%, $(LINT_CFLAGS))
-PFLAGS = $(PROTO_FLAGS) -DPROTO $(LINT_CFLAGS)
-
 ALL_LIB_DIRS = $(GUI_LIBS_DIR) $(X_LIBS_DIR)
-ALL_LIBS = $(GUI_LIBS1) $(GUI_X_LIBS) $(GUI_LIBS2) $(X_PRE_LIBS) $(X_LIBS) $(X_EXTRA_LIBS) $(LIBS) $(EXTRA_LIBS) $(MZSCHEME_LIBS) $(PERL_LIBS) $(PYTHON_LIBS) $(TCL_LIBS) $(RUBY_LIBS) $(PROFILE_LIBS)
+ALL_LIBS = \
+	   $(GUI_LIBS1) \
+	   $(GUI_X_LIBS) \
+	   $(GUI_LIBS2) \
+	   $(X_PRE_LIBS) \
+	   $(X_LIBS) \
+	   $(X_EXTRA_LIBS) \
+	   $(LIBS) \
+	   $(EXTRA_LIBS) \
+	   $(LUA_LIBS) \
+	   $(MZSCHEME_LIBS) \
+	   $(PERL_LIBS) \
+	   $(PYTHON_LIBS) \
+	   $(PYTHON3_LIBS) \
+	   $(TCL_LIBS) \
+	   $(RUBY_LIBS) \
+	   $(PROFILE_LIBS) \
+	   $(LEAK_LIBS)
 
 # abbreviations
 DEST_BIN = $(DESTDIR)$(BINDIR)
@@ -1377,6 +1412,7 @@ DEST_MAN_RU_U = $(DEST_MAN_TOP)/ru.UTF-8$(MAN1DIR)
 TAGS_INCL = *.h
 
 BASIC_SRC = \
+	blowfish.c \
 	buffer.c \
 	charset.c \
 	diff.c \
@@ -1415,6 +1451,7 @@ BASIC_SRC = \
 	regexp.c \
 	screen.c \
 	search.c \
+	sha256.c \
 	spell.c \
 	syntax.c \
 	tag.c \
@@ -1425,30 +1462,47 @@ BASIC_SRC = \
 	window.c \
 	$(OS_EXTRA_SRC)
 
-SRC =	$(BASIC_SRC) $(GUI_SRC) $(HANGULIN_SRC) $(MZSCHEME_SRC) \
-	$(PERL_SRC) $(PYTHON_SRC) $(TCL_SRC) $(RUBY_SRC) \
-	$(SNIFF_SRC) $(WORKSHOP_SRC) $(WSDEBUG_SRC)
+SRC =	$(BASIC_SRC) \
+	$(GUI_SRC) \
+	$(HANGULIN_SRC) \
+	$(LUA_SRC) \
+	$(MZSCHEME_SRC) \
+	$(PERL_SRC) \
+	$(PYTHON_SRC) $(PYTHON3_SRC) \
+	$(TCL_SRC) \
+	$(RUBY_SRC) \
+	$(SNIFF_SRC) \
+	$(WORKSHOP_SRC) \
+	$(WSDEBUG_SRC)
 
 TAGS_SRC = *.c *.cpp if_perl.xs
 
-EXTRA_SRC = hangulin.c if_mzsch.c auto/if_perl.c if_perlsfio.c \
-	    if_python.c if_tcl.c if_ruby.c if_sniff.c gui_beval.c \
-	    workshop.c wsdebug.c integration.c netbeans.c
+EXTRA_SRC = hangulin.c if_lua.c if_mzsch.c auto/if_perl.c if_perlsfio.c \
+	    if_python.c if_python3.c if_tcl.c if_ruby.c if_sniff.c \
+	    gui_beval.c workshop.c wsdebug.c integration.c netbeans.c
+
+# Unittest files
+MEMFILE_TEST_SRC = memfile_test.c
+MEMFILE_TEST_TARGET = memfile_test$(EXEEXT)
+
+UNITTEST_SRC = $(MEMFILE_TEST_SRC)
+UNITTEST_TARGETS = $(MEMFILE_TEST_TARGET)
 
 # All sources, also the ones that are not configured
-ALL_SRC = $(BASIC_SRC) $(ALL_GUI_SRC) $(EXTRA_SRC)
+ALL_SRC = $(BASIC_SRC) $(ALL_GUI_SRC) $(UNITTEST_SRC) $(EXTRA_SRC)
 
 # Which files to check with lint.  Select one of these three lines.  ALL_SRC
 # checks more, but may not work well for checking a GUI that wasn't configured.
 # The perl sources also don't work well with lint.
-LINT_SRC = $(BASIC_SRC) $(GUI_SRC) $(HANGULIN_SRC) $(PYTHON_SRC) $(TCL_SRC) \
+LINT_SRC = $(BASIC_SRC) $(GUI_SRC) $(HANGULIN_SRC) $(PYTHON_SRC) $(PYTHON3_SRC) $(TCL_SRC) \
 	$(SNIFF_SRC) $(WORKSHOP_SRC) $(WSDEBUG_SRC) $(NETBEANS_SRC)
 #LINT_SRC = $(SRC)
 #LINT_SRC = $(ALL_SRC)
 #LINT_SRC = $(BASIC_SRC)
 
-OBJ = \
+OBJ_COMMON = \
 	objects/buffer.o \
+	objects/blowfish.o \
 	objects/charset.o \
 	objects/diff.o \
 	objects/digraph.o \
@@ -1467,10 +1521,8 @@ OBJ = \
 	$(HANGULIN_OBJ) \
 	objects/if_cscope.o \
 	objects/if_xcmdsrv.o \
-	objects/main.o \
 	objects/mark.o \
-	objects/memfile.o \
-	objects/memline.o \
+        objects/memline.o \
 	objects/menu.o \
 	objects/message.o \
 	objects/misc1.o \
@@ -1487,6 +1539,7 @@ OBJ = \
 	objects/regexp.o \
 	objects/screen.o \
 	objects/search.o \
+	objects/sha256.o \
 	objects/spell.o \
 	objects/syntax.o \
 	$(SNIFF_OBJ) \
@@ -1494,11 +1547,14 @@ OBJ = \
 	objects/term.o \
 	objects/ui.o \
 	objects/undo.o \
+	objects/version.o \
 	objects/window.o \
 	$(GUI_OBJ) \
+	$(LUA_OBJ) \
 	$(MZSCHEME_OBJ) \
 	$(PERL_OBJ) \
 	$(PYTHON_OBJ) \
+	$(PYTHON3_OBJ) \
 	$(TCL_OBJ) \
 	$(RUBY_OBJ) \
 	$(OS_EXTRA_OBJ) \
@@ -1506,7 +1562,15 @@ OBJ = \
 	$(NETBEANS_OBJ) \
 	$(WSDEBUG_OBJ)
 
+OBJ = $(OBJ_COMMON) \
+	objects/main.o \
+	objects/memfile.o
+
+MEMFILE_TEST_OBJ = $(OBJ_COMMON) \
+        objects/memfile_test.o
+
 PRO_AUTO = \
+	blowfish.pro \
 	buffer.pro \
 	charset.pro \
 	diff.pro \
@@ -1527,6 +1591,7 @@ PRO_AUTO = \
 	if_cscope.pro \
 	if_xcmdsrv.pro \
 	if_python.pro \
+	if_python3.pro \
 	if_ruby.pro \
 	main.pro \
 	mark.pro \
@@ -1547,6 +1612,7 @@ PRO_AUTO = \
 	regexp.pro \
 	screen.pro \
 	search.pro \
+	sha256.pro \
 	spell.pro \
 	syntax.pro \
 	tag.pro \
@@ -1566,7 +1632,7 @@ PRO_AUTO = \
 RSRC_DIR = os_mac_rsrc
 
 PRO_MANUAL = os_amiga.pro os_msdos.pro os_win16.pro os_win32.pro \
-	os_mswin.pro os_beos.pro os_vms.pro os_riscos.pro $(PERL_PRO)
+	os_mswin.pro os_beos.pro os_vms.pro $(PERL_PRO)
 
 # Default target is making the executable and tools
 all: $(VIMTARGET) $(TOOLS) languages $(GUI_BUNDLE)
@@ -1587,13 +1653,15 @@ config auto/config.mk: auto/configure config.mk.in config.h.in
 		CC="$(CC)" CPPFLAGS="$(CPPFLAGS)" CFLAGS="$(CFLAGS)" \
 		LDFLAGS="$(LDFLAGS)" $(CONF_SHELL) srcdir="$(srcdir)" \
 		./configure $(CONF_OPT_GUI) $(CONF_OPT_X) $(CONF_OPT_XSMP) \
-		$(CONF_OPT_DARWIN) $(CONF_OPT_PERL) $(CONF_OPT_PYTHON) \
+		$(CONF_OPT_DARWIN) $(CONF_OPT_FAIL) \
+		$(CONF_OPT_PERL) $(CONF_OPT_PYTHON) $(CONF_OPT_PYTHON3) \
 		$(CONF_OPT_TCL) $(CONF_OPT_RUBY) $(CONF_OPT_NLS) \
 		$(CONF_OPT_CSCOPE) $(CONF_OPT_MULTIBYTE) $(CONF_OPT_INPUT) \
 		$(CONF_OPT_OUTPUT) $(CONF_OPT_GPM) $(CONF_OPT_WORKSHOP) \
 		$(CONF_OPT_SNIFF) $(CONF_OPT_FEAT) $(CONF_TERM_LIB) \
 		$(CONF_OPT_COMPBY) $(CONF_OPT_ACL)  $(CONF_OPT_NETBEANS) \
 		$(CONF_ARGS) $(CONF_OPT_MZSCHEME) $(CONF_OPT_PLTHOME) \
+		$(CONF_OPT_LUA) $(CONF_OPT_LUA_PREFIX) \
 		$(CONF_OPT_SYSMOUSE)
 
 # Use "make reconfig" to rerun configure without cached values.
@@ -1647,11 +1715,12 @@ CCC = $(CC) -c -I$(srcdir) $(ALL_CFLAGS)
 $(VIMTARGET): auto/config.mk objects $(OBJ) version.c version.h
 	$(CCC) version.c -o objects/version.o
 	@LINK="$(PURIFY) $(SHRPENV) $(CClink) $(ALL_LIB_DIRS) $(LDFLAGS) \
-		-o $(VIMTARGET) $(OBJ) objects/version.o $(ALL_LIBS)" \
-		MAKE="$(MAKE)" sh $(srcdir)/link.sh
+		-o $(VIMTARGET) $(OBJ) $(ALL_LIBS)" \
+		MAKE="$(MAKE)" LINK_AS_NEEDED=$(LINK_AS_NEEDED) \
+		sh $(srcdir)/link.sh
 
 xxd/xxd$(EXEEXT): xxd/xxd.c
-	cd xxd; CC="$(CC)" CFLAGS="$(CPPFLAGS) $(CFLAGS)" \
+	cd xxd; CC="$(CC)" CFLAGS="$(CPPFLAGS) $(CFLAGS)" LDFLAGS="$(LDFLAGS)" \
 		$(MAKE) -f Makefile
 
 # Build the language specific files if they were unpacked.
@@ -1677,46 +1746,54 @@ update-po:
 
 proto: $(PRO_AUTO) $(PRO_MANUAL)
 
+# Filter out arguments that cproto doesn't support.
+# Don't pass "-pthread" to cproto, it sees it as a list of individual flags.
+# Don't pass "-fstack-protector" to cproto, for the same reason.
+# The -E"gcc -E" argument must be separate to avoid problems with shell
+# quoting.
+CPROTO = cproto $(PROTO_FLAGS) -DPROTO \
+	 `echo '$(LINT_CFLAGS)' | sed -e 's/-pthread//g' -e 's/-fstack-protector//g'`
+
 ### Would be nice if this would work for "normal" make.
 ### Currently it only works for (Free)BSD make.
 #$(PRO_AUTO): $$(*F).c
-#	cproto $(PFLAGS) -DFEAT_GUI $(*F).c > $@
+#	$(CPROTO) -DFEAT_GUI $(*F).c > $@
 
 # Always define FEAT_GUI.  This may generate a few warnings if it's also
 # defined in auto/config.h, you can ignore that.
 .c.pro:
-	cproto $(PFLAGS) -DFEAT_GUI $< > proto/$@
+	$(CPROTO) -DFEAT_GUI $< > proto/$@
 	echo "/* vim: set ft=c : */" >> proto/$@
 
 os_amiga.pro: os_amiga.c
-	cproto $(PFLAGS) -DAMIGA -UHAVE_CONFIG_H -DBPTR=char* $< > proto/$@
+	$(CPROTO) -DAMIGA -UHAVE_CONFIG_H -DBPTR=char* $< > proto/$@
 	echo "/* vim: set ft=c : */" >> proto/$@
 
 os_msdos.pro: os_msdos.c
-	cproto $(PFLAGS) -DMSDOS -UHAVE_CONFIG_H $< > proto/$@
+	$(CPROTO) -DMSDOS -UHAVE_CONFIG_H $< > proto/$@
 	echo "/* vim: set ft=c : */" >> proto/$@
 
 os_win16.pro: os_win16.c
-	cproto $(PFLAGS) -DWIN16 -UHAVE_CONFIG_H $< > proto/$@
+	$(CPROTO) -DWIN16 -UHAVE_CONFIG_H $< > proto/$@
 	echo "/* vim: set ft=c : */" >> proto/$@
 
 os_win32.pro: os_win32.c
-	cproto $(PFLAGS) -DWIN32 -UHAVE_CONFIG_H $< > proto/$@
+	$(CPROTO) -DWIN32 -UHAVE_CONFIG_H $< > proto/$@
 	echo "/* vim: set ft=c : */" >> proto/$@
 
 os_mswin.pro: os_mswin.c
-	cproto $(PFLAGS) -DWIN16 -DWIN32 -UHAVE_CONFIG_H $< > proto/$@
+	$(CPROTO) -DWIN16 -DWIN32 -UHAVE_CONFIG_H $< > proto/$@
 	echo "/* vim: set ft=c : */" >> proto/$@
 
 os_beos.pro: os_beos.c
-	cproto $(PFLAGS) -D__BEOS__ -UHAVE_CONFIG_H $< > proto/$@
+	$(CPROTO) -D__BEOS__ -UHAVE_CONFIG_H $< > proto/$@
 	echo "/* vim: set ft=c : */" >> proto/$@
 
 os_vms.pro: os_vms.c
 # must use os_vms_conf.h for auto/config.h
 	mv auto/config.h auto/config.h.save
 	cp os_vms_conf.h auto/config.h
-	cproto $(PFLAGS) -DVMS -UFEAT_GUI_ATHENA -UFEAT_GUI_NEXTAW -UFEAT_GUI_MOTIF -UFEAT_GUI_GTK $< > proto/$@
+	$(CPROTO) -DVMS -UFEAT_GUI_ATHENA -UFEAT_GUI_NEXTAW -UFEAT_GUI_MOTIF -UFEAT_GUI_GTK $< > proto/$@
 	echo "/* vim: set ft=c : */" >> proto/$@
 	rm auto/config.h
 	mv auto/config.h.save auto/config.h
@@ -1724,7 +1801,7 @@ os_vms.pro: os_vms.c
 # if_perl.pro is special: Use the generated if_perl.c for input and remove
 # prototypes for local functions.
 if_perl.pro: auto/if_perl.c
-	cproto $(PFLAGS) -DFEAT_GUI auto/if_perl.c | sed "/_VI/d" > proto/$@
+	$(CPROTO) -DFEAT_GUI auto/if_perl.c | sed "/_VI/d" > proto/$@
 
 
 notags:
@@ -1763,12 +1840,32 @@ test check:
 		ln -s $(VIMTARGET) vim; \
 	fi
 	cd testdir; $(MAKE) -f Makefile $(GUI_TESTTARGET) VIMPROG=../$(VIMTARGET) $(GUI_TESTARG)
+	$(MAKE) -f Makefile unittest
+
+unittesttargets:
+	$(MAKE) -f Makefile $(UNITTEST_TARGETS)
+
+unittest unittests: $(UNITTEST_TARGETS)
+	@for t in $(UNITTEST_TARGETS); do \
+		./$$t || exit 1; echo $$t passed; \
+	done
 
 testclean:
 	cd testdir; $(MAKE) -f Makefile clean
 	if test -d $(PODIR); then \
 		cd $(PODIR); $(MAKE) checkclean; \
 	fi
+
+# Unittests
+# It's build just like Vim to satisfy all dependencies.
+$(MEMFILE_TEST_TARGET): auto/config.mk objects $(MEMFILE_TEST_OBJ)
+	$(CCC) version.c -o objects/version.o
+	@LINK="$(PURIFY) $(SHRPENV) $(CClink) $(ALL_LIB_DIRS) $(LDFLAGS) \
+		-o $(MEMFILE_TEST_TARGET) $(MEMFILE_TEST_OBJ) $(ALL_LIBS)" \
+		MAKE="$(MAKE)" LINK_AS_NEEDED=$(LINK_AS_NEEDED) \
+		sh $(srcdir)/link.sh
+
+# install targets
 
 install: $(GUI_INSTALL)
 
@@ -1894,7 +1991,8 @@ installmacros: $(DEST_VIM) $(DEST_RT) $(DEST_MACRO)
 	chmod $(FILEMOD) `find $(DEST_MACRO) -type f -print`
 	chmod $(SCRIPTMOD) $(DEST_MACRO)/less.sh
 # When using CVS some CVS directories might have been copied.
-	cvs=`find $(DEST_MACRO) \( -name CVS -o -name AAPDIR \) -print`; \
+# Also delete AAPDIR and *.info files.
+	cvs=`find $(DEST_MACRO) \( -name CVS -o -name AAPDIR -o -name "*.info" \) -print`; \
 	      if test -n "$$cvs"; then \
 		 rm -rf $$cvs; \
 	      fi
@@ -1910,6 +2008,7 @@ installgtutorbin: $(DEST_VIM)
 
 installtutor: $(DEST_RT) $(DEST_TUTOR)
 	-$(INSTALL_DATA) $(TUTORSOURCE)/README* $(TUTORSOURCE)/tutor* $(DEST_TUTOR)
+	-rm -f $(DEST_TUTOR)/*.info
 	chmod $(HELPMOD) $(DEST_TUTOR)/*
 
 # Install the spell files, if they exist.  This assumes at least the English
@@ -2201,6 +2300,8 @@ clean celan: testclean
 	-rm -f *.o objects/* core $(VIMTARGET).core $(VIMTARGET) vim xxd/*.o
 	-rm -f $(TOOLS) auto/osdef.h auto/pathdef.c auto/if_perl.c
 	-rm -f conftest* *~ auto/link.sed
+	-rm -f $(UNITTEST_TARGETS)
+	-rm -f runtime pixmaps
 	-rm -rf $(APPDIR)
 	-rm -rf mzscheme_base.c
 	if test -d $(PODIR); then \
@@ -2233,6 +2334,7 @@ shadow:	runtime pixmaps
 				 ../../testdir/vimrc.unix \
 				 ../../testdir/*.in \
 				 ../../testdir/*.vim \
+				 ../../testdir/test83-tags? \
 				 ../../testdir/*.ok .
 
 # Link needed for doing "make install" in a shadow directory.
@@ -2337,6 +2439,9 @@ auto/pathdef.c: Makefile auto/config.mk
 objects:
 	mkdir objects
 
+objects/blowfish.o: blowfish.c
+	$(CCC) -o $@ blowfish.c
+
 objects/buffer.o: buffer.c
 	$(CCC) -o $@ buffer.c
 
@@ -2436,6 +2541,9 @@ objects/if_cscope.o: if_cscope.c
 objects/if_xcmdsrv.o: if_xcmdsrv.c
 	$(CCC) -o $@ if_xcmdsrv.c
 
+objects/if_lua.o: if_lua.c
+	$(CCC) $(LUA_CFLAGS) -o $@ if_lua.c
+
 objects/if_mzsch.o: if_mzsch.c $(MZSCHEME_EXTRA)
 	$(CCC) -o $@ $(MZSCHEME_CFLAGS_EXTRA) if_mzsch.c
  
@@ -2443,16 +2551,24 @@ mzscheme_base.c:
 	$(MZSCHEME_MZC) --c-mods mzscheme_base.c ++lib scheme/base
 
 objects/if_perl.o: auto/if_perl.c
-	$(CCC) -o $@ auto/if_perl.c
+	$(CCC) $(PERL_CFLAGS) -o $@ auto/if_perl.c
 
 objects/if_perlsfio.o: if_perlsfio.c
-	$(CCC) -o $@ if_perlsfio.c
+	$(CCC) $(PERL_CFLAGS) -o $@ if_perlsfio.c
 
-objects/if_python.o: if_python.c
-	$(CCC) -o $@ $(PYTHON_CFLAGS_EXTRA) if_python.c
+objects/py_getpath.o: $(PYTHON_CONFDIR)/getpath.c
+	$(CCC) $(PYTHON_CFLAGS) -o $@ $(PYTHON_CONFDIR)/getpath.c \
+		-I$(PYTHON_CONFDIR) -DHAVE_CONFIG_H -DNO_MAIN \
+		$(PYTHON_GETPATH_CFLAGS)
+
+objects/if_python.o: if_python.c if_py_both.h
+	$(CCC) $(PYTHON_CFLAGS) $(PYTHON_CFLAGS_EXTRA) -o $@ if_python.c
+
+objects/if_python3.o: if_python3.c if_py_both.h
+	$(CCC) $(PYTHON3_CFLAGS) $(PYTHON3_CFLAGS_EXTRA) -o $@ if_python3.c
 
 objects/if_ruby.o: if_ruby.c
-	$(CCC) -o $@ if_ruby.c
+	$(CCC) $(RUBY_CFLAGS) -o $@ if_ruby.c
 
 objects/if_sniff.o: if_sniff.c
 	$(CCC) -o $@ if_sniff.c
@@ -2471,6 +2587,9 @@ objects/mark.o: mark.c
 
 objects/memfile.o: memfile.c
 	$(CCC) -o $@ memfile.c
+
+objects/memfile_test.o: memfile_test.c
+	$(CCC) -o $@ memfile_test.c
 
 objects/memline.o: memline.c
 	$(CCC) -o $@ memline.c
@@ -2508,8 +2627,8 @@ objects/os_beos.o: os_beos.c
 objects/os_qnx.o: os_qnx.c
 	$(CCC) -o $@ os_qnx.c
 
-objects/os_macosx.o: os_macosx.c
-	$(CCC) -o $@ os_macosx.c
+objects/os_macosx.o: os_macosx.m
+	$(CCC) -o $@ os_macosx.m
 
 objects/os_mac_conv.o: os_mac_conv.c
 	$(CCC) -o $@ os_mac_conv.c
@@ -2519,15 +2638,6 @@ objects/os_unix.o: os_unix.c
 
 objects/pathdef.o: auto/pathdef.c
 	$(CCC) -o $@ auto/pathdef.c
-
-objects/py_config.o: $(PYTHON_CONFDIR)/config.c
-	$(CCC) -o $@ $(PYTHON_CONFDIR)/config.c \
-		-I$(PYTHON_CONFDIR) -DHAVE_CONFIG_H -DNO_MAIN
-
-objects/py_getpath.o: $(PYTHON_CONFDIR)/getpath.c
-	$(CCC) -o $@ $(PYTHON_CONFDIR)/getpath.c \
-		-I$(PYTHON_CONFDIR) -DHAVE_CONFIG_H -DNO_MAIN \
-		$(PYTHON_GETPATH_CFLAGS)
 
 objects/pty.o: pty.c
 	$(CCC) -o $@ pty.c
@@ -2546,6 +2656,9 @@ objects/screen.o: screen.c
 
 objects/search.o: search.c
 	$(CCC) -o $@ search.c
+
+objects/sha256.o: sha256.c
+	$(CCC) -o $@ sha256.c
 
 objects/spell.o: spell.c
 	$(CCC) -o $@ spell.c
@@ -2666,313 +2779,333 @@ $(APPDIR)/Contents:
 ###############################################################################
 ### (automatically generated by 'make depend')
 ### Dependencies:
+objects/blowfish.o: blowfish.c vim.h auto/config.h feature.h os_unix.h \
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h
 objects/buffer.o: buffer.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h version.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h version.h
 objects/charset.o: charset.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/diff.o: diff.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/digraph.o: digraph.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/edit.o: edit.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/eval.o: eval.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h version.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h version.h
 objects/ex_cmds.o: ex_cmds.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h version.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h version.h
 objects/ex_cmds2.o: ex_cmds2.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h version.h
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h version.h
 objects/ex_docmd.o: ex_docmd.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h
 objects/ex_eval.o: ex_eval.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/ex_getln.o: ex_getln.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h
 objects/fileio.o: fileio.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/fold.o: fold.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/getchar.o: getchar.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/hardcopy.o: hardcopy.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h version.h
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h version.h
 objects/hashtab.o: hashtab.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/if_cscope.o: if_cscope.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h if_cscope.h
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h if_cscope.h
 objects/if_xcmdsrv.o: if_xcmdsrv.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h version.h
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h version.h
 objects/main.o: main.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h farsi.c arabic.c
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h farsi.c arabic.c
 objects/mark.o: mark.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/memfile.o: memfile.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/memline.o: memline.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/menu.o: menu.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/message.o: message.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/misc1.o: misc1.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h version.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h version.h
 objects/misc2.o: misc2.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/move.o: move.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/mbyte.o: mbyte.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/normal.o: normal.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/ops.o: ops.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h ascii.h \
-  keymap.h term.h macros.h option.h structs.h regexp.h gui.h gui_beval.h \
-  proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h arabic.h
+ keymap.h term.h macros.h option.h structs.h regexp.h gui.h gui_beval.h \
+ proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h arabic.h
 objects/option.o: option.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/os_unix.o: os_unix.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h os_unixx.h
-objects/pathdef.o: auto/pathdef.c ./vim.h ./auto/config.h ./feature.h ./os_unix.h \
-  ./auto/osdef.h ./ascii.h ./keymap.h ./term.h ./macros.h ./option.h \
-  ./structs.h ./regexp.h ./gui.h ./gui_beval.h proto/gui_beval.pro \
-  ./ex_cmds.h ./proto.h ./globals.h ./farsi.h ./arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h os_unixx.h
+objects/pathdef.o: auto/pathdef.c vim.h auto/config.h feature.h os_unix.h \
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h
 objects/popupmnu.o: popupmnu.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h
 objects/quickfix.o: quickfix.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h
 objects/regexp.o: regexp.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/screen.o: screen.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/search.o: search.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
+objects/sha256.o: sha256.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/spell.o: spell.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/syntax.o: syntax.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/tag.o: tag.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h ascii.h \
-  keymap.h term.h macros.h option.h structs.h regexp.h gui.h gui_beval.h \
-  proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h arabic.h
+ keymap.h term.h macros.h option.h structs.h regexp.h gui.h gui_beval.h \
+ proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h arabic.h
 objects/term.o: term.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/ui.o: ui.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h ascii.h \
-  keymap.h term.h macros.h option.h structs.h regexp.h gui.h gui_beval.h \
-  proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h arabic.h
+ keymap.h term.h macros.h option.h structs.h regexp.h gui.h gui_beval.h \
+ proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h arabic.h
 objects/undo.o: undo.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/version.o: version.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h version.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h version.h
 objects/window.o: window.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/gui.o: gui.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h ascii.h \
-  keymap.h term.h macros.h option.h structs.h regexp.h gui.h gui_beval.h \
-  proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h arabic.h
+ keymap.h term.h macros.h option.h structs.h regexp.h gui.h gui_beval.h \
+ proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h arabic.h
 objects/gui_gtk.o: gui_gtk.c gui_gtk_f.h vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h ../pixmaps/stock_icons.h
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h ../pixmaps/stock_icons.h
 objects/gui_gtk_f.o: gui_gtk_f.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h gui_gtk_f.h
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h gui_gtk_f.h
 objects/gui_motif.o: gui_motif.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h gui_xmebw.h ../pixmaps/alert.xpm \
-  ../pixmaps/error.xpm ../pixmaps/generic.xpm ../pixmaps/info.xpm \
-  ../pixmaps/quest.xpm gui_x11_pm.h ../pixmaps/tb_new.xpm \
-  ../pixmaps/tb_open.xpm ../pixmaps/tb_close.xpm ../pixmaps/tb_save.xpm \
-  ../pixmaps/tb_print.xpm ../pixmaps/tb_cut.xpm ../pixmaps/tb_copy.xpm \
-  ../pixmaps/tb_paste.xpm ../pixmaps/tb_find.xpm \
-  ../pixmaps/tb_find_next.xpm ../pixmaps/tb_find_prev.xpm \
-  ../pixmaps/tb_find_help.xpm ../pixmaps/tb_exit.xpm \
-  ../pixmaps/tb_undo.xpm ../pixmaps/tb_redo.xpm ../pixmaps/tb_help.xpm \
-  ../pixmaps/tb_macro.xpm ../pixmaps/tb_make.xpm \
-  ../pixmaps/tb_save_all.xpm ../pixmaps/tb_jump.xpm \
-  ../pixmaps/tb_ctags.xpm ../pixmaps/tb_load_session.xpm \
-  ../pixmaps/tb_save_session.xpm ../pixmaps/tb_new_session.xpm \
-  ../pixmaps/tb_blank.xpm ../pixmaps/tb_maximize.xpm \
-  ../pixmaps/tb_split.xpm ../pixmaps/tb_minimize.xpm \
-  ../pixmaps/tb_shell.xpm ../pixmaps/tb_replace.xpm \
-  ../pixmaps/tb_vsplit.xpm ../pixmaps/tb_maxwidth.xpm \
-  ../pixmaps/tb_minwidth.xpm
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h gui_xmebw.h ../pixmaps/alert.xpm \
+ ../pixmaps/error.xpm ../pixmaps/generic.xpm ../pixmaps/info.xpm \
+ ../pixmaps/quest.xpm gui_x11_pm.h ../pixmaps/tb_new.xpm \
+ ../pixmaps/tb_open.xpm ../pixmaps/tb_close.xpm ../pixmaps/tb_save.xpm \
+ ../pixmaps/tb_print.xpm ../pixmaps/tb_cut.xpm ../pixmaps/tb_copy.xpm \
+ ../pixmaps/tb_paste.xpm ../pixmaps/tb_find.xpm \
+ ../pixmaps/tb_find_next.xpm ../pixmaps/tb_find_prev.xpm \
+ ../pixmaps/tb_find_help.xpm ../pixmaps/tb_exit.xpm \
+ ../pixmaps/tb_undo.xpm ../pixmaps/tb_redo.xpm ../pixmaps/tb_help.xpm \
+ ../pixmaps/tb_macro.xpm ../pixmaps/tb_make.xpm \
+ ../pixmaps/tb_save_all.xpm ../pixmaps/tb_jump.xpm \
+ ../pixmaps/tb_ctags.xpm ../pixmaps/tb_load_session.xpm \
+ ../pixmaps/tb_save_session.xpm ../pixmaps/tb_new_session.xpm \
+ ../pixmaps/tb_blank.xpm ../pixmaps/tb_maximize.xpm \
+ ../pixmaps/tb_split.xpm ../pixmaps/tb_minimize.xpm \
+ ../pixmaps/tb_shell.xpm ../pixmaps/tb_replace.xpm \
+ ../pixmaps/tb_vsplit.xpm ../pixmaps/tb_maxwidth.xpm \
+ ../pixmaps/tb_minwidth.xpm
 objects/gui_xmdlg.o: gui_xmdlg.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h
 objects/gui_xmebw.o: gui_xmebw.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h gui_xmebwp.h gui_xmebw.h
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h gui_xmebwp.h gui_xmebw.h
 objects/gui_athena.o: gui_athena.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h gui_at_sb.h gui_x11_pm.h \
-  ../pixmaps/tb_new.xpm ../pixmaps/tb_open.xpm ../pixmaps/tb_close.xpm \
-  ../pixmaps/tb_save.xpm ../pixmaps/tb_print.xpm ../pixmaps/tb_cut.xpm \
-  ../pixmaps/tb_copy.xpm ../pixmaps/tb_paste.xpm ../pixmaps/tb_find.xpm \
-  ../pixmaps/tb_find_next.xpm ../pixmaps/tb_find_prev.xpm \
-  ../pixmaps/tb_find_help.xpm ../pixmaps/tb_exit.xpm \
-  ../pixmaps/tb_undo.xpm ../pixmaps/tb_redo.xpm ../pixmaps/tb_help.xpm \
-  ../pixmaps/tb_macro.xpm ../pixmaps/tb_make.xpm \
-  ../pixmaps/tb_save_all.xpm ../pixmaps/tb_jump.xpm \
-  ../pixmaps/tb_ctags.xpm ../pixmaps/tb_load_session.xpm \
-  ../pixmaps/tb_save_session.xpm ../pixmaps/tb_new_session.xpm \
-  ../pixmaps/tb_blank.xpm ../pixmaps/tb_maximize.xpm \
-  ../pixmaps/tb_split.xpm ../pixmaps/tb_minimize.xpm \
-  ../pixmaps/tb_shell.xpm ../pixmaps/tb_replace.xpm \
-  ../pixmaps/tb_vsplit.xpm ../pixmaps/tb_maxwidth.xpm \
-  ../pixmaps/tb_minwidth.xpm
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h gui_at_sb.h gui_x11_pm.h \
+ ../pixmaps/tb_new.xpm ../pixmaps/tb_open.xpm ../pixmaps/tb_close.xpm \
+ ../pixmaps/tb_save.xpm ../pixmaps/tb_print.xpm ../pixmaps/tb_cut.xpm \
+ ../pixmaps/tb_copy.xpm ../pixmaps/tb_paste.xpm ../pixmaps/tb_find.xpm \
+ ../pixmaps/tb_find_next.xpm ../pixmaps/tb_find_prev.xpm \
+ ../pixmaps/tb_find_help.xpm ../pixmaps/tb_exit.xpm \
+ ../pixmaps/tb_undo.xpm ../pixmaps/tb_redo.xpm ../pixmaps/tb_help.xpm \
+ ../pixmaps/tb_macro.xpm ../pixmaps/tb_make.xpm \
+ ../pixmaps/tb_save_all.xpm ../pixmaps/tb_jump.xpm \
+ ../pixmaps/tb_ctags.xpm ../pixmaps/tb_load_session.xpm \
+ ../pixmaps/tb_save_session.xpm ../pixmaps/tb_new_session.xpm \
+ ../pixmaps/tb_blank.xpm ../pixmaps/tb_maximize.xpm \
+ ../pixmaps/tb_split.xpm ../pixmaps/tb_minimize.xpm \
+ ../pixmaps/tb_shell.xpm ../pixmaps/tb_replace.xpm \
+ ../pixmaps/tb_vsplit.xpm ../pixmaps/tb_maxwidth.xpm \
+ ../pixmaps/tb_minwidth.xpm
 objects/gui_gtk_x11.o: gui_gtk_x11.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h gui_gtk_f.h ../runtime/vim32x32.xpm \
-  ../runtime/vim16x16.xpm ../runtime/vim48x48.xpm
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h gui_gtk_f.h ../runtime/vim32x32.xpm \
+ ../runtime/vim16x16.xpm ../runtime/vim48x48.xpm
 objects/gui_x11.o: gui_x11.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h ../runtime/vim32x32.xpm ../runtime/vim16x16.xpm \
-  ../runtime/vim48x48.xpm
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h ../runtime/vim32x32.xpm ../runtime/vim16x16.xpm \
+ ../runtime/vim48x48.xpm
 objects/gui_at_sb.o: gui_at_sb.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h gui_at_sb.h
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h gui_at_sb.h
 objects/gui_at_fs.o: gui_at_fs.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h gui_at_sb.h
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h gui_at_sb.h
 objects/pty.o: pty.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h ascii.h \
-  keymap.h term.h macros.h option.h structs.h regexp.h gui.h gui_beval.h \
-  proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h arabic.h
+ keymap.h term.h macros.h option.h structs.h regexp.h gui.h gui_beval.h \
+ proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h arabic.h
+objects/memfile_test.o: memfile_test.c main.c vim.h auto/config.h feature.h \
+ os_unix.h auto/osdef.h ascii.h keymap.h term.h macros.h option.h \
+ structs.h regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h \
+ proto.h globals.h farsi.h arabic.h farsi.c arabic.c memfile.c
 objects/hangulin.o: hangulin.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h
+objects/if_lua.o: if_lua.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
 objects/if_mzsch.o: if_mzsch.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h if_mzsch.h
-objects/if_perl.o: auto/if_perl.c ./vim.h ./auto/config.h ./feature.h ./os_unix.h \
-  ./auto/osdef.h ./ascii.h ./keymap.h ./term.h ./macros.h ./option.h \
-  ./structs.h ./regexp.h ./gui.h ./gui_beval.h proto/gui_beval.pro \
-  ./ex_cmds.h ./proto.h ./globals.h ./farsi.h ./arabic.h
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h if_mzsch.h
+objects/if_perl.o: auto/if_perl.c vim.h auto/config.h feature.h os_unix.h \
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h
 objects/if_perlsfio.o: if_perlsfio.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h
 objects/if_python.o: if_python.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h if_py_both.h
+objects/if_python3.o: if_python3.c vim.h auto/config.h feature.h os_unix.h \
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h if_py_both.h
 objects/if_tcl.o: if_tcl.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h
-objects/if_ruby.o: if_ruby.c vim.h auto/config.h feature.h os_unix.h auto/osdef.h \
-  ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
-  gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
-  arabic.h version.h
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h
+objects/if_ruby.o: if_ruby.c auto/config.h vim.h feature.h os_unix.h auto/osdef.h \
+ ascii.h keymap.h term.h macros.h option.h structs.h regexp.h gui.h \
+ gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h globals.h farsi.h \
+ arabic.h version.h
 objects/if_sniff.o: if_sniff.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h os_unixx.h
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h os_unixx.h
 objects/gui_beval.o: gui_beval.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h
 objects/workshop.o: workshop.c auto/config.h integration.h vim.h feature.h \
-  os_unix.h auto/osdef.h ascii.h keymap.h term.h macros.h option.h \
-  structs.h regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h \
-  proto.h globals.h farsi.h arabic.h version.h workshop.h
+ os_unix.h auto/osdef.h ascii.h keymap.h term.h macros.h option.h \
+ structs.h regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h \
+ proto.h globals.h farsi.h arabic.h version.h workshop.h
 objects/wsdebug.o: wsdebug.c
 objects/integration.o: integration.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h integration.h
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h integration.h
 objects/netbeans.o: netbeans.c vim.h auto/config.h feature.h os_unix.h \
-  auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
-  regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
-  globals.h farsi.h arabic.h version.h
+ auto/osdef.h ascii.h keymap.h term.h macros.h option.h structs.h \
+ regexp.h gui.h gui_beval.h proto/gui_beval.pro ex_cmds.h proto.h \
+ globals.h farsi.h arabic.h version.h

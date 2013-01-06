@@ -1033,10 +1033,10 @@ foldMoveTo(updown, dir, count)
  * Init the fold info in a new window.
  */
     void
-foldInitWin(newwin)
-    win_T	*newwin;
+foldInitWin(new_win)
+    win_T	*new_win;
 {
-    ga_init2(&newwin->w_folds, (int)sizeof(fold_T), 10);
+    ga_init2(&new_win->w_folds, (int)sizeof(fold_T), 10);
 }
 
 /* find_wl_entry() {{{2 */
@@ -1469,11 +1469,14 @@ deleteFoldEntry(gap, idx, recursive)
     }
     else
     {
-	/* move nested folds one level up, to overwrite the fold that is
+	/* Move nested folds one level up, to overwrite the fold that is
 	 * deleted. */
 	moved = fp->fd_nested.ga_len;
 	if (ga_grow(gap, (int)(moved - 1)) == OK)
 	{
+	    /* Get "fp" again, the array may have been reallocated. */
+	    fp = (fold_T *)gap->ga_data + idx;
+
 	    /* adjust fd_top and fd_flags for the moved folds */
 	    nfp = (fold_T *)fp->fd_nested.ga_data;
 	    for (i = 0; i < moved; ++i)
@@ -1486,9 +1489,9 @@ deleteFoldEntry(gap, idx, recursive)
 	    }
 
 	    /* move the existing folds down to make room */
-	    if (idx < gap->ga_len)
+	    if (idx + 1 < gap->ga_len)
 		mch_memmove(fp + moved, fp + 1,
-					sizeof(fold_T) * (gap->ga_len - idx));
+				  sizeof(fold_T) * (gap->ga_len - (idx + 1)));
 	    /* move the contained folds one level up */
 	    mch_memmove(fp, nfp, (size_t)(sizeof(fold_T) * moved));
 	    vim_free(nfp);
@@ -2265,24 +2268,24 @@ foldUpdateIEMS(wp, top, bot)
     if (foldlevelSyntax == getlevel)
     {
 	garray_T *gap = &wp->w_folds;
-	fold_T	 *fp = NULL;
+	fold_T	 *fpn = NULL;
 	int	  current_fdl = 0;
 	linenr_T  fold_start_lnum = 0;
 	linenr_T  lnum_rel = fline.lnum;
 
 	while (current_fdl < fline.lvl)
 	{
-	    if (!foldFind(gap, lnum_rel, &fp))
+	    if (!foldFind(gap, lnum_rel, &fpn))
 		break;
 	    ++current_fdl;
 
-	    fold_start_lnum += fp->fd_top;
-	    gap = &fp->fd_nested;
-	    lnum_rel -= fp->fd_top;
+	    fold_start_lnum += fpn->fd_top;
+	    gap = &fpn->fd_nested;
+	    lnum_rel -= fpn->fd_top;
 	}
-	if (fp != NULL && current_fdl == fline.lvl)
+	if (fpn != NULL && current_fdl == fline.lvl)
 	{
-	    linenr_T fold_end_lnum = fold_start_lnum + fp->fd_len;
+	    linenr_T fold_end_lnum = fold_start_lnum + fpn->fd_len;
 
 	    if (fold_end_lnum > bot)
 		bot = fold_end_lnum;
@@ -3289,7 +3292,8 @@ foldlevelSyntax(flp)
 /* put_folds() {{{2 */
 #if defined(FEAT_SESSION) || defined(PROTO)
 static int put_folds_recurse __ARGS((FILE *fd, garray_T *gap, linenr_T off));
-static int put_foldopen_recurse __ARGS((FILE *fd, garray_T *gap, linenr_T off));
+static int put_foldopen_recurse __ARGS((FILE *fd, win_T *wp, garray_T *gap, linenr_T off));
+static int put_fold_open_close __ARGS((FILE *fd, fold_T *fp, linenr_T off));
 
 /*
  * Write commands to "fd" to restore the manual folds in window "wp".
@@ -3309,7 +3313,7 @@ put_folds(fd, wp)
 
     /* If some folds are manually opened/closed, need to restore that. */
     if (wp->w_fold_manual)
-	return put_foldopen_recurse(fd, &wp->w_folds, (linenr_T)0);
+	return put_foldopen_recurse(fd, wp, &wp->w_folds, (linenr_T)0);
 
     return OK;
 }
@@ -3349,12 +3353,14 @@ put_folds_recurse(fd, gap, off)
  * Returns FAIL when writing failed.
  */
     static int
-put_foldopen_recurse(fd, gap, off)
+put_foldopen_recurse(fd, wp, gap, off)
     FILE	*fd;
+    win_T	*wp;
     garray_T	*gap;
     linenr_T	off;
 {
     int		i;
+    int		level;
     fold_T	*fp;
 
     fp = (fold_T *)gap->ga_data;
@@ -3364,24 +3370,57 @@ put_foldopen_recurse(fd, gap, off)
 	{
 	    if (fp->fd_nested.ga_len > 0)
 	    {
-		/* open/close nested folds while this fold is open */
+		/* open nested folds while this fold is open */
 		if (fprintf(fd, "%ld", fp->fd_top + off) < 0
 			|| put_eol(fd) == FAIL
 			|| put_line(fd, "normal zo") == FAIL)
 		    return FAIL;
-		if (put_foldopen_recurse(fd, &fp->fd_nested, off + fp->fd_top)
+		if (put_foldopen_recurse(fd, wp, &fp->fd_nested,
+							     off + fp->fd_top)
 			== FAIL)
 		    return FAIL;
+		/* close the parent when needed */
+		if (fp->fd_flags == FD_CLOSED)
+		{
+		    if (put_fold_open_close(fd, fp, off) == FAIL)
+			return FAIL;
+		}
 	    }
-	    if (fprintf(fd, "%ld", fp->fd_top + off) < 0
-		    || put_eol(fd) == FAIL
-		    || fprintf(fd, "normal z%c",
-				    fp->fd_flags == FD_CLOSED ? 'c' : 'o') < 0
-		    || put_eol(fd) == FAIL)
-		return FAIL;
+	    else
+	    {
+		/* Open or close the leaf according to the window foldlevel.
+		 * Do not close a leaf that is already closed, as it will close
+		 * the parent. */
+		level = foldLevelWin(wp, off + fp->fd_top);
+		if ((fp->fd_flags == FD_CLOSED && wp->w_p_fdl >= level)
+			|| (fp->fd_flags != FD_CLOSED && wp->w_p_fdl < level))
+		if (put_fold_open_close(fd, fp, off) == FAIL)
+		    return FAIL;
+	    }
 	}
 	++fp;
     }
+
+    return OK;
+}
+
+/* put_fold_open_close() {{{2 */
+/*
+ * Write the open or close command to "fd".
+ * Returns FAIL when writing failed.
+ */
+    static int
+put_fold_open_close(fd, fp, off)
+    FILE	*fd;
+    fold_T	*fp;
+    linenr_T	off;
+{
+    if (fprintf(fd, "%ld", fp->fd_top + off) < 0
+	    || put_eol(fd) == FAIL
+	    || fprintf(fd, "normal z%c",
+			   fp->fd_flags == FD_CLOSED ? 'c' : 'o') < 0
+	    || put_eol(fd) == FAIL)
+	return FAIL;
 
     return OK;
 }

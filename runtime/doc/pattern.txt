@@ -1,4 +1,4 @@
-*pattern.txt*   For Vim version 7.2.  Last change: 2008 Nov 18
+*pattern.txt*   For Vim version 7.3.  Last change: 2012 May 18
 
 
 		  VIM REFERENCE MANUAL    by Bram Moolenaar
@@ -21,7 +21,7 @@ explanations are in chapter 27 |usr_27.txt|.
 10. Highlighting matches	|match-highlight|
 
 ==============================================================================
-1. Search commands				*search-commands* *E486*
+1. Search commands				*search-commands*
 
 							*/*
 /{pattern}[/]<CR>	Search forward for the [count]'th occurrence of
@@ -150,6 +150,11 @@ use <Esc> to abandon the search.
 All matches for the last used search pattern will be highlighted if you set
 the 'hlsearch' option.  This can be suspended with the |:nohlsearch| command.
 
+When no match is found you get the error: *E486* Pattern not found
+Note that for the |:global| command this behaves like a normal message, for Vi
+compatibility.  For the |:s| command the "e" flag can be used to avoid the
+error message |:s_flags|.
+
 					*search-offset* *{offset}*
 These commands search for the specified pattern.  With "/" and "?" an
 additional offset may be given.  There are two types of offsets: line offsets
@@ -214,7 +219,8 @@ The last used pattern and offset are remembered.  They can be used to repeat
 the search, possibly in another direction or with another count.  Note that
 two patterns are remembered: One for 'normal' search commands and one for the
 substitute command ":s".  Each time an empty pattern is given, the previously
-used pattern is used.
+used pattern is used.  However, if there is no previous search command, a
+previous substitute pattern is used, if possible.
 
 The 'magic' option sticks with the last used pattern.  If you change 'magic',
 this will not change how the last used pattern will be interpreted.
@@ -631,17 +637,18 @@ overview.
 							*/\@!*
 \@!	Matches with zero width if the preceding atom does NOT match at the
 	current position. |/zero-width| {not in Vi}
-	Like '(?!pattern)" in Perl.
+	Like "(?!pattern)" in Perl.
 	Example			matches ~
 	foo\(bar\)\@!		any "foo" not followed by "bar"
-	a.\{-}p\@!		"a", "ap", "app", etc. not followed by a "p"
+	a.\{-}p\@!		"a", "ap", "app", "appp", etc. not immediately
+				followed by a "p"
 	if \(\(then\)\@!.\)*$	"if " not followed by "then"
 
 	Using "\@!" is tricky, because there are many places where a pattern
 	does not match.  "a.*p\@!" will match from an "a" to the end of the
 	line, because ".*" can match all characters in the line and the "p"
 	doesn't match at the end of the line.  "a.\{-}p\@!" will match any
-	"a", "ap", "aap", etc. that isn't followed by a "p", because the "."
+	"a", "ap", "app", etc. that isn't followed by a "p", because the "."
 	can match a "p" and "p\@!" doesn't match after that.
 
 	You can't use "\@!" to look for a non-match before the matching
@@ -650,10 +657,17 @@ overview.
 	"foobar" you could use "\(foo\)\@!...bar", but that doesn't match a
 	bar at the start of a line.  Use "\(foo\)\@<!bar".
 
+	Useful example: to find "foo" in a line that does not contain "bar": >
+		/^\%(.*bar\)\@!.*\zsfoo
+<	This pattern first checks that there is not a single position in the
+	line where "bar" matches.  If ".*bar" matches somewhere the \@! will
+	reject the pattern.  When there is no match any "foo" will be found.
+	The "\zs" is to have the match start just before "foo".
+
 							*/\@<=*
 \@<=	Matches with zero width if the preceding atom matches just before what
 	follows. |/zero-width| {not in Vi}
-	Like '(?<=pattern)" in Perl, but Vim allows non-fixed-width patterns.
+	Like "(?<=pattern)" in Perl, but Vim allows non-fixed-width patterns.
 	Example			matches ~
 	\(an\_s\+\)\@<=file	"file" after "an" and white space or an
 				end-of-line
@@ -677,7 +691,7 @@ overview.
 	before what follows.  Thus this matches if there is no position in the
 	current or previous line where the atom matches such that it ends just
 	before what follows.  |/zero-width| {not in Vi}
-	Like '(?<!pattern)" in Perl, but Vim allows non-fixed-width patterns.
+	Like "(?<!pattern)" in Perl, but Vim allows non-fixed-width patterns.
 	The match with the preceding atom is made to end just before the match
 	with what follows, thus an atom that ends in ".*" will work.
 	Warning: This can be slow (because many positions need to be checked
@@ -765,7 +779,7 @@ $	At end of pattern or in front of "\|", "\)" or "\n" ('magic' on):
 	branch is used.  Example: >
 		/\(.\{-}\zsFab\)\{3}
 <	Finds the third occurrence of "Fab".
-	{not in Vi} {not available when compiled without the +syntax feature}
+	{not in Vi} {not available when compiled without the |+syntax| feature}
 							*/\ze*
 \ze	Matches at any position, and sets the end of the match there: The
 	previous char is the last char of the whole match. |/zero-width|
@@ -773,7 +787,7 @@ $	At end of pattern or in front of "\|", "\)" or "\n" ('magic' on):
 	branch is used.
 	Example: "end\ze\(if\|for\)" matches the "end" in "endif" and
 	"endfor".
-	{not in Vi} {not available when compiled without the +syntax feature}
+	{not in Vi} {not available when compiled without the |+syntax| feature}
 
 						*/\%^* *start-of-file*
 \%^	Matches start of the file.  When matching with a string, matches the
@@ -923,7 +937,7 @@ match ASCII characters, as indicated by the range.
 \l	lowercase character:		[a-z]		*/\l*
 \L	non-lowercase character:	[^a-z]		*/\L*
 \u	uppercase character:		[A-Z]		*/\u*
-\U	non-uppercase character		[^A-Z]		*/\U*
+\U	non-uppercase character:	[^A-Z]		*/\U*
 
 	NOTE: Using the atom is faster than the [] form.
 
@@ -995,7 +1009,8 @@ x	A single character, with no special meaning, matches itself
 	in the collection: "[^xyz]" matches anything but 'x', 'y' and 'z'.
 	- If two characters in the sequence are separated by '-', this is
 	  shorthand for the full list of ASCII characters between them.  E.g.,
-	  "[0-9]" matches any decimal digit.
+	  "[0-9]" matches any decimal digit.  Non-ASCII characters can be
+	  used, but the character values must not be more than 256 apart.
 	- A character class expression is evaluated to the set of characters
 	  belonging to that character class.  The following character classes
 	  are supported:
@@ -1026,11 +1041,9 @@ x	A single character, with no special meaning, matches itself
 	  These items only work for 8-bit characters.
 							*/[[=* *[==]*
 	- An equivalence class.  This means that characters are matched that
-	  have almost the same meaning, e.g., when ignoring accents.  The form
-	  is:
+	  have almost the same meaning, e.g., when ignoring accents.  This
+	  only works for Unicode, latin1 and latin9.  The form is:
 		[=a=]
-	  Currently this is only implemented for latin1.  Also works for the
-	  latin1 characters in utf-8 and latin9.
 							*/[[.* *[..]*
 	- A collation element.  This currently simply accepts a single
 	  character in the form:
@@ -1043,9 +1056,9 @@ x	A single character, with no special meaning, matches itself
 	  "^"):  "[]xyz]" or "[^]xyz]" {not in Vi}.
 	  For '-' you can also make it the first or last character: "[-xyz]",
 	  "[^-xyz]" or "[xyz-]".  For '\' you can also let it be followed by
-	  any character that's not in "^]-\bertn".  "[\xyz]" matches '\', 'x',
-	  'y' and 'z'.  It's better to use "\\" though, future expansions may
-	  use other characters after '\'.
+	  any character that's not in "^]-\bdertnoUux".  "[\xyz]" matches '\',
+	  'x', 'y' and 'z'.  It's better to use "\\" though, future expansions
+	  may use other characters after '\'.
 	- The following translations are accepted when the 'l' flag is not
 	  included in 'cpoptions' {not in Vi}:
 		\e	<Esc>
@@ -1084,7 +1097,7 @@ x	A single character, with no special meaning, matches itself
 	To include a "[" use "[[]" and for "]" use []]", e.g.,: >
 		/index\%[[[]0[]]]
 <	matches "index" "index[", "index[0" and "index[0]".
-	{not available when compiled without the +syntax feature}
+	{not available when compiled without the |+syntax| feature}
 
 				*/\%d* */\%x* */\%o* */\%u* */\%U* *E678*
 

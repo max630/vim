@@ -58,7 +58,7 @@ ui_write(s, len)
 #endif
 }
 
-#if defined(UNIX) || defined(VMS) || defined(PROTO)
+#if defined(UNIX) || defined(VMS) || defined(PROTO) || defined(WIN3264)
 /*
  * When executing an external program, there may be some typed characters that
  * are not consumed by it.  Give them back to ui_inchar() and they are stored
@@ -467,11 +467,15 @@ clip_own_selection(cbd)
      * Also want to check somehow that we are reading from the keyboard rather
      * than a mapping etc.
      */
-    if (!cbd->owned && cbd->available)
-    {
-	cbd->owned = (clip_gen_own_selection(cbd) == OK);
 #ifdef FEAT_X11
-	if (cbd == &clip_star)
+    /* Always own the selection, we might have lost it without being
+     * notified, e.g. during a ":sh" command. */
+    if (cbd->available)
+    {
+	int was_owned = cbd->owned;
+
+	cbd->owned = (clip_gen_own_selection(cbd) == OK);
+	if (!was_owned && cbd == &clip_star)
 	{
 	    /* May have to show a different kind of highlighting for the
 	     * selected area.  There is no specific redraw command for this,
@@ -483,8 +487,12 @@ clip_own_selection(cbd)
 		    && hl_attr(HLF_V) != hl_attr(HLF_VNC))
 		redraw_curbuf_later(INVERTED_ALL);
 	}
-#endif
     }
+#else
+    /* Only own the clibpard when we didn't own it yet. */
+    if (!cbd->owned && cbd->available)
+	cbd->owned = (clip_gen_own_selection(cbd) == OK);
+#endif
 }
 
     void
@@ -892,64 +900,6 @@ clip_process_selection(button, col, row, repeated_click)
 		cb->start.col, cb->end.lnum, cb->end.col);
 #endif
 }
-
-#if 0 /* not used */
-/*
- * Called after an Expose event to redraw the selection
- */
-    void
-clip_redraw_selection(x, y, w, h)
-    int	    x;
-    int	    y;
-    int	    w;
-    int	    h;
-{
-    VimClipboard    *cb = &clip_star;
-    int		    row1, col1, row2, col2;
-    int		    row;
-    int		    start;
-    int		    end;
-
-    if (cb->state == SELECT_CLEARED)
-	return;
-
-    row1 = check_row(Y_2_ROW(y));
-    col1 = check_col(X_2_COL(x));
-    row2 = check_row(Y_2_ROW(y + h - 1));
-    col2 = check_col(X_2_COL(x + w - 1));
-
-    /* Limit the rows that need to be re-drawn */
-    if (cb->start.lnum > row1)
-	row1 = cb->start.lnum;
-    if (cb->end.lnum < row2)
-	row2 = cb->end.lnum;
-
-    /* Look at each row that might need to be re-drawn */
-    for (row = row1; row <= row2; row++)
-    {
-	/* For the first selection row, use the starting selection column */
-	if (row == cb->start.lnum)
-	    start = cb->start.col;
-	else
-	    start = 0;
-
-	/* For the last selection row, use the ending selection column */
-	if (row == cb->end.lnum)
-	    end = cb->end.col;
-	else
-	    end = Columns;
-
-	if (col1 > start)
-	    start = col1;
-
-	if (col2 < end)
-	    end = col2 + 1;
-
-	if (end > start)
-	    gui_mch_invert_rectangle(row, start, 1, end - start);
-    }
-}
-#endif
 
 # if defined(FEAT_GUI) || defined(PROTO)
 /*
@@ -1659,7 +1609,7 @@ add_to_input_buf_csi(char_u *str, int len)
 
 #if defined(FEAT_HANGULIN) || defined(PROTO)
     void
-push_raw_key (s, len)
+push_raw_key(s, len)
     char_u  *s;
     int	    len;
 {
@@ -1904,6 +1854,10 @@ ui_cursor_shape()
 # ifdef MCH_CURSOR_SHAPE
     mch_update_cursor();
 # endif
+
+# ifdef FEAT_CONCEAL
+    conceal_check_cursur_line();
+# endif
 }
 #endif
 
@@ -1963,10 +1917,12 @@ open_app_context()
 static Atom	vim_atom;	/* Vim's own special selection format */
 #ifdef FEAT_MBYTE
 static Atom	vimenc_atom;	/* Vim's extended selection format */
+static Atom	utf8_atom;
 #endif
 static Atom	compound_text_atom;
 static Atom	text_atom;
 static Atom	targets_atom;
+static Atom	timestamp_atom;	/* Used to get a timestamp */
 
     void
 x11_setup_atoms(dpy)
@@ -1975,19 +1931,81 @@ x11_setup_atoms(dpy)
     vim_atom	       = XInternAtom(dpy, VIM_ATOM_NAME,   False);
 #ifdef FEAT_MBYTE
     vimenc_atom	       = XInternAtom(dpy, VIMENC_ATOM_NAME,False);
+    utf8_atom	       = XInternAtom(dpy, "UTF8_STRING",   False);
 #endif
     compound_text_atom = XInternAtom(dpy, "COMPOUND_TEXT", False);
     text_atom	       = XInternAtom(dpy, "TEXT",	   False);
-    targets_atom       = XInternAtom(dpy, "TARGETS",       False);
+    targets_atom       = XInternAtom(dpy, "TARGETS",	   False);
     clip_star.sel_atom = XA_PRIMARY;
-    clip_plus.sel_atom = XInternAtom(dpy, "CLIPBOARD",     False);
+    clip_plus.sel_atom = XInternAtom(dpy, "CLIPBOARD",	   False);
+    timestamp_atom     = XInternAtom(dpy, "TIMESTAMP",	   False);
 }
 
 /*
  * X Selection stuff, for cutting and pasting text to other windows.
  */
 
+static Boolean	clip_x11_convert_selection_cb __ARGS((Widget, Atom *, Atom *, Atom *, XtPointer *, long_u *, int *));
+static void  clip_x11_lose_ownership_cb __ARGS((Widget, Atom *));
+static void clip_x11_timestamp_cb __ARGS((Widget w, XtPointer n, XEvent *event, Boolean *cont));
 static void  clip_x11_request_selection_cb __ARGS((Widget, XtPointer, Atom *, Atom *, XtPointer, long_u *, int *));
+
+/*
+ * Property callback to get a timestamp for XtOwnSelection.
+ */
+    static void
+clip_x11_timestamp_cb(w, n, event, cont)
+    Widget	w;
+    XtPointer	n UNUSED;
+    XEvent	*event;
+    Boolean	*cont UNUSED;
+{
+    Atom	    actual_type;
+    int		    format;
+    unsigned  long  nitems, bytes_after;
+    unsigned char   *prop=NULL;
+    XPropertyEvent  *xproperty=&event->xproperty;
+
+    /* Must be a property notify, state can't be Delete (True), has to be
+     * one of the supported selection types. */
+    if (event->type != PropertyNotify || xproperty->state
+	    || (xproperty->atom != clip_star.sel_atom
+				    && xproperty->atom != clip_plus.sel_atom))
+	return;
+
+    if (XGetWindowProperty(xproperty->display, xproperty->window,
+	  xproperty->atom, 0, 0, False, timestamp_atom, &actual_type, &format,
+						&nitems, &bytes_after, &prop))
+	return;
+
+    if (prop)
+	XFree(prop);
+
+    /* Make sure the property type is "TIMESTAMP" and it's 32 bits. */
+    if (actual_type != timestamp_atom || format != 32)
+	return;
+
+    /* Get the selection, using the event timestamp. */
+    if (XtOwnSelection(w, xproperty->atom, xproperty->time,
+	    clip_x11_convert_selection_cb, clip_x11_lose_ownership_cb,
+	    NULL) == OK)
+    {
+	/* Set the "owned" flag now, there may have been a call to
+	 * lose_ownership_cb in between. */
+	if (xproperty->atom == clip_plus.sel_atom)
+	    clip_plus.owned = TRUE;
+	else
+	    clip_star.owned = TRUE;
+    }
+}
+
+    void
+x11_setup_selection(w)
+    Widget	w;
+{
+    XtAddEventHandler(w, PropertyChangeMask, False,
+	    /*(XtEventHandler)*/clip_x11_timestamp_cb, (XtPointer)NULL);
+}
 
     static void
 clip_x11_request_selection_cb(w, success, sel_atom, type, value, length,
@@ -2000,7 +2018,7 @@ clip_x11_request_selection_cb(w, success, sel_atom, type, value, length,
     long_u	*length;
     int		*format;
 {
-    int		motion_type;
+    int		motion_type = MAUTO;
     long_u	len;
     char_u	*p;
     char	**text_list = NULL;
@@ -2020,7 +2038,6 @@ clip_x11_request_selection_cb(w, success, sel_atom, type, value, length,
 	*(int *)success = FALSE;
 	return;
     }
-    motion_type = MCHAR;
     p = (char_u *)value;
     len = *length;
     if (*type == vim_atom)
@@ -2059,7 +2076,11 @@ clip_x11_request_selection_cb(w, success, sel_atom, type, value, length,
     }
 #endif
 
-    else if (*type == compound_text_atom || (
+    else if (*type == compound_text_atom
+#ifdef FEAT_MBYTE
+	    || *type == utf8_atom
+#endif
+	    || (
 #ifdef FEAT_MBYTE
 		enc_dbcs != 0 &&
 #endif
@@ -2113,7 +2134,7 @@ clip_x11_request_selection(myShell, dpy, cbd)
 #else
 	    1
 #endif
-	    ; i < 5; i++)
+	    ; i < 6; i++)
     {
 	switch (i)
 	{
@@ -2121,10 +2142,18 @@ clip_x11_request_selection(myShell, dpy, cbd)
 	    case 0:  type = vimenc_atom;	break;
 #endif
 	    case 1:  type = vim_atom;		break;
-	    case 2:  type = compound_text_atom; break;
-	    case 3:  type = text_atom;		break;
+#ifdef FEAT_MBYTE
+	    case 2:  type = utf8_atom;		break;
+#endif
+	    case 3:  type = compound_text_atom; break;
+	    case 4:  type = text_atom;		break;
 	    default: type = XA_STRING;
 	}
+#ifdef FEAT_MBYTE
+	if (type == utf8_atom && !enc_utf8)
+	    /* Only request utf-8 when 'encoding' is utf8. */
+	    continue;
+#endif
 	success = MAYBE;
 	XtGetSelectionValue(myShell, cbd->sel_atom, type,
 	    clip_x11_request_selection_cb, (XtPointer)&success, CurrentTime);
@@ -2186,8 +2215,6 @@ clip_x11_request_selection(myShell, dpy, cbd)
     yank_cut_buffer0(dpy, cbd);
 }
 
-static Boolean	clip_x11_convert_selection_cb __ARGS((Widget, Atom *, Atom *, Atom *, XtPointer *, long_u *, int *));
-
     static Boolean
 clip_x11_convert_selection_cb(w, sel_atom, target, type, value, length, format)
     Widget	w UNUSED;
@@ -2217,18 +2244,23 @@ clip_x11_convert_selection_cb(w, sel_atom, target, type, value, length, format)
     {
 	Atom *array;
 
-	if ((array = (Atom *)XtMalloc((unsigned)(sizeof(Atom) * 6))) == NULL)
+	if ((array = (Atom *)XtMalloc((unsigned)(sizeof(Atom) * 7))) == NULL)
 	    return False;
 	*value = (XtPointer)array;
 	i = 0;
-	array[i++] = XA_STRING;
 	array[i++] = targets_atom;
 #ifdef FEAT_MBYTE
 	array[i++] = vimenc_atom;
 #endif
 	array[i++] = vim_atom;
+#ifdef FEAT_MBYTE
+	if (enc_utf8)
+	    array[i++] = utf8_atom;
+#endif
+	array[i++] = XA_STRING;
 	array[i++] = text_atom;
 	array[i++] = compound_text_atom;
+
 	*type = XA_ATOM;
 	/* This used to be: *format = sizeof(Atom) * 8; but that caused
 	 * crashes on 64 bit machines. (Peter Derr) */
@@ -2240,6 +2272,7 @@ clip_x11_convert_selection_cb(w, sel_atom, target, type, value, length, format)
     if (       *target != XA_STRING
 #ifdef FEAT_MBYTE
 	    && *target != vimenc_atom
+	    && *target != utf8_atom
 #endif
 	    && *target != vim_atom
 	    && *target != text_atom
@@ -2269,13 +2302,16 @@ clip_x11_convert_selection_cb(w, sel_atom, target, type, value, length, format)
 	return False;
     }
 
-    if (*target == XA_STRING)
+    if (*target == XA_STRING
+#ifdef FEAT_MBYTE
+	    || (*target == utf8_atom && enc_utf8)
+#endif
+	    )
     {
 	mch_memmove(result, string, (size_t)(*length));
-	*type = XA_STRING;
+	*type = *target;
     }
-    else if (*target == compound_text_atom
-	    || *target == text_atom)
+    else if (*target == compound_text_atom || *target == text_atom)
     {
 	XTextProperty	text_prop;
 	char		*string_nt = (char *)alloc((unsigned)*length + 1);
@@ -2315,8 +2351,6 @@ clip_x11_convert_selection_cb(w, sel_atom, target, type, value, length, format)
     return True;
 }
 
-static void  clip_x11_lose_ownership_cb __ARGS((Widget, Atom *));
-
     static void
 clip_x11_lose_ownership_cb(w, sel_atom)
     Widget  w UNUSED;
@@ -2330,7 +2364,7 @@ clip_x11_lose_ownership_cb(w, sel_atom)
 
     void
 clip_x11_lose_selection(myShell, cbd)
-    Widget	myShell;
+    Widget		myShell;
     VimClipboard	*cbd;
 {
     XtDisownSelection(myShell, cbd->sel_atom, CurrentTime);
@@ -2338,13 +2372,31 @@ clip_x11_lose_selection(myShell, cbd)
 
     int
 clip_x11_own_selection(myShell, cbd)
-    Widget	myShell;
+    Widget		myShell;
     VimClipboard	*cbd;
 {
-    if (XtOwnSelection(myShell, cbd->sel_atom, CurrentTime,
-	    clip_x11_convert_selection_cb, clip_x11_lose_ownership_cb,
-							       NULL) == False)
-	return FAIL;
+    /* When using the GUI we have proper timestamps, use the one of the last
+     * event.  When in the console we don't get events (the terminal gets
+     * them), Get the time by a zero-length append, clip_x11_timestamp_cb will
+     * be called with the current timestamp.  */
+#ifdef FEAT_GUI
+    if (gui.in_use)
+    {
+	if (XtOwnSelection(myShell, cbd->sel_atom,
+	       XtLastTimestampProcessed(XtDisplay(myShell)),
+	       clip_x11_convert_selection_cb, clip_x11_lose_ownership_cb,
+	       NULL) == False)
+	    return FAIL;
+    }
+    else
+#endif
+    {
+	if (!XChangeProperty(XtDisplay(myShell), XtWindow(myShell),
+		  cbd->sel_atom, timestamp_atom, 32, PropModeAppend, NULL, 0))
+	    return FAIL;
+    }
+    /* Flush is required in a terminal as nothing else is doing it. */
+    XFlush(XtDisplay(myShell));
     return OK;
 }
 
@@ -2935,8 +2987,7 @@ mouse_comp_pos(win, rowp, colp, lnump)
     if (col < 0)
     {
 #ifdef FEAT_NETBEANS_INTG
-	if (usingNetbeans)
-	    netbeans_gutter_click(lnum);
+	netbeans_gutter_click(lnum);
 #endif
 	col = 0;
     }
@@ -2990,7 +3041,7 @@ mouse_find_win(rowp, colp)
 }
 #endif
 
-#if defined(FEAT_GUI_MOTIF) || defined(FEAT_GUI_GTK) || defined (FEAT_GUI_MAC) \
+#if defined(FEAT_GUI_MOTIF) || defined(FEAT_GUI_GTK) || defined(FEAT_GUI_MAC) \
 	|| defined(FEAT_GUI_ATHENA) || defined(FEAT_GUI_MSWIN) \
 	|| defined(FEAT_GUI_PHOTON) || defined(PROTO)
 /*
@@ -3034,6 +3085,9 @@ get_fpos_of_mouse(mpos)
 
     if (mpos->col > 0)
 	--mpos->col;
+#ifdef FEAT_VIRTUALEDIT
+    mpos->coladd = 0;
+#endif
     return IN_BUFFER;
 }
 

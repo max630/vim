@@ -1335,18 +1335,11 @@ gui_mch_add_menu_item(menu, idx)
 	    else
 		wid = 4;
 
-#if 0
-	    /* We better use a FormWidget here, since it's far more
-	     * flexible in terms of size.  */
-	    type = xmFormWidgetClass;
-	    XtSetArg(args[n], XmNwidth, wid); n++;
-#else
 	    type = xmSeparatorWidgetClass;
 	    XtSetArg(args[n], XmNwidth, wid); n++;
 	    XtSetArg(args[n], XmNminWidth, wid); n++;
 	    XtSetArg(args[n], XmNorientation, XmVERTICAL); n++;
 	    XtSetArg(args[n], XmNseparatorType, XmSHADOW_ETCHED_IN); n++;
-#endif
 	}
 	else
 	{
@@ -2023,7 +2016,7 @@ do_mnemonic(Widget w, unsigned int keycode)
 
 		    XmProcessTraversal(w, XmTRAVERSE_CURRENT);
 
-		    memset((char *) &keyEvent, 0, sizeof(XKeyPressedEvent));
+		    vim_memset((char *) &keyEvent, 0, sizeof(XKeyPressedEvent));
 		    keyEvent.type = KeyPress;
 		    keyEvent.serial = 1;
 		    keyEvent.send_event = True;
@@ -2556,13 +2549,14 @@ create_pixmap_label(parent, name, data, args, arg)
 #endif
 
     int
-gui_mch_dialog(type, title, message, button_names, dfltbutton, textfield)
+gui_mch_dialog(type, title, message, button_names, dfltbutton, textfield, ex_cmd)
     int		type UNUSED;
     char_u	*title;
     char_u	*message;
     char_u	*button_names;
     int		dfltbutton;
     char_u	*textfield;		/* buffer of size IOSIZE */
+    int		ex_cmd UNUSED;
 {
     char_u		*buts;
     char_u		*p, *next;
@@ -2946,17 +2940,6 @@ gui_mch_compute_footer_height()
 
     return (int) height + top + bottom + (shadow << 1);
 }
-
-#if 0	    /* not used */
-    void
-gui_mch_set_footer_pos(h)
-    int	    h;			    /* textArea height */
-{
-    XtVaSetValues(footer,
-		  XmNtopOffset, h + 7,
-		  NULL);
-}
-#endif
 
     void
 gui_mch_enable_footer(showit)

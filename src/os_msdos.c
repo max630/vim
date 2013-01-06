@@ -21,7 +21,6 @@
  * Some functions are also used for Win16 (MS-Windows 3.1).
  */
 
-#include "vimio.h"
 #include "vim.h"
 
 #include <conio.h>
@@ -2233,7 +2232,7 @@ clip_mch_lose_selection(VimClipboard *cbd)
     void
 clip_mch_request_selection(VimClipboard *cbd)
 {
-    int		type = MCHAR;
+    int		type = MAUTO;
     char_u	*pAllocated = NULL;
     char_u	*pClipText = NULL;
     int		clip_data_format = 0;
@@ -2281,14 +2280,12 @@ clip_mch_request_selection(VimClipboard *cbd)
 	{
 	    clip_data_format = CF_TEXT;
 	    pClipText = pAllocated;
-	    type = (vim_strchr((char*)pClipText, '\r') != NULL) ? MLINE : MCHAR;
 	}
 
 	else if ((pAllocated = Win16GetClipboardData(CF_OEMTEXT)) != NULL)
 	{
 	    clip_data_format = CF_OEMTEXT;
 	    pClipText = pAllocated;
-	    type = (vim_strchr((char*)pClipText, '\r') != NULL) ? MLINE : MCHAR;
 	}
 
 	/* Did we get anything? */

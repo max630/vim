@@ -85,6 +85,17 @@ getGvimName(char *name, int runtime)
     }
 }
 
+    static void
+getGvimNameW(wchar_t *nameW)
+{
+    char *name;
+
+    name = (char *)malloc(BUFSIZE);
+    getGvimName(name, 0);
+    mbstowcs(nameW, name, BUFSIZE);
+    free(name);
+}
+
 //
 // Get the Vim runtime directory into buf[BUFSIZE].
 // The result is empty when it failed.
@@ -131,6 +142,7 @@ static char *null_libintl_bindtextdomain(const char *, const char *);
 static int dyn_libintl_init(char *dir);
 static void dyn_libintl_end(void);
 
+static wchar_t *oldenv = NULL;
 static HINSTANCE hLibintlDLL = 0;
 static char *(*dyn_libintl_gettext)(const char *) = null_libintl_gettext;
 static char *(*dyn_libintl_textdomain)(const char *) = null_libintl_textdomain;
@@ -328,8 +340,10 @@ DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID  /* lpReserved */)
 inc_cRefThisDLL()
 {
 #ifdef FEAT_GETTEXT
-    if (g_cRefThisDll == 0)
+    if (g_cRefThisDll == 0) {
 	dyn_gettext_load();
+	oldenv = GetEnvironmentStringsW();
+    }
 #endif
     InterlockedIncrement((LPLONG)&g_cRefThisDll);
 }
@@ -338,8 +352,13 @@ inc_cRefThisDLL()
 dec_cRefThisDLL()
 {
 #ifdef FEAT_GETTEXT
-    if (InterlockedDecrement((LPLONG)&g_cRefThisDll) == 0)
+    if (InterlockedDecrement((LPLONG)&g_cRefThisDll) == 0) {
 	dyn_gettext_free();
+	if (oldenv != NULL) {
+	    FreeEnvironmentStringsW(oldenv);
+	    oldenv = NULL;
+	}
+    }
 #else
     InterlockedDecrement((LPLONG)&g_cRefThisDll);
 #endif
@@ -575,8 +594,23 @@ STDMETHODIMP CShellExt::QueryContextMenu(HMENU hMenu,
 
     // Initialize m_cntOfHWnd to 0
     m_cntOfHWnd = 0;
-    // Retrieve all the vim instances
-    EnumWindows(EnumWindowsProc, (LPARAM)this);
+
+    HKEY keyhandle;
+    bool showExisting = true;
+
+    // Check whether "Edit with existing Vim" entries are disabled.
+    if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Vim\\Gvim", 0,
+				       KEY_READ, &keyhandle) == ERROR_SUCCESS)
+    {
+	if (RegQueryValueEx(keyhandle, "DisableEditWithExisting", 0, NULL,
+						 NULL, NULL) == ERROR_SUCCESS)
+	    showExisting = false;
+	RegCloseKey(keyhandle);
+    }
+
+    // Retrieve all the vim instances, unless disabled.
+    if (showExisting)
+	EnumWindows(EnumWindowsProc, (LPARAM)this);
 
     if (cbFiles > 1)
     {
@@ -848,39 +882,39 @@ STDMETHODIMP CShellExt::InvokeGvim(HWND hParent,
 				   LPCSTR  /* pszParam */,
 				   int  /* iShowCmd */)
 {
-    char m_szFileUserClickedOn[BUFSIZE];
-    char cmdStr[BUFSIZE];
+    wchar_t m_szFileUserClickedOn[BUFSIZE];
+    wchar_t cmdStrW[BUFSIZE];
     UINT i;
 
     for (i = 0; i < cbFiles; i++)
     {
-	DragQueryFile((HDROP)medium.hGlobal,
+	DragQueryFileW((HDROP)medium.hGlobal,
 		i,
 		m_szFileUserClickedOn,
 		sizeof(m_szFileUserClickedOn));
 
-	getGvimName(cmdStr, 0);
-	strcat(cmdStr, " \"");
+	getGvimNameW(cmdStrW);
+	wcscat(cmdStrW, L" \"");
 
-	if ((strlen(cmdStr) + strlen(m_szFileUserClickedOn) + 2) < BUFSIZE)
+	if ((wcslen(cmdStrW) + wcslen(m_szFileUserClickedOn) + 2) < BUFSIZE)
 	{
-	    strcat(cmdStr, m_szFileUserClickedOn);
-	    strcat(cmdStr, "\"");
+	    wcscat(cmdStrW, m_szFileUserClickedOn);
+	    wcscat(cmdStrW, L"\"");
 
-	    STARTUPINFO si;
+	    STARTUPINFOW si;
 	    PROCESS_INFORMATION pi;
 
 	    ZeroMemory(&si, sizeof(si));
 	    si.cb = sizeof(si);
 
 	    // Start the child process.
-	    if (!CreateProcess(NULL,	// No module name (use command line).
-			cmdStr,		// Command line.
+	    if (!CreateProcessW(NULL,	// No module name (use command line).
+			cmdStrW,	// Command line.
 			NULL,		// Process handle not inheritable.
 			NULL,		// Thread handle not inheritable.
 			FALSE,		// Set handle inheritance to FALSE.
-			0,		// No creation flags.
-			NULL,		// Use parent's environment block.
+			oldenv == NULL ? 0 : CREATE_UNICODE_ENVIRONMENT,
+			oldenv,		// Use unmodified environment block.
 			NULL,		// Use parent's starting directory.
 			&si,		// Pointer to STARTUPINFO structure.
 			&pi)		// Pointer to PROCESS_INFORMATION structure.
@@ -919,49 +953,50 @@ STDMETHODIMP CShellExt::InvokeSingleGvim(HWND hParent,
 				   int  /* iShowCmd */,
 				   int useDiff)
 {
-    char	m_szFileUserClickedOn[BUFSIZE];
-    char	*cmdStr;
+    wchar_t	m_szFileUserClickedOn[BUFSIZE];
+    wchar_t	*cmdStrW;
     size_t	cmdlen;
     size_t	len;
     UINT i;
 
     cmdlen = BUFSIZE;
-    cmdStr = (char *)malloc(cmdlen);
-    getGvimName(cmdStr, 0);
+    cmdStrW  = (wchar_t *) malloc(cmdlen * sizeof(wchar_t));
+    getGvimNameW(cmdStrW);
+
     if (useDiff)
-	strcat(cmdStr, " -d");
+	wcscat(cmdStrW, L" -d");
     for (i = 0; i < cbFiles; i++)
     {
-	DragQueryFile((HDROP)medium.hGlobal,
+	DragQueryFileW((HDROP)medium.hGlobal,
 		i,
 		m_szFileUserClickedOn,
 		sizeof(m_szFileUserClickedOn));
 
-	len = strlen(cmdStr) + strlen(m_szFileUserClickedOn) + 4;
+	len = wcslen(cmdStrW) + wcslen(m_szFileUserClickedOn) + 4;
 	if (len > cmdlen)
 	{
 	    cmdlen = len + BUFSIZE;
-	    cmdStr = (char *)realloc(cmdStr, cmdlen);
+	    cmdStrW = (wchar_t *)realloc(cmdStrW, cmdlen * sizeof(wchar_t));
 	}
-	strcat(cmdStr, " \"");
-	strcat(cmdStr, m_szFileUserClickedOn);
-	strcat(cmdStr, "\"");
+	wcscat(cmdStrW, L" \"");
+	wcscat(cmdStrW, m_szFileUserClickedOn);
+	wcscat(cmdStrW, L"\"");
     }
 
-    STARTUPINFO si;
+    STARTUPINFOW si;
     PROCESS_INFORMATION pi;
 
     ZeroMemory(&si, sizeof(si));
     si.cb = sizeof(si);
 
     // Start the child process.
-    if (!CreateProcess(NULL,	// No module name (use command line).
-		cmdStr,		// Command line.
+    if (!CreateProcessW(NULL,	// No module name (use command line).
+		cmdStrW,	// Command line.
 		NULL,		// Process handle not inheritable.
 		NULL,		// Thread handle not inheritable.
 		FALSE,		// Set handle inheritance to FALSE.
-		0,		// No creation flags.
-		NULL,		// Use parent's environment block.
+		oldenv == NULL ? 0 : CREATE_UNICODE_ENVIRONMENT,
+		oldenv,		// Use unmodified environment block.
 		NULL,		// Use parent's starting directory.
 		&si,		// Pointer to STARTUPINFO structure.
 		&pi)		// Pointer to PROCESS_INFORMATION structure.
@@ -979,7 +1014,7 @@ STDMETHODIMP CShellExt::InvokeSingleGvim(HWND hParent,
 	CloseHandle(pi.hThread);
     }
 
-    free(cmdStr);
+    free(cmdStrW);
 
     return NOERROR;
 }

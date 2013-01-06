@@ -1,6 +1,7 @@
 " Vim filetype plugin
 " Language:		Haml
-" Maintainer:		Tim Pope <vimNOSPAM@tpope.info>
+" Maintainer:		Tim Pope <vimNOSPAM@tpope.org>
+" Last Change:		2012 Mar 11
 
 " Only do this when not done yet for this buffer
 if exists("b:did_ftplugin")
@@ -56,11 +57,12 @@ if exists("loaded_matchit")
   let b:match_words = s:match_words
 endif
 
-setlocal commentstring=-#\ %s
+setlocal comments= commentstring=-#\ %s
 
 let b:undo_ftplugin = "setl cms< com< "
       \ " | unlet! b:browsefilter b:match_words | " . s:undo_ftplugin
 
 let &cpo = s:save_cpo
+unlet s:save_cpo
 
 " vim:set sw=2:

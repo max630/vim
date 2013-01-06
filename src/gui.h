@@ -52,10 +52,6 @@
 # include <SegLoad.h>*/
 #endif
 
-#ifdef RISCOS
-# include "gui_riscos.h"
-#endif
-
 #ifdef FEAT_GUI_PHOTON
 # include <Ph.h>
 # include <Pt.h>
@@ -75,7 +71,7 @@
  * On some systems scrolling needs to be done right away instead of in the
  * main loop.
  */
-#if defined(FEAT_GUI_MSWIN) || defined(FEAT_GUI_MAC) || defined(HAVE_GTK2)
+#if defined(FEAT_GUI_MSWIN) || defined(FEAT_GUI_MAC) || defined(FEAT_GUI_GTK)
 # define USE_ON_FLY_SCROLL
 #endif
 
@@ -151,7 +147,7 @@
 #define DRAW_BOLD		0x02	/* draw bold text */
 #define DRAW_UNDERL		0x04	/* draw underline text */
 #define DRAW_UNDERC		0x08	/* draw undercurl text */
-#if defined(RISCOS) || defined(HAVE_GTK2)
+#if defined(FEAT_GUI_GTK)
 # define DRAW_ITALIC		0x10	/* draw italic text */
 #endif
 #define DRAW_CURSOR		0x20	/* drawing block cursor (win32) */
@@ -219,9 +215,6 @@ typedef struct GuiScrollbar
 #ifdef FEAT_GUI_MAC
     ControlHandle id;		/* A handle to the scrollbar */
 #endif
-#ifdef RISCOS
-    int		id;		/* Window handle of scrollbar window */
-#endif
 #ifdef FEAT_GUI_PHOTON
     PtWidget_t	*id;
 #endif
@@ -235,13 +228,8 @@ typedef long	    guicolor_T;	/* handle for a GUI color; for X11 this should
 				   actual color */
 
 #ifdef FEAT_GUI_GTK
-# ifdef HAVE_GTK2
   typedef PangoFontDescription	*GuiFont;       /* handle for a GUI font */
   typedef PangoFontDescription  *GuiFontset;    /* handle for a GUI fontset */
-# else
-  typedef GdkFont	*GuiFont;	/* handle for a GUI font */
-  typedef GdkFont	*GuiFontset;	/* handle for a GUI fontset */
-# endif
 # define NOFONT		(GuiFont)NULL
 # define NOFONTSET	(GuiFontset)NULL
 #else
@@ -315,7 +303,7 @@ typedef struct Gui
     int		border_offset;	    /* Total pixel offset for all borders */
 
     GuiFont	norm_font;	    /* Normal font */
-#ifndef HAVE_GTK2
+#ifndef FEAT_GUI_GTK
     GuiFont	bold_font;	    /* Bold font */
     GuiFont	ital_font;	    /* Italic font */
     GuiFont	boldital_font;	    /* Bold-Italic font */
@@ -324,7 +312,7 @@ typedef struct Gui
 				     * The styled font variants are not used. */
 #endif
 
-#if defined(FEAT_MENU) && !defined(HAVE_GTK2)
+#if defined(FEAT_MENU) && !defined(FEAT_GUI_GTK)
 # ifdef FONTSET_ALWAYS
     GuiFontset	menu_fontset;	    /* set of fonts for multi-byte chars */
 # else
@@ -402,31 +390,24 @@ typedef struct Gui
     GdkColor	*fgcolor;	    /* GDK-styled foreground color */
     GdkColor	*bgcolor;	    /* GDK-styled background color */
     GdkColor	*spcolor;	    /* GDK-styled special color */
-# ifndef HAVE_GTK2
-    GuiFont	current_font;
-# endif
     GdkGC	*text_gc;	    /* cached GC for normal text */
-# ifdef HAVE_GTK2
     PangoContext     *text_context; /* the context used for all text */
     PangoFont	     *ascii_font;   /* cached font for ASCII strings */
     PangoGlyphString *ascii_glyphs; /* cached code point -> glyph map */
-# endif
 # ifdef FEAT_GUI_TABLINE
     GtkWidget	*tabline;	    /* tab pages line handle */
 # endif
 
     GtkAccelGroup *accel_group;
-# ifndef HAVE_GTK2
-    GtkWidget	*fontdlg;	    /* font selection dialog window */
-    char_u	*fontname;	    /* font name from font selection dialog */
-# endif
     GtkWidget	*filedlg;	    /* file selection dialog */
     char_u	*browse_fname;	    /* file name from filedlg */
+
+    guint32	event_time;
 #endif	/* FEAT_GUI_GTK */
 
 #if defined(FEAT_GUI_TABLINE) \
 	&& (defined(FEAT_GUI_W32) || defined(FEAT_GUI_MOTIF) \
-                 || defined(FEAT_GUI_MAC))
+		|| defined(FEAT_GUI_MAC))
     int		tabline_height;
 #endif
 
@@ -462,14 +443,6 @@ typedef struct Gui
     int		MacOSHelpItems;	    /* Nr of help-items supplied by MacOS */
     WindowPtr	wid;		    /* Window id of text area */
     int		visibility;	    /* Is window partially/fully obscured? */
-#endif
-
-#ifdef RISCOS
-    int		window_handle;
-    char_u	*window_title;
-    int		window_title_size;
-    int		fg_colour;		/* in 0xBBGGRR format */
-    int		bg_colour;
 #endif
 
 #ifdef FEAT_GUI_PHOTON
@@ -522,7 +495,7 @@ typedef enum
 # define FRD_MATCH_CASE	0x10	/* match case */
 #endif
 
-#ifdef HAVE_GTK2
+#ifdef FEAT_GUI_GTK
 /*
  * Convenience macros to convert from 'encoding' to 'termencoding' and
  * vice versa.	If no conversion is necessary the passed-in pointer is
@@ -563,4 +536,4 @@ typedef enum
 # define CONVERT_TO_UTF8_FREE(String) ((String) = (char_u *)NULL)
 # define CONVERT_FROM_UTF8(String) (String)
 # define CONVERT_FROM_UTF8_FREE(String) ((String) = (char_u *)NULL)
-#endif /* HAVE_GTK2 */
+#endif /* FEAT_GUI_GTK */

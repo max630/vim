@@ -1,4 +1,4 @@
-*quickfix.txt*  For Vim version 7.2.  Last change: 2009 May 24
+*quickfix.txt*  For Vim version 7.3.  Last change: 2011 May 10
 
 
 		  VIM REFERENCE MANUAL    by Bram Moolenaar
@@ -215,28 +215,29 @@ command with 'l'.
 
 							*:cex* *:cexpr* *E777*
 :cex[pr][!] {expr}	Create a quickfix list using the result of {expr} and
-			jump to the first error.  If {expr} is a String, then
-			each new-line terminated line in the String is
-			processed using 'errorformat' and the result is added
-			to the quickfix list.  If {expr} is a List, then each
-			String item in the list is processed and added to the
-			quickfix list.  Non String items in the List are
-			ignored. See |:cc|
-			for [!].
+			jump to the first error.
+			If {expr} is a String, then each new-line terminated
+			line in the String is processed using the global value
+			of 'errorformat' and the result is added to the
+			quickfix list.
+			If {expr} is a List, then each String item in the list
+			is processed and added to the quickfix list.  Non
+			String items in the List are ignored.
+			See |:cc| for [!].
 			Examples: >
 				:cexpr system('grep -n xyz *')
 				:cexpr getline(1, '$')
 <
 							*:lex* *:lexpr*
-:lex[pr][!] {expr}	Same as ":cexpr", except the location list for the
+:lex[pr][!] {expr}	Same as |:cexpr|, except the location list for the
 			current window is used instead of the quickfix list.
 
 							*:cgete* *:cgetexpr*
 :cgete[xpr] {expr}	Create a quickfix list using the result of {expr}.
-			Just like ":cexpr", but don't jump to the first error.
+			Just like |:cexpr|, but don't jump to the first error.
 
 							*:lgete* *:lgetexpr*
-:lgete[xpr] {expr}	Same as ":cgetexpr", except the location list for the
+:lgete[xpr] {expr}	Same as |:cgetexpr|, except the location list for the
 			current window is used instead of the quickfix list.
 
 							*:cad* *:caddexpr*
@@ -301,7 +302,7 @@ use this code: >
 =============================================================================
 2. The error window					*quickfix-window*
 
-							*:cope* *:copen*
+					    *:cope* *:copen* *w:quickfix_title*
 :cope[n] [height]	Open a window to show the current list of errors.
 			When [height] is given, the window becomes that high
 			(if there is room).  Otherwise the window is made ten
@@ -310,7 +311,11 @@ use this code: >
 			'buftype' equal to "quickfix".  Don't change this!
 			If there already is a quickfix window, it will be made
 			the current window.  It is not possible to open a
-			second quickfix window.
+			second quickfix window. The window will have the
+			w:quickfix_title variable set which will indicate the
+			command that produced the quickfix list. This can be
+			used to compose a custom status line if the value of
+			'statusline' is adjusted properly.
 
 							*:lop* *:lopen*
 :lop[en] [height]	Open a window to show the location list for the
@@ -541,6 +546,14 @@ there is no match in the file the associated buffer is wiped out again.  The
 descriptors when searching many files.  However, when the |:hide| command
 modifier is used the buffers are kept loaded.  This makes following searches
 in the same files a lot faster.
+
+Note that |:copen| (or |:lopen| for |:lgrep|) may be used to open a buffer
+containing the search results in linked form.  The |:silent| command may be
+used to suppress the default full screen grep output.  The ":grep!" form of
+the |:grep| command doesn't jump to the first match automatically.  These
+commands can be combined to create a NewGrep command: >
+
+        command! -nargs=+ NewGrep execute 'silent grep! <args>' | copen 42
 
 
 5.1 using Vim's internal grep
@@ -900,8 +913,8 @@ Basic items
 	%n		error number (finds a number)
 	%m		error message (finds a string)
 	%r		matches the "rest" of a single-line file message %O/P/Q
-	%p		pointer line (finds a sequence of '-', '.' or ' ' and
-			uses the length for the column number)
+	%p		pointer line (finds a sequence of '-', '.', ' ' or
+			tabs and uses the length for the column number)
 	%*{conv}	any scanf non-assignable conversion
 	%%		the single '%' character
 	%s		search text (finds a string)
@@ -1230,7 +1243,7 @@ identified directory.  If not, it is searched in all other directories of the
 directory stack (NOT the directory subtree!).  If it is still not found, it is
 assumed that it is in Vim's current directory.
 
-There are limitation in this algorithm.  This examples assume that make just
+There are limitations in this algorithm.  These examples assume that make just
 prints information about entering a directory in the form "Making all in dir".
 
 1) Assume you have following directories and files:
@@ -1260,7 +1273,7 @@ prints information about entering a directory in the form "Making all in dir".
    This can be solved by printing absolute directories in the "enter directory"
    message or by printing "leave directory" messages..
 
-To avoid this problems, ensure to print absolute directory names and "leave
+To avoid this problem, ensure to print absolute directory names and "leave
 directory" messages.
 
 Examples for Makefiles:

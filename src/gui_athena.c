@@ -236,21 +236,6 @@ gui_x11_create_widgets()
      */
     gui.border_offset = gui.border_width;
 
-#if 0 /* not needed? */
-    XtInitializeWidgetClass(formWidgetClass);
-    XtInitializeWidgetClass(boxWidgetClass);
-    XtInitializeWidgetClass(coreWidgetClass);
-#ifdef FEAT_MENU
-    XtInitializeWidgetClass(menuButtonWidgetClass);
-#endif
-    XtInitializeWidgetClass(simpleMenuWidgetClass);
-#ifdef FEAT_GUI_NEXTAW
-    XtInitializeWidgetClass(scrollbarWidgetClass);
-#else
-    XtInitializeWidgetClass(vim_scrollbarWidgetClass);
-#endif
-#endif
-
     /* The form containing all the other widgets */
     vimForm = XtVaCreateManagedWidget("vimForm",
 	formWidgetClass,	vimShell,
@@ -1270,7 +1255,7 @@ gui_mch_add_menu_item(menu, idx)
 		return;
 
 	    /* If there are other "pulldown" items in this pane, then adjust
-	     * the right margin to accomodate the arrow pixmap, otherwise
+	     * the right margin to accommodate the arrow pixmap, otherwise
 	     * the right margin will be the same as the left margin.
 	     */
 	    {
@@ -2132,13 +2117,14 @@ dialog_wm_handler(w, client_data, event, dum)
 }
 
     int
-gui_mch_dialog(type, title, message, buttons, dfltbutton, textfield)
+gui_mch_dialog(type, title, message, buttons, dfltbutton, textfield, ex_cmd)
     int		type UNUSED;
     char_u	*title;
     char_u	*message;
     char_u	*buttons;
     int		dfltbutton UNUSED;
     char_u	*textfield;
+    int		ex_cmd UNUSED;
 {
     char_u		*buts;
     char_u		*p, *next;
@@ -2254,7 +2240,7 @@ gui_mch_dialog(type, title, message, buttons, dfltbutton, textfield)
 		    vertical ? XtNfromVert : XtNfromHoriz, prev_dialogButton,
 		    NULL);
 
-	XtAddCallback(dialogButton, XtNcallback, butproc, (XtPointer)butcount);
+	XtAddCallback(dialogButton, XtNcallback, butproc, (XtPointer)(long_u)butcount);
 	p = next;
 	prev_dialogButton = dialogButton;
     }

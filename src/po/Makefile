@@ -20,6 +20,7 @@ LANGUAGES = \
 		ko \
 		ko.UTF-8 \
 		nb \
+		nl \
 		no \
 		pl \
 		pt_BR \
@@ -49,6 +50,7 @@ MOFILES = \
 		ko.mo \
 		ko.UTF-8.mo \
 		nb.mo \
+		nl.mo \
 		no.mo \
 		pl.mo \
 		pt_BR.mo \
@@ -88,6 +90,7 @@ CHECKFILES = \
 		ko.ck \
 		ko.UTF-8.ck \
 		nb.ck \
+		nl.ck \
 		no.ck \
 		pl.ck \
 		pt_BR.ck \
@@ -247,14 +250,10 @@ distclean: clean
 checkclean:
 	rm -f *.ck
 
-#
-# NOTE: If you get an error for gvimext.cpp not found, you need to unpack the
-# extra archive.
-#
-$(PACKAGE).pot: ../*.c ../if_perl.xs ../GvimExt/gvimext.cpp ../globals.h
+$(PACKAGE).pot: ../*.c ../if_perl.xs ../GvimExt/gvimext.cpp ../globals.h ../if_py_both.h
 	cd ..; $(XGETTEXT) --default-domain=$(PACKAGE) \
 		--add-comments --keyword=_ --keyword=N_ \
-		*.c if_perl.xs GvimExt/gvimext.cpp globals.h
+		*.c if_perl.xs GvimExt/gvimext.cpp globals.h if_py_both.h
 	mv -f ../$(PACKAGE).po $(PACKAGE).pot
 
 update-po: $(LANGUAGES)

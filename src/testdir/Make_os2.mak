@@ -1,5 +1,5 @@
 #
-# Makefile to run al tests for Vim, on OS/2
+# Makefile to run all tests for Vim, on OS/2
 #
 # Requires a set of Unix tools: echo, diff, etc.
 
@@ -13,6 +13,7 @@ VIMPROG = ../vim.exe
 # test25	uses symbolic link
 # test27	can't edit file with "*" in file name
 # test52	only for Win32
+# test85	no Lua interface
 
 SCRIPTS = test1.out test3.out test4.out test5.out test6.out \
 		test7.out test8.out test9.out \
@@ -26,7 +27,10 @@ SCRIPTS = test1.out test3.out test4.out test5.out test6.out \
 		test48.out test51.out test53.out test54.out test55.out \
 		test56.out test57.out test58.out test59.out test60.out \
 		test61.out test62.out test63.out test64.out test65.out \
-		test66.out test67.out test68.out test69.out
+		test66.out test67.out test68.out test69.out test70.out \
+		test71.out test72.out test73.out test74.out test75.out \
+		test76.out test77.out test78.out test79.out test80.out \
+		test81.out test82.out test83.out test84.out
 
 .SUFFIXES: .in .out
 

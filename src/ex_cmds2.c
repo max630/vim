@@ -11,10 +11,6 @@
  * ex_cmds2.c: some more functions for command line commands
  */
 
-#if defined(MSDOS) || defined(WIN16) || defined(WIN32) || defined(_WIN64)
-# include "vimio.h"	/* for mch_open(), must be before vim.h */
-#endif
-
 #include "vim.h"
 #include "version.h"
 
@@ -504,18 +500,10 @@ dbg_parsearg(arg, gap)
 	/* Expand the file name in the same way as do_source().  This means
 	 * doing it twice, so that $DIR/file gets expanded when $DIR is
 	 * "~/dir". */
-#ifdef RISCOS
-	q = mch_munge_fname(p);
-#else
 	q = expand_env_save(p);
-#endif
 	if (q == NULL)
 	    return FAIL;
-#ifdef RISCOS
-	p = mch_munge_fname(q);
-#else
 	p = expand_env_save(q);
-#endif
 	vim_free(q);
 	if (p == NULL)
 	    return FAIL;
@@ -694,10 +682,12 @@ ex_breaklist(eap)
 	for (i = 0; i < dbg_breakp.ga_len; ++i)
 	{
 	    bp = &BREAKP(i);
+	    if (bp->dbg_type == DBG_FILE)
+		home_replace(NULL, bp->dbg_name, NameBuff, MAXPATHL, TRUE);
 	    smsg((char_u *)_("%3d  %s %s  line %ld"),
 		    bp->dbg_nr,
 		    bp->dbg_type == DBG_FUNC ? "func" : "file",
-		    bp->dbg_name,
+		    bp->dbg_type == DBG_FUNC ? bp->dbg_name : NameBuff,
 		    (long)bp->dbg_lnum);
 	}
 }
@@ -1119,7 +1109,7 @@ ex_profile(eap)
 static enum
 {
     PEXP_SUBCMD,	/* expand :profile sub-commands */
-    PEXP_FUNC,		/* expand :profile func {funcname} */
+    PEXP_FUNC		/* expand :profile func {funcname} */
 } pexpand_what;
 
 static char *pexpand_cmds[] = {
@@ -1488,7 +1478,7 @@ browse_save_fname(buf)
 #endif
 
 /*
- * Ask the user what to do when abondoning a changed buffer.
+ * Ask the user what to do when abandoning a changed buffer.
  * Must check 'write' option first!
  */
     void
@@ -1496,9 +1486,10 @@ dialog_changed(buf, checkall)
     buf_T	*buf;
     int		checkall;	/* may abandon all changed buffers */
 {
-    char_u	buff[IOSIZE];
+    char_u	buff[DIALOG_MSG_SIZE];
     int		ret;
     buf_T	*buf2;
+    exarg_T     ea;
 
     dialog_msg(buff, _("Save changes to \"%s\"?"),
 			(buf->b_fname != NULL) ?
@@ -1508,13 +1499,19 @@ dialog_changed(buf, checkall)
     else
 	ret = vim_dialog_yesnocancel(VIM_QUESTION, NULL, buff, 1);
 
+    /* Init ea pseudo-structure, this is needed for the check_overwrite()
+     * function. */
+    ea.append = ea.forceit = FALSE;
+
     if (ret == VIM_YES)
     {
 #ifdef FEAT_BROWSE
 	/* May get file name, when there is none */
 	browse_save_fname(buf);
 #endif
-	if (buf->b_fname != NULL)   /* didn't hit Cancel */
+	if (buf->b_fname != NULL && check_overwrite(&ea, buf,
+				    buf->b_fname, buf->b_ffname, FALSE) == OK)
+	    /* didn't hit Cancel */
 	    (void)buf_write_all(buf, FALSE);
     }
     else if (ret == VIM_NO)
@@ -1542,7 +1539,9 @@ dialog_changed(buf, checkall)
 		/* May get file name, when there is none */
 		browse_save_fname(buf2);
 #endif
-		if (buf2->b_fname != NULL)   /* didn't hit Cancel */
+		if (buf2->b_fname != NULL && check_overwrite(&ea, buf2,
+				  buf2->b_fname, buf2->b_ffname, FALSE) == OK)
+		    /* didn't hit Cancel */
 		    (void)buf_write_all(buf2, FALSE);
 #ifdef FEAT_AUTOCMD
 		/* an autocommand may have deleted the buffer */
@@ -1579,6 +1578,26 @@ can_abandon(buf, forceit)
 		|| forceit);
 }
 
+static void add_bufnum __ARGS((int *bufnrs, int *bufnump, int nr));
+
+/*
+ * Add a buffer number to "bufnrs", unless it's already there.
+ */
+    static void
+add_bufnum(bufnrs, bufnump, nr)
+    int	    *bufnrs;
+    int	    *bufnump;
+    int	    nr;
+{
+    int i;
+
+    for (i = 0; i < *bufnump; ++i)
+	if (bufnrs[i] == nr)
+	    return;
+    bufnrs[*bufnump] = nr;
+    *bufnump = *bufnump + 1;
+}
+
 /*
  * Return TRUE if any buffer was changed and cannot be abandoned.
  * That changed buffer becomes the current buffer.
@@ -1587,32 +1606,64 @@ can_abandon(buf, forceit)
 check_changed_any(hidden)
     int		hidden;		/* Only check hidden buffers */
 {
+    int		ret = FALSE;
     buf_T	*buf;
     int		save;
+    int		i;
+    int		bufnum = 0;
+    int		bufcount = 0;
+    int		*bufnrs;
 #ifdef FEAT_WINDOWS
+    tabpage_T   *tp;
     win_T	*wp;
 #endif
 
-    for (;;)
-    {
-	/* check curbuf first: if it was changed we can't abandon it */
-	if (!hidden && curbufIsChanged())
-	    buf = curbuf;
-	else
-	{
-	    for (buf = firstbuf; buf != NULL; buf = buf->b_next)
-		if ((!hidden || buf->b_nwindows == 0) && bufIsChanged(buf))
-		    break;
-	}
-	if (buf == NULL)    /* No buffers changed */
-	    return FALSE;
+    for (buf = firstbuf; buf != NULL; buf = buf->b_next)
+	++bufcount;
 
-	/* Try auto-writing the buffer.  If this fails but the buffer no
-	 * longer exists it's not changed, that's OK. */
-	if (check_changed(buf, p_awa, TRUE, FALSE, TRUE) && buf_valid(buf))
-	    break;	    /* didn't save - still changes */
+    if (bufcount == 0)
+	return FALSE;
+
+    bufnrs = (int *)alloc(sizeof(int) * bufcount);
+    if (bufnrs == NULL)
+	return FALSE;
+
+    /* curbuf */
+    bufnrs[bufnum++] = curbuf->b_fnum;
+#ifdef FEAT_WINDOWS
+    /* buf in curtab */
+    FOR_ALL_WINDOWS(wp)
+	if (wp->w_buffer != curbuf)
+	    add_bufnum(bufnrs, &bufnum, wp->w_buffer->b_fnum);
+
+    /* buf in other tab */
+    for (tp = first_tabpage; tp != NULL; tp = tp->tp_next)
+	if (tp != curtab)
+	    for (wp = tp->tp_firstwin; wp != NULL; wp = wp->w_next)
+		add_bufnum(bufnrs, &bufnum, wp->w_buffer->b_fnum);
+#endif
+    /* any other buf */
+    for (buf = firstbuf; buf != NULL; buf = buf->b_next)
+	add_bufnum(bufnrs, &bufnum, buf->b_fnum);
+
+    for (i = 0; i < bufnum; ++i)
+    {
+	buf = buflist_findnr(bufnrs[i]);
+	if (buf == NULL)
+	    continue;
+	if ((!hidden || buf->b_nwindows == 0) && bufIsChanged(buf))
+	{
+	    /* Try auto-writing the buffer.  If this fails but the buffer no
+	    * longer exists it's not changed, that's OK. */
+	    if (check_changed(buf, p_awa, TRUE, FALSE, TRUE) && buf_valid(buf))
+		break;	    /* didn't save - still changes */
+	}
     }
 
+    if (i >= bufnum)
+	goto theend;
+
+    ret = TRUE;
     exiting = FALSE;
 #if defined(FEAT_GUI_DIALOG) || defined(FEAT_CON_DIALOG)
     /*
@@ -1645,24 +1696,29 @@ check_changed_any(hidden)
 #ifdef FEAT_WINDOWS
     /* Try to find a window that contains the buffer. */
     if (buf != curbuf)
-	for (wp = firstwin; wp != NULL; wp = wp->w_next)
+	FOR_ALL_TAB_WINDOWS(tp, wp)
 	    if (wp->w_buffer == buf)
 	    {
-		win_goto(wp);
+		goto_tabpage_win(tp, wp);
 # ifdef FEAT_AUTOCMD
 		/* Paranoia: did autocms wipe out the buffer with changes? */
 		if (!buf_valid(buf))
-		    return TRUE;
+		{
+		    goto theend;
+		}
 # endif
-		break;
+		goto buf_found;
 	    }
+buf_found:
 #endif
 
     /* Open the changed buffer in the current window. */
     if (buf != curbuf)
 	set_curbuf(buf, DOBUF_GOTO);
 
-    return TRUE;
+theend:
+    vim_free(bufnrs);
+    return ret;
 }
 
 /*
@@ -1949,7 +2005,7 @@ alist_check_arg_idx()
 }
 
 /*
- * Return TRUE if window "win" is editing then file at the current argument
+ * Return TRUE if window "win" is editing the file at the current argument
  * index.
  */
     static int
@@ -2165,9 +2221,7 @@ do_argfile(eap, argn)
 	{
 	    if (win_split(0, 0) == FAIL)
 		return;
-# ifdef FEAT_SCROLLBIND
-	    curwin->w_p_scb = FALSE;
-# endif
+	    RESET_BINDING(curwin);
 	}
 	else
 #endif
@@ -2824,7 +2878,7 @@ struct source_cookie
     FILE	*fp;		/* opened file for sourcing */
     char_u      *nextline;      /* if not NULL: line that was read ahead */
     int		finished;	/* ":finish" used */
-#if defined (USE_CRNL) || defined (USE_CR)
+#if defined(USE_CRNL) || defined(USE_CR)
     int		fileformat;	/* EOL_UNKNOWN, EOL_UNIX or EOL_DOS */
     int		error;		/* TRUE if LF found after CR-LF */
 #endif
@@ -2946,11 +3000,7 @@ do_source(fname, check_other, is_vimrc)
     proftime_T		    wait_start;
 #endif
 
-#ifdef RISCOS
-    p = mch_munge_fname(fname);
-#else
     p = expand_env_save(fname);
-#endif
     if (p == NULL)
 	return retval;
     fname_exp = fix_fname(p);
@@ -3286,7 +3336,11 @@ ex_scriptnames(eap)
 
     for (i = 1; i <= script_items.ga_len && !got_int; ++i)
 	if (SCRIPT_ITEM(i).sn_name != NULL)
-	    smsg((char_u *)"%3d: %s", i, SCRIPT_ITEM(i).sn_name);
+	{
+	    home_replace(NULL, SCRIPT_ITEM(i).sn_name,
+						    NameBuff, MAXPATHL, TRUE);
+	    smsg((char_u *)"%3d: %s", i, NameBuff);
+	}
 }
 
 # if defined(BACKSLASH_IN_FILENAME) || defined(PROTO)
@@ -3412,7 +3466,7 @@ getsourceline(c, cookie, indent)
 {
     struct source_cookie *sp = (struct source_cookie *)cookie;
     char_u		*line;
-    char_u		*p, *s;
+    char_u		*p;
 
 #ifdef FEAT_EVAL
     /* If breakpoints have been added/deleted need to check for it. */
@@ -3451,28 +3505,49 @@ getsourceline(c, cookie, indent)
     {
 	/* compensate for the one line read-ahead */
 	--sourcing_lnum;
-	for (;;)
+
+	/* Get the next line and concatenate it when it starts with a
+	 * backslash. We always need to read the next line, keep it in
+	 * sp->nextline. */
+	sp->nextline = get_one_sourceline(sp);
+	if (sp->nextline != NULL && *(p = skipwhite(sp->nextline)) == '\\')
 	{
-	    sp->nextline = get_one_sourceline(sp);
-	    if (sp->nextline == NULL)
-		break;
-	    p = skipwhite(sp->nextline);
-	    if (*p != '\\')
-		break;
-	    s = alloc((unsigned)(STRLEN(line) + STRLEN(p)));
-	    if (s == NULL)	/* out of memory */
-		break;
-	    STRCPY(s, line);
-	    STRCAT(s, p + 1);
+	    garray_T    ga;
+
+	    ga_init2(&ga, (int)sizeof(char_u), 400);
+	    ga_concat(&ga, line);
+	    ga_concat(&ga, p + 1);
+	    for (;;)
+	    {
+		vim_free(sp->nextline);
+		sp->nextline = get_one_sourceline(sp);
+		if (sp->nextline == NULL)
+		    break;
+		p = skipwhite(sp->nextline);
+		if (*p != '\\')
+		    break;
+		/* Adjust the growsize to the current length to speed up
+		 * concatenating many lines. */
+		if (ga.ga_len > 400)
+		{
+		    if (ga.ga_len > 8000)
+			ga.ga_growsize = 8000;
+		    else
+			ga.ga_growsize = ga.ga_len;
+		}
+		ga_concat(&ga, p + 1);
+	    }
+	    ga_append(&ga, NUL);
 	    vim_free(line);
-	    line = s;
-	    vim_free(sp->nextline);
+	    line = ga.ga_data;
 	}
     }
 
 #ifdef FEAT_MBYTE
     if (line != NULL && sp->conv.vc_type != CONV_NONE)
     {
+	char_u	*s;
+
 	/* Convert the encoding of the script line. */
 	s = string_convert(&sp->conv, line, NULL);
 	if (s != NULL)
@@ -3857,6 +3932,7 @@ ex_checktime(eap)
 
 #if (defined(HAVE_LOCALE_H) || defined(X_LOCALE)) \
 	&& (defined(FEAT_EVAL) || defined(FEAT_MULTI_LANG))
+# define HAVE_GET_LOCALE_VAL
 static char *get_locale_val __ARGS((int what));
 
     static char *
@@ -3946,7 +4022,7 @@ get_mess_lang()
 {
     char_u *p;
 
-# if (defined(HAVE_LOCALE_H) || defined(X_LOCALE))
+# ifdef HAVE_GET_LOCALE_VAL
 #  if defined(LC_MESSAGES)
     p = (char_u *)get_locale_val(LC_MESSAGES);
 #  else
@@ -3997,7 +4073,7 @@ get_mess_env()
 	    p = mch_getenv((char_u *)"LANG");
 	    if (p != NULL && VIM_ISDIGIT(*p))
 		p = NULL;		/* ignore something like "1043" */
-# if defined(HAVE_LOCALE_H) || defined(X_LOCALE)
+# ifdef HAVE_GET_LOCALE_VAL
 	    if (p == NULL || *p == NUL)
 		p = (char_u *)get_locale_val(LC_CTYPE);
 # endif
@@ -4018,7 +4094,7 @@ set_lang_var()
 {
     char_u	*loc;
 
-# if defined(HAVE_LOCALE_H) || defined(X_LOCALE)
+# ifdef HAVE_GET_LOCALE_VAL
     loc = (char_u *)get_locale_val(LC_CTYPE);
 # else
     /* setlocale() not supported: use the default value */
@@ -4028,14 +4104,14 @@ set_lang_var()
 
     /* When LC_MESSAGES isn't defined use the value from $LC_MESSAGES, fall
      * back to LC_CTYPE if it's empty. */
-# if (defined(HAVE_LOCALE_H) || defined(X_LOCALE)) && defined(LC_MESSAGES)
+# if defined(HAVE_GET_LOCALE_VAL) && defined(LC_MESSAGES)
     loc = (char_u *)get_locale_val(LC_MESSAGES);
 # else
     loc = get_mess_env();
 # endif
     set_vim_var_string(VV_LANG, loc, -1);
 
-# if defined(HAVE_LOCALE_H) || defined(X_LOCALE)
+# ifdef HAVE_GET_LOCALE_VAL
     loc = (char_u *)get_locale_val(LC_TIME);
 # endif
     set_vim_var_string(VV_LC_TIME, loc, -1);
@@ -4165,11 +4241,90 @@ ex_language(eap)
 	    /* Set v:lang, v:lc_time and v:ctype to the final result. */
 	    set_lang_var();
 # endif
+# ifdef FEAT_TITLE
+	    maketitle();
+# endif
 	}
     }
 }
 
 # if defined(FEAT_CMDL_COMPL) || defined(PROTO)
+
+static char_u	**locales = NULL;	/* Array of all available locales */
+static int	did_init_locales = FALSE;
+
+static void init_locales __ARGS((void));
+static char_u **find_locales __ARGS((void));
+
+/*
+ * Lazy initialization of all available locales.
+ */
+    static void
+init_locales()
+{
+    if (!did_init_locales)
+    {
+	did_init_locales = TRUE;
+	locales = find_locales();
+    }
+}
+
+/* Return an array of strings for all available locales + NULL for the
+ * last element.  Return NULL in case of error. */
+    static char_u **
+find_locales()
+{
+    garray_T	locales_ga;
+    char_u	*loc;
+
+    /* Find all available locales by running command "locale -a".  If this
+     * doesn't work we won't have completion. */
+    char_u *locale_a = get_cmd_output((char_u *)"locale -a",
+							NULL, SHELL_SILENT);
+    if (locale_a == NULL)
+	return NULL;
+    ga_init2(&locales_ga, sizeof(char_u *), 20);
+
+    /* Transform locale_a string where each locale is separated by "\n"
+     * into an array of locale strings. */
+    loc = (char_u *)strtok((char *)locale_a, "\n");
+
+    while (loc != NULL)
+    {
+	if (ga_grow(&locales_ga, 1) == FAIL)
+	    break;
+	loc = vim_strsave(loc);
+	if (loc == NULL)
+	    break;
+
+	((char_u **)locales_ga.ga_data)[locales_ga.ga_len++] = loc;
+	loc = (char_u *)strtok(NULL, "\n");
+    }
+    vim_free(locale_a);
+    if (ga_grow(&locales_ga, 1) == FAIL)
+    {
+	ga_clear(&locales_ga);
+	return NULL;
+    }
+    ((char_u **)locales_ga.ga_data)[locales_ga.ga_len] = NULL;
+    return (char_u **)locales_ga.ga_data;
+}
+
+#  if defined(EXITFREE) || defined(PROTO)
+    void
+free_locales()
+{
+    int			i;
+    if (locales != NULL)
+    {
+	for (i = 0; locales[i] != NULL; i++)
+	    vim_free(locales[i]);
+	vim_free(locales);
+	locales = NULL;
+    }
+}
+#  endif
+
 /*
  * Function given to ExpandGeneric() to obtain the possible arguments of the
  * ":language" command.
@@ -4185,7 +4340,25 @@ get_lang_arg(xp, idx)
 	return (char_u *)"ctype";
     if (idx == 2)
 	return (char_u *)"time";
-    return NULL;
+
+    init_locales();
+    if (locales == NULL)
+	return NULL;
+    return locales[idx - 3];
+}
+
+/*
+ * Function given to ExpandGeneric() to obtain the available locales.
+ */
+    char_u *
+get_locales(xp, idx)
+    expand_T	*xp UNUSED;
+    int		idx;
+{
+    init_locales();
+    if (locales == NULL)
+	return NULL;
+    return locales[idx];
 }
 # endif
 

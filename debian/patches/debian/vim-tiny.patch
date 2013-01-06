@@ -8,11 +8,9 @@ Author: Stefano Zacchiroli <zack@debian.org>
 Author: James Vega <jamessan@debian.org>
 Bug-Debian: http://bugs.debian.org/222138
 
-Index: b/src/main.c
-===================================================================
 --- a/src/main.c
 +++ b/src/main.c
-@@ -87,6 +87,9 @@
+@@ -83,6 +83,9 @@
  #ifdef FEAT_DIFF
      int		diff_mode;		/* start with 'diff' set */
  #endif
@@ -22,7 +20,7 @@ Index: b/src/main.c
  } mparm_T;
  
  /* Values for edit_type. */
-@@ -1507,6 +1510,10 @@
+@@ -1606,6 +1609,10 @@
      }
      else if (STRNICMP(initstr, "vim", 3) == 0)
  	initstr += 3;
@@ -33,7 +31,7 @@ Index: b/src/main.c
  
      /* Catch "[r][g]vimdiff" and "[r][g]viewdiff". */
      if (STRICMP(initstr, "diff") == 0)
-@@ -2806,7 +2813,12 @@
+@@ -2916,7 +2923,12 @@
  	 * Get system wide defaults, if the file name is defined.
  	 */
  #ifdef SYS_VIMRC_FILE
@@ -47,11 +45,9 @@ Index: b/src/main.c
  #endif
  #ifdef MACOS_X
  	(void)do_source((char_u *)"$VIMRUNTIME/macmap.vim", FALSE, DOSO_NONE);
-Index: b/src/os_unix.h
-===================================================================
 --- a/src/os_unix.h
 +++ b/src/os_unix.h
-@@ -237,6 +237,9 @@
+@@ -233,6 +233,9 @@
  /*
   * Unix system-dependent file names
   */

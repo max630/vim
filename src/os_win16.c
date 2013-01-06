@@ -20,13 +20,11 @@
 # pragma warn -obs
 #endif
 
-#include "vimio.h"
 #include "vim.h"
 
 #include <dos.h>
 #include <string.h>
 #include <sys/types.h>
-#include <errno.h>
 #include <signal.h>
 #include <limits.h>
 #include <process.h>
@@ -193,8 +191,6 @@ mch_check_win(
     int argc,
     char **argv)
 {
-    int		i;
-
     return OK;	    /* GUI always has a tty */
 }
 
@@ -247,9 +243,9 @@ mch_system(char *cmd, int options)
 	/* Wait for the command to terminate before continuing */
 	while (GetModuleUsage((HINSTANCE)h_module) > 0 && again )
 	{
-	    while( PeekMessage( &msg, NULL, 0, 0, PM_REMOVE ) && again )
+	    while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) && again)
 	    {
-		if(msg.message == WM_QUIT)
+		if (msg.message == WM_QUIT)
 
 		{
 		    PostQuitMessage(msg.wParam);

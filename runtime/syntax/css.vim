@@ -2,7 +2,7 @@
 " Language:	Cascading Style Sheets
 " Maintainer:	Claudio Fleiner <claudio@fleiner.com>
 " URL:		http://www.fleiner.com/vim/syntax/css.vim
-" Last Change:	2007 Nov 06
+" Last Change:	2011 Dec 14
 " CSS2 by Nikolai Weibull
 " Full CSS2, HTML4 support by Yeti
 
@@ -87,9 +87,9 @@ syn keyword cssCommonAttr contained auto none inherit
 syn keyword cssCommonAttr contained top bottom
 syn keyword cssCommonAttr contained medium normal
 
-syn match cssFontProp contained "\<font\>\(-\(family\|style\|variant\|weight\|size\(-adjust\)\=\|stretch\)\>\)\="
+syn match cssFontProp contained "\<font\(-\(family\|style\|variant\|weight\|size\(-adjust\)\=\|stretch\)\)\=\>"
 syn match cssFontAttr contained "\<\(sans-\)\=\<serif\>"
-syn match cssFontAttr contained "\<small\>\(-\(caps\|caption\)\>\)\="
+syn match cssFontAttr contained "\<small\(-\(caps\|caption\)\)\=\>"
 syn match cssFontAttr contained "\<x\{1,2\}-\(large\|small\)\>"
 syn match cssFontAttr contained "\<message-box\>"
 syn match cssFontAttr contained "\<status-bar\>"
@@ -102,7 +102,7 @@ syn keyword cssFontAttr contained large smaller larger
 syn keyword cssFontAttr contained narrower wider
 
 syn keyword cssColorProp contained color
-syn match cssColorProp contained "\<background\(-\(color\|image\|attachment\|position\)\)\="
+syn match cssColorProp contained "\<background\(-\(color\|image\|attachment\|position\)\)\=\>"
 syn keyword cssColorAttr contained center scroll fixed
 syn match cssColorAttr contained "\<repeat\(-[xy]\)\=\>"
 syn match cssColorAttr contained "\<no-repeat\>"
@@ -182,7 +182,7 @@ syn match cssError contained "{@<>"
 syn region cssDefinition transparent matchgroup=cssBraces start='{' end='}' contains=css.*Attr,css.*Prop,cssComment,cssValue.*,cssColor,cssURL,cssImportant,cssError,cssStringQ,cssStringQQ,cssFunction,cssUnicodeEscape
 syn match cssBraceError "}"
 
-syn match cssPseudoClass ":\S*" contains=cssPseudoClassId,cssUnicodeEscape
+syn match cssPseudoClass ":[A-Za-z0-9_-]*" contains=cssPseudoClassId,cssUnicodeEscape
 syn keyword cssPseudoClassId contained link visited active hover focus before after left right
 syn match cssPseudoClassId contained "\<first\(-\(line\|letter\|child\)\)\=\>"
 syn region cssPseudoClassLang matchgroup=cssPseudoClassId start=":lang(" end=")" oneline

@@ -1,3 +1,333 @@
+vim (2:7.3.547-6~bpo60+1) squeeze-backports; urgency=low
+
+  * Rebuild for squeeze-backports.
+
+ -- James McCoy <jamessan@debian.org>  Sun, 06 Jan 2013 12:37:03 -0500
+
+vim (2:7.3.547-6) unstable; urgency=low
+
+  * Always enable ACL support.  (Closes: #693462)
+
+ -- James McCoy <jamessan@debian.org>  Thu, 22 Nov 2012 09:37:52 -0500
+
+vim (2:7.3.547-5) unstable; urgency=low
+
+  * Use xz compression for all binary packages.  (Closes: #687265)
+  * Backport patches 7.3.652 and 7.3.661 to fix crash in Python bindings when
+    GCC 4.7 is used to build Vim.  (Closes: #678122)
+
+ -- James McCoy <jamessan@debian.org>  Sat, 15 Sep 2012 23:59:18 -0400
+
+vim (2:7.3.547-4) unstable; urgency=low
+
+  * Add remove-py_config.patch, removing the dependence on Python's config.c.
+    (Closes: #681599)
+
+ -- James McCoy <jamessan@debian.org>  Mon, 23 Jul 2012 22:55:51 -0400
+
+vim (2:7.3.547-3) unstable; urgency=low
+
+  * Add netrw-syntax-fix.patch to fix a syntax error in NetRead's ftp
+    handling.  (Closes: #678513)
+
+ -- James McCoy <jamessan@debian.org>  Tue, 26 Jun 2012 19:14:28 -0400
+
+vim (2:7.3.547-2) unstable; urgency=low
+
+  * Work around GCC 4.7 optimization bug, #678122, by explicitly using gcc-4.6
+
+ -- James McCoy <jamessan@debian.org>  Thu, 21 Jun 2012 22:28:51 -0400
+
+vim (2:7.3.547-1) unstable; urgency=low
+
+  * Merge upstream tag v7-3-547
+  * Change ruby(-dev) Build-Depends to use unversioned package names in order
+    to build with the default ruby version.
+  * Add spell-check support to Debian control syntax file.
+
+ -- James McCoy <jamessan@debian.org>  Wed, 06 Jun 2012 20:20:05 -0400
+
+vim (2:7.3.524-1) unstable; urgency=low
+
+  * Merge upstream tag v7-3-524
+    + Recognize git commit files in submodules. (Closes: #663735)
+    + Fix NetRW's munging of options when opening files.  (Closes: #661720)
+    + 7.3.485: Use environment's LDFLAGS when building xxd.  (Closes: #663605)
+    + Update recognized keywords for dircolors syntax.  (Closes: #660632)
+  * Exclude the tools directory from the install.
+    + Stop shipping scripts which use Perl4 functionality.  (Closes: #659431)
+    + Remove lintian overrides for csh scripts.
+    + Remove patch debian/awk-shebang.patch
+  * Remove EOLed Lenny/Maverick releases, add Quantal release to runtime
+    files.
+  * Remove upstream/po-syntax-cpo.patch, merged upstream.
+  * Remove upstream/debian-runtime-*.patch, merged upstream.
+  * Remove upstream/fr-manpage-fixes.patch, merged upstream.
+  * Remove upstream/xdefaults-syntax-define.patch, merged upstream.
+  * Add lintian override for binaries-have-file-conflict.  vim-runtime diverts
+    vim-tiny's doc/help.txt and doc/tags.
+  * Remove unused menu-icon-missing override.
+
+ -- James McCoy <jamessan@debian.org>  Thu, 24 May 2012 21:37:40 -0400
+
+vim (2:7.3.429-2) unstable; urgency=low
+
+  * Ignore failures in test61 since it is highly sensitive to timing.
+    Slow/heavily loaded systems will cause the test to fail.  (Closes:
+    #625941)
+  * Install bug scripts with correct permissions.
+    + Use dh_bugfiles to simplify process
+    + Bump debhelper B-D to >= 7.2.3~
+
+ -- James McCoy <jamessan@debian.org>  Fri, 10 Feb 2012 22:47:19 -0500
+
+vim (2:7.3.429-1) unstable; urgency=low
+
+  * Pull upstream tag v7-3-429
+    + Updated sshconfig syntax file.  (Closes: #594296)
+    + 7.3.365: Fix crash when using a large Unicode character with syntax
+      highlighting.  (Closes: #657777)
+    + Updated java indent file handles indentation of annotations.  (Closes:
+      #519240)
+  * Add new education and introspection sections to debcontrol syntax file.
+    (Closes: #651381)
+  * Update vim-common's mime information to handle only having vim-tiny
+    installed.  (Closes: #654674)
+    + Add test -x /usr/bin/vim for the vim entries.
+    + Add lower-priority vi entries.
+  * Use new --enable-fail-if-missing flag to make configure fail if an
+    interpreter is enabled but configure test fails.
+  * Add bug script to show what binaries the vi/vim/gvim symlinks point to.
+  * Only use /u/s/dpkg/default.mk when available.
+    + Reduce versioned B-D on dpkg-dev
+    + Manually set relevant makefile variables if file isn't present
+  * Add alternate libncurses5-dev B-D to ease backporting.
+
+ -- James McCoy <jamessan@debian.org>  Sat, 04 Feb 2012 22:04:06 -0500
+
+vim (2:7.3.363-1) unstable; urgency=low
+
+  * Pull upstream tag v7-3-363
+    + 7.3.358: Fix mouse handling since urxvt support.  (Closes: #647055)
+  * Set vim-lesstif's section to oldlibs, as suggested by
+    transitional-package-should-be-oldlibs-extra.
+
+ -- James McCoy <jamessan@debian.org>  Wed, 30 Nov 2011 21:53:43 -0500
+
+vim (2:7.3.346-1) unstable; urgency=low
+
+  * Pull upstream tag v7-3-346
+    + 7.3.337: Redraw the screen after resizing the terminal.  (Closes:
+      #644668)
+    + 7.3.343: Add mouse support for urxvt.
+    + 7.3.344: Use read()/write() instead of fputs()/fread() to detect when
+      the child GUI process has started.  (Closes: #644639)
+  * Don't build vim-gnome on m68k, since the dependencies aren't available.
+  * Update Debian runtime files for Precise Pangolin.  (Closes: #644489)
+  * Use correct DEB_VERSION_* make variable for update-orig target.
+  * Also use CPPFLAGS and LDFLAGS from /u/s/dpkg/buildflags.mk
+  * Change libncurses5-dev B-D to libtinfo-dev.
+  * Remove patch de.po-lesen.patch, merged upstream.
+  * Set DEB_BUILD_MAINT_OPTIONS=hardening=-fortify so we don't override
+    upstream's handling.
+  * Bump Standards-Version to 3.9.2, no changes needed.
+
+ -- James McCoy <jamessan@debian.org>  Thu, 20 Oct 2011 22:17:16 -0400
+
+vim (2:7.3.333-1) unstable; urgency=low
+
+  * Pull upstream tag v7-3-333
+    + 7.3.318: Fix behavior of C on empty last line.  (Closes: #642432)
+    + 7.3.323: Recognize a few more patterns for GCC error messages.  (Closes:
+      #621693)
+    + 7.3.333: Handle multi-byte characters when using `.' to repeat a
+      command.  (Closes: #632542)
+  * debian/rules: Remove debian/lintian/vim in clean-vim-basic
+  * debian/rules: Include makefiles from dpkg-dev.
+    + Bump dpkg-dev versioned B-D >= 1.16.1
+
+ -- James Vega <jamessan@debian.org>  Tue, 04 Oct 2011 21:48:44 -0400
+
+vim (2:7.3.315-1) unstable; urgency=low
+
+  * Pull upstream tag v7-3-315.
+    + 7.3.295: When select() is interrupted loop and try again.  (Closes:
+      #627376)
+    + 7.3.300: Python doesn't parse multi-byte argument correctly. (Closes:
+      #638375)
+  * Recognize armhf as an architecture in debcontrol files.  (Closes: #638873)
+  * Fix typo in vim policy.  Thanks to Jakub Wilk for the patch.  (Closes:
+    #640042)
+  * Add GenericName field to desktop file. (Closes: #641037)
+  * Use versioned ruby binary name to ensure we're getting the correct build
+    flags.
+
+ -- James Vega <jamessan@debian.org>  Sun, 18 Sep 2011 22:17:17 -0400
+
+vim (2:7.3.280-1) unstable; urgency=low
+
+  * Pull upstream tag v7-3-280.
+    + Remove patches/crontab-syntax-case-ignore, merged upstream.
+    + Remove patches/debcontrol-syntax-multiarch, merged upstream
+    + Remove patches/dosini-syntax-hash, merged upstream
+    + 7.3.261: Parse GCC 4.5+ "In file included from" messages correctly when
+      using quickfix.  (Closes: #621693)
+  * debian/control:
+    + Add vim-lua Provides to packages which are built with lua bindings.
+    + Add Lua to long description for the packages which provide the bindings.
+  * Drop +hg~$hash from the version string now that upstream is tagging the
+    minor updates.
+  * Update Debian/Ubuntu codenames in debchangelog/debsources syntax files.
+    (Closes: #624686)
+  * Add support for architecture wildcards in debcontrol syntax file.  Thanks
+    to Jakub Wilk for the patch.  (Closes: #624805)
+  * Remove path and extension from Icon key in the desktop file.  Thanks to
+    Michael Bienia for the patch.  (Closes: #624688, LP: #740842)
+  * debian/watch: Change dversionmangle to just drop the patch version.
+  * Make the leading XC- optional for the Package-Type header in debcontrol
+    syntax file.  Thanks to Guillem Jover for the patch.  (Closes: #628763)
+  * Improve syntax highlighting for automake files.  Based on a patch by
+    Guillem Jover.  (Closes: #628759)
+
+ -- James Vega <jamessan@debian.org>  Mon, 15 Aug 2011 06:35:08 -0400
+
+vim (2:7.3.154+hg~74503f6ee649-2) unstable; urgency=low
+
+  * Remove upstream/Makefile-parallel.patch as many parallel invocations of
+    upstream's Makefile may result in multiple instances of cp trying to
+    exclusively open src/auto/config.mk.
+  * debian/rules: Add a src/auto/config.mk target which all configure-*
+    targets have as a pre-requisite.
+
+ -- James Vega <jamessan@debian.org>  Sun, 10 Apr 2011 17:43:21 -0400
+
+vim (2:7.3.154+hg~74503f6ee649-1) unstable; urgency=low
+
+  * Pull patches 036 - 154.  (Closes: #608390)
+    + 7.3.042: Clear the spell checking info only when clearing the options
+      for a buffer.  (Closes: #600688)
+    + 7.3.088: Fix a sporadic crash when using Ruby bindings.  (Closes:
+      #614336)
+    + 7.3.091: Don't write special K_IGNORE codes when recording a Vim
+      session.  (Closes: #608242)
+  * debian/watch: Adjust dversionmangle to handle the hg naming.
+  * Add upstream/es.po-recover.patch, which corrects the translation of the
+    swap file recovery prompt.  Thanks to Vicente Couce Díaz for the patch.
+    (Closes: #606947)
+  * debian/rules:
+    + Remove -Wl,--as-needed since upstream now uses that when available.
+    + Disable dynamic loading of language bindings until a more robust method
+      of handling their dependencies is determined.  (Closes: #611573)
+  * Remove vim-lesstif package in favor of the new vim-athena package.
+  * Add upstream/pythoncomplete-autoload-init.patch, which ensures PyParser's
+    parserline variable is initialized.  Thanks to John Eikenberry for the
+    patch.  (Closes: #608420)
+  * Bump debhelper compatibility to 7.
+    + Use dh_prep instead of dh_clean -k.
+    + Bump debhelper Build-Depends to >= 7.
+  * debian.vim: Remove BufRead autocmd which was incorrectly setting
+    filetype=mail for reportbug.conf.  Reportbug's temp files are always
+    reportbug-*.  (Closes: #621798)
+  * Add upstream/debcontrol-syntax-multiarch.patch, which adds syntax
+    highlighting of Multi-Arch fields in debian/control.  Thanks to Thomas
+    Preud'homme for the patch.  (Closes: #621098)
+  * debian/control:
+    + Remove python3-dev Build-Depends since python3interp can only be enabled
+      if dynamically loading the language binding libraries.
+    + Change ruby Build-Depends to ruby1.8 since the unversioned packages are
+      going away.
+  * Add upstream/Makefile-parallel.patch, which adds the "shadow" target to
+    the top-level Makefile so src/config.mk.dist is properly copied to
+    src/auto/config.mk before invoking src/Makefile.  This fixes parallel
+    builds since config.mk.dist was introduced.
+  + Update Lintian overrides for the consistent path names in 2.5.0.
+
+ -- James Vega <jamessan@debian.org>  Sat, 09 Apr 2011 19:18:27 -0400
+
+vim (2:7.3.035+hg~8fdc12103333-1) unstable; urgency=low
+
+  * Pull patches 001 - 035.
+    + More robust YAML highlighting.  (Closes: #535682)
+  * debian/rules:
+    + Stop overriding CFLAGS on the command-line when invoking make.  Upstream
+      enforces an upper-limit of 1 for _FORTIFY_SOURCE due to the use of
+      flexible arrays in nested structs, which improperly cause Vim to crash
+      with _FORTIFY_SOURCE=2.
+    + Use DEB_HOST_ARCH_OS instead of DEB_HOST_GNU_SYSTEM to determine whether
+      Linux-specific functionality is enabled.
+    + Use dpkg-vendor to change build configuration when building on Ubuntu.
+      Thanks to Michael Bienia for the patch.
+  * Make helpztags capable of generating tags files for non-English help
+    files.  (Closes: #600248)
+  * Debian runtime:
+    + Add natty as a recognized distribution.  (Closes: #600560)
+    + Add metapackages as a recognized section.  (Closes: #600562)
+    + Remove etch as a recognized distribution.
+  * debian/control: Add dpkg-dev (>= 1.15.1) Build-Depends for dpkg-vendor.
+
+ -- James Vega <jamessan@debian.org>  Mon, 25 Oct 2010 00:48:58 -0400
+
+vim (2:7.3.000+hg~ee53a39d5896-1) unstable; urgency=low
+
+  * New upstream release.
+  * debian/rules:
+    + Explicitly use the dynamic loading Python interfaces.
+    + Remove cleanup from clean target which are now properly handled by
+      upstream's Makefile.
+  * Update version information in documentation.
+
+ -- James Vega <jamessan@debian.org>  Sun, 15 Aug 2010 17:34:02 -0400
+
+vim (2:7.3f.20100812+hg~20e83abf88b1-1) experimental; urgency=low
+
+  * Merge latest 7.3f pre-release.
+    + Correctly restore multi-byte terminal titles when exiting Vim.  (Closes:
+      #558153)
+    + Highlight text inside math zones correctly for tex files.  (Closes:
+      #509908)
+    + Recognize nested cite regions in tex files.  (Closes: #444288)
+    + Support syntax highlighting of bash's $"".  (Closes: #473736)
+  * Patches merged upstream:
+    + perl-indent-block.patch
+    + logcheck-ftplugin.patch
+    + tex-syntax-verbatim-spell.patch
+  * Enable Lua scripting.
+    + Add liblua5.1-0-dev and lua5.1 to Build-Depends.
+    + Enable lua interface via dynamic loading.
+  * Switch Perl interface to dynamic loading.
+  * debian/rules: Prefer running tests with the vim-nox binary if it's
+    available.
+  * Bump Standards-Version to 3.9.1.0 -- no changes needed.
+
+ -- James Vega <jamessan@debian.org>  Thu, 12 Aug 2010 20:01:43 -0400
+
+vim (2:7.3b.20100720+hg~7b7508ee56f1-1) experimental; urgency=low
+
+  * Merge 7.3b pre-release.
+    + Don't run autocommands when being killed to avoid overrunning the stack.
+      (Closes: #580961)
+    + Detect when the recovered buffer matches the on-disk file and notify the
+      user.  (Closes: #89359)
+    + Update CMake runtime files.  (Closes: #463715)
+    + Correctly set timestamp for X selection transfers.  (Closes: #577035)
+    + Improve 'cindent's handling of javascript.  (Closes: #588875)
+    + Correctly displays characters inserted via digraph sequences which wrap
+      to a new line.  (Closes: #442184)
+  * Patches merged upstream:
+    + it-manpage-fixes.patch
+    + lang-breaks-floating-point.patch
+    + python-modlibs.patch:
+      - Remove autoconf Build-Depends as configure.in isn't being patched
+        anymore.
+      - Remove autoconf-stamp pre-requisite for configure-stamp-% target.
+  * Update debian/rules to handle the snapshot versioning.
+  * Enable Python3 language interface.
+    + Add python3-dev to Build-Depends.
+    + Pass --enable-python3interp to configure when building variants with
+      language interfaces enabled.
+
+ -- James Vega <jamessan@debian.org>  Wed, 21 Jul 2010 00:12:19 -0400
+
 vim (2:7.2.445+hg~cb94c42c0e1a-1) unstable; urgency=low
 
   * debian/control:

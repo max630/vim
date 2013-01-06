@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
 "/usr/share/sgml/docbook/dtd/xml/4.3/docbookx.dtd" [
-  <!ENTITY vim-version "7.1">
-  <!ENTITY vim-tag "vim71">
+  <!ENTITY vim-version "7.3">
+  <!ENTITY vim-tag "vim73">
   <!ENTITY vim-compat  "1">
   <!ENTITY vim-pkg "<application>vim</application>">
   <!ENTITY vim "<application>Vim</application>">
@@ -70,7 +70,7 @@
 	    <filename>debian/control</filename> and write into
 	    <filename>README.Debian</filename> something like: <blockquote>
 	      <para> Dear user, this package provides the vim addon
-		<replaceable>ADDON</replaceable>, but it is not enable per
+		<replaceable>ADDON</replaceable>, but it is not enabled per
 		default. If you want to enable it for your user account just
 		execute <userinput>vim-addons install
 		  <replaceable>ADDON</replaceable></userinput>. Similarly, to

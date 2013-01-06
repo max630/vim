@@ -30,6 +30,11 @@
 #	  is yes)
 #	Global IME support: GIME=yes (requires GUI=yes)
 #
+#	Lua interface:
+#	  LUA=[Path to Lua directory]
+#	  DYNAMIC_LUA=yes (to load the Lua DLL dynamically)
+#	  LUA_VER=[Lua version]  (default is 51)
+#
 #	MzScheme interface:
 #	  MZSCHEME=[Path to MzScheme directory]
 #	  DYNAMIC_MZSCHEME=yes (to load the MzScheme DLLs dynamically)
@@ -46,6 +51,11 @@
 #	  PYTHON=[Path to Python directory]
 #	  DYNAMIC_PYTHON=yes (to load the Python DLL dynamically)
 #	  PYTHON_VER=[Python version, eg 15, 20]  (default is 22)
+#
+#	Python3 interface:
+#	  PYTHON3=[Path to Python3 directory]
+#	  DYNAMIC_PYTHON3=yes (to load the Python3 DLL dynamically)
+#	  PYTHON3_VER=[Python3 version, eg 30, 31]  (default is 31)
 #
 #	Ruby interface:
 #	  RUBY=[Path to Ruby directory]
@@ -152,11 +162,17 @@ OBJDIR = .\ObjC
 !if "$(OLE)" == "yes"
 OBJDIR = $(OBJDIR)O
 !endif
+!ifdef LUA
+OBJDIR = $(OBJDIR)U
+!endif
 !ifdef PERL
 OBJDIR = $(OBJDIR)L
 !endif
 !ifdef PYTHON
 OBJDIR = $(OBJDIR)Y
+!endif
+!ifdef PYTHON3
+OBJDIR = $(OBJDIR)H
 !endif
 !ifdef TCL
 OBJDIR = $(OBJDIR)T
@@ -208,11 +224,8 @@ MAKEFLAGS_GVIMEXT = DEBUG=yes
 
 !include <Win32.mak>
 
-# Turn on Win64 compatibility warnings for VC7.x and VC8.
-# (/Wp64 is deprecated in VC9 and generates an obnoxious warning.)
-!if ("$(MSVCVER)" == "7.0") || ("$(MSVCVER)" == "7.1") || ("$(MSVCVER)" == "8.0") 
-DEFINES=$(DEFINES) /Wp64
-!endif
+# Flag to turn on Win64 compatibility warnings for VC7.x and VC8.
+WP64CHECK = /Wp64
 
 #>>>>> path of the compiler and linker; name of include and lib directories
 # PATH = c:\msvc20\bin;$(PATH)
@@ -364,6 +377,9 @@ MSVCVER = 10.0
 !if "$(_NMAKE_VER)" == "10.00.30128.01"
 MSVCVER = 10.0
 !endif
+!if "$(_NMAKE_VER)" == "10.00.30319.01"
+MSVCVER = 10.0
+!endif
 !endif
 
 # Abort bulding VIM if version of VC is unrecognised.
@@ -393,8 +409,8 @@ CPUARG = /G7 /arch:SSE2
 CPUARG =
 !endif
 !else
-# VC8/9 only allows specifying SSE architecture
-!if "$(CPUNR)" == "pentium4"
+# VC8/9/10 only allows specifying SSE architecture but only for 32bit
+!if "$(ASSEMBLY_ARCHITECTURE)" == "x86" && "$(CPUNR)" == "pentium4"
 CPUARG = /arch:SSE2
 !endif
 !endif
@@ -411,12 +427,19 @@ OPTFLAG = /O2
 !else # MAXSPEED
 OPTFLAG = /Ox
 !endif
+
 !if ("$(MSVCVER)" == "8.0") || ("$(MSVCVER)" == "9.0") || ("$(MSVCVER)" == "10.0")
 # Use link time code generation if not worried about size
 !if "$(OPTIMIZE)" != "SPACE"
 OPTFLAG = $(OPTFLAG) /GL
 !endif
 !endif
+
+# (/Wp64 is deprecated in VC9 and generates an obnoxious warning.)
+!if ("$(MSVCVER)" == "7.0") || ("$(MSVCVER)" == "7.1") || ("$(MSVCVER)" == "8.0") 
+CFLAGS=$(CFLAGS) $(WP64CHECK)
+!endif
+
 CFLAGS = $(CFLAGS) $(OPTFLAG) -DNDEBUG $(CPUARG)
 RCFLAGS = $(rcflags) $(rcvars) -DNDEBUG
 ! ifdef USE_MSVCRT
@@ -453,6 +476,7 @@ INCL =	vim.h os_win32.h ascii.h feature.h globals.h keymap.h macros.h \
 	$(NBDEBUG_INCL)
 
 OBJ = \
+	$(OUTDIR)\blowfish.obj \
 	$(OUTDIR)\buffer.obj \
 	$(OUTDIR)\charset.obj \
 	$(OUTDIR)\diff.obj \
@@ -490,6 +514,7 @@ OBJ = \
 	$(OUTDIR)\regexp.obj \
 	$(OUTDIR)\screen.obj \
 	$(OUTDIR)\search.obj \
+	$(OUTDIR)\sha256.obj \
 	$(OUTDIR)\spell.obj \
 	$(OUTDIR)\syntax.obj \
 	$(OUTDIR)\tag.obj \
@@ -591,12 +616,40 @@ CFLAGS  = $(CFLAGS) -DFEAT_TCL -DDYNAMIC_TCL -DDYNAMIC_TCL_DLL=\"$(TCL_DLL)\" \
 		-DDYNAMIC_TCL_VER=\"$(TCL_VER_LONG)\"
 TCL_OBJ	= $(OUTDIR)\if_tcl.obj
 TCL_INC	= /I "$(TCL)\Include" /I "$(TCL)"
-TCL_LIB = $(TCL)\lib\tclstub$(TCL_VER).lib
+TCL_LIB = "$(TCL)\lib\tclstub$(TCL_VER).lib"
 !else
 CFLAGS  = $(CFLAGS) -DFEAT_TCL
 TCL_OBJ	= $(OUTDIR)\if_tcl.obj
 TCL_INC	= /I "$(TCL)\Include" /I "$(TCL)"
 TCL_LIB = $(TCL)\lib\tcl$(TCL_VER)vc.lib
+!endif
+!endif
+
+# Lua interface
+!ifdef LUA
+!ifndef LUA_VER
+LUA_VER = 51
+!endif
+!message Lua requested (version $(LUA_VER)) - root dir is "$(LUA)"
+!if "$(DYNAMIC_LUA)" == "yes"
+!message Lua DLL will be loaded dynamically
+!endif
+CFLAGS = $(CFLAGS) -DFEAT_LUA
+LUA_OBJ = $(OUTDIR)\if_lua.obj
+LUA_INC = /I "$(LUA)\include" /I "$(LUA)"
+!if "$(DYNAMIC_LUA)" == "yes"
+CFLAGS = $(CFLAGS) -DDYNAMIC_LUA \
+		-DDYNAMIC_LUA_DLL=\"lua$(LUA_VER).dll\"
+LUA_LIB = /nodefaultlib:lua$(LUA_VER).lib
+!else
+LUA_LIB = "$(LUA)\lib\lua$(LUA_VER).lib"
+!endif
+!endif
+
+!ifdef PYTHON
+!ifdef PYTHON3
+DYNAMIC_PYTHON=yes
+DYNAMIC_PYTHON3=yes
 !endif
 !endif
 
@@ -621,6 +674,27 @@ PYTHON_LIB = $(PYTHON)\libs\python$(PYTHON_VER).lib
 !endif
 !endif
 
+# PYTHON3 interface
+!ifdef PYTHON3
+!ifndef PYTHON3_VER
+PYTHON3_VER = 31
+!endif
+!message Python3 requested (version $(PYTHON3_VER)) - root dir is "$(PYTHON3)"
+!if "$(DYNAMIC_PYTHON3)" == "yes"
+!message Python3 DLL will be loaded dynamically
+!endif
+CFLAGS = $(CFLAGS) -DFEAT_PYTHON3
+PYTHON3_OBJ = $(OUTDIR)\if_python3.obj
+PYTHON3_INC = /I "$(PYTHON3)\Include" /I "$(PYTHON3)\PC"
+!if "$(DYNAMIC_PYTHON3)" == "yes"
+CFLAGS = $(CFLAGS) -DDYNAMIC_PYTHON3 \
+		-DDYNAMIC_PYTHON3_DLL=\"python$(PYTHON3_VER).dll\"
+PYTHON3_LIB = /nodefaultlib:python$(PYTHON3_VER).lib
+!else
+PYTHON3_LIB = $(PYTHON3)\libs\python$(PYTHON3_VER).lib
+!endif
+!endif
+
 # MzScheme interface
 !ifdef MZSCHEME
 !message MzScheme requested - root dir is "$(MZSCHEME)"
@@ -628,12 +702,18 @@ PYTHON_LIB = $(PYTHON)\libs\python$(PYTHON_VER).lib
 MZSCHEME_VER = 205_000
 !endif
 CFLAGS = $(CFLAGS) -DFEAT_MZSCHEME -I $(MZSCHEME)\include
-!if EXIST("$(MZSCHEME)\collects\scheme\base.ss")
-# for MzScheme 4.x we need to include byte code for basic Scheme stuff
+!if EXIST("$(MZSCHEME)\collects\scheme\base.ss") \
+	|| EXIST("$(MZSCHEME)\collects\scheme\base.rkt") 
+# for MzScheme >= 4 we need to include byte code for basic Scheme stuff
 MZSCHEME_EXTRA_DEP = mzscheme_base.c
 CFLAGS = $(CFLAGS) -DINCLUDE_MZSCHEME_BASE
 !endif
-!if EXIST("$(MZSCHEME)\lib\msvc\libmzsch$(MZSCHEME_VER).lib") \
+!if EXIST("$(MZSCHEME)\lib\msvc\libmzsch$(MZSCHEME_VER).lib")
+MZSCHEME_MAIN_LIB=mzsch
+!else
+MZSCHEME_MAIN_LIB=racket
+!endif
+!if EXIST("$(MZSCHEME)\lib\msvc\lib$(MZSCHEME_MAIN_LIB)$(MZSCHEME_VER).lib") \
 	&& !EXIST("$(MZSCHEME)\lib\msvc\libmzgc$(MZSCHEME_VER).lib")
 !message Building with Precise GC
 MZSCHEME_PRECISE_GC = yes
@@ -645,7 +725,7 @@ CFLAGS = $(CFLAGS) -DMZ_PRECISE_GC
 !endif
 !message MzScheme DLLs will be loaded dynamically
 CFLAGS = $(CFLAGS) -DDYNAMIC_MZSCHEME \
-		-DDYNAMIC_MZSCH_DLL=\"libmzsch$(MZSCHEME_VER).dll\" \
+		-DDYNAMIC_MZSCH_DLL=\"lib$(MZSCHEME_MAIN_LIB)$(MZSCHEME_VER).dll\" \
 		-DDYNAMIC_MZGC_DLL=\"libmzgc$(MZSCHEME_VER).dll\"
 !else
 !if "$(MZSCHEME_DEBUG)" == "yes"
@@ -653,13 +733,15 @@ CFLAGS = $(CFLAGS) -DMZSCHEME_FORCE_GC
 !endif
 !if "$(MZSCHEME_PRECISE_GC)" == "yes"
 # Precise GC does not use separate dll
-MZSCHEME_LIB = $(MZSCHEME)\lib\msvc\libmzsch$(MZSCHEME_VER).lib
+MZSCHEME_LIB = $(MZSCHEME)\lib\msvc\lib$(MZSCHEME_MAIN_LIB)$(MZSCHEME_VER).lib
 !else
 MZSCHEME_LIB = $(MZSCHEME)\lib\msvc\libmzgc$(MZSCHEME_VER).lib \
-		$(MZSCHEME)\lib\msvc\libmzsch$(MZSCHEME_VER).lib
+		$(MZSCHEME)\lib\msvc\lib$(MZSCHEME_MAIN_LIB)$(MZSCHEME_VER).lib
 !endif
 !endif
 MZSCHEME_OBJ = $(OUTDIR)\if_mzsch.obj
+# increase stack size
+MZSCHEME_LIB = $(MZSCHEME_LIB) /STACK:8388608
 !endif
 
 # Perl interface
@@ -705,6 +787,11 @@ PERL_EXE = $(PERL)\Bin$(PERL_ARCH)\perl
 PERL_INC = /I $(PERL_INCDIR)
 PERL_OBJ = $(OUTDIR)\if_perl.obj $(OUTDIR)\if_perlsfio.obj
 XSUBPP = $(PERL)\lib\ExtUtils\xsubpp
+!if exist($(XSUBPP))
+XSUBPP = $(PERL_EXE) $(XSUBPP)
+!else
+XSUBPP = xsubpp
+!endif
 XSUBPP_TYPEMAP = $(PERL)\lib\ExtUtils\typemap
 
 !endif
@@ -740,7 +827,11 @@ RUBY_INSTALL_NAME = mswin32-ruby$(RUBY_VER)
 !message Ruby requested (version $(RUBY_VER)) - root dir is "$(RUBY)"
 CFLAGS = $(CFLAGS) -DFEAT_RUBY
 RUBY_OBJ = $(OUTDIR)\if_ruby.obj
+!if $(RUBY_VER) >= 190
+RUBY_INC = /I "$(RUBY)\include\ruby-$(RUBY_VER_LONG)\$(RUBY_PLATFORM)" /I "$(RUBY)\include\ruby-$(RUBY_VER_LONG)"
+!else
 RUBY_INC = /I "$(RUBY)\lib\ruby\$(RUBY_VER_LONG)\$(RUBY_PLATFORM)"
+!endif
 RUBY_LIB = $(RUBY)\lib\$(RUBY_INSTALL_NAME).lib
 # Do we want to load Ruby dynamically?
 !if "$(DYNAMIC_RUBY)" == "yes"
@@ -794,7 +885,7 @@ conflags = $(conflags) /map /mapinfo:lines
 
 LINKARGS1 = $(linkdebug) $(conflags)
 LINKARGS2 = $(CON_LIB) $(GUI_LIB) $(LIBC) $(OLE_LIB)  user32.lib $(SNIFF_LIB) \
-		$(MZSCHEME_LIB) $(PERL_LIB) $(PYTHON_LIB) $(RUBY_LIB) \
+		$(LUA_LIB) $(MZSCHEME_LIB) $(PERL_LIB) $(PYTHON_LIB) $(PYTHON3_LIB) $(RUBY_LIB) \
 		$(TCL_LIB) $(NETBEANS_LIB) $(XPM_LIB) $(LINK_PDB)
 
 # Report link time code generation progress if used. 
@@ -810,11 +901,12 @@ all:	$(VIM).exe vimrun.exe install.exe uninstal.exe xxd/xxd.exe \
 		GvimExt/gvimext.dll
 
 $(VIM).exe: $(OUTDIR) $(OBJ) $(GUI_OBJ) $(OLE_OBJ) $(OLE_IDL) $(MZSCHEME_OBJ) \
-		$(PERL_OBJ) $(PYTHON_OBJ) $(RUBY_OBJ) $(TCL_OBJ) $(SNIFF_OBJ) \
-		$(CSCOPE_OBJ) $(NETBEANS_OBJ) $(XPM_OBJ) version.c version.h
+		$(LUA_OBJ) $(PERL_OBJ) $(PYTHON_OBJ) $(PYTHON3_OBJ) $(RUBY_OBJ) $(TCL_OBJ) \
+		$(SNIFF_OBJ) $(CSCOPE_OBJ) $(NETBEANS_OBJ) $(XPM_OBJ) \
+		version.c version.h
 	$(CC) $(CFLAGS) version.c
 	$(link) $(LINKARGS1) -out:$(VIM).exe $(OBJ) $(GUI_OBJ) $(OLE_OBJ) \
-		$(MZSCHEME_OBJ) $(PERL_OBJ) $(PYTHON_OBJ) $(RUBY_OBJ) \
+		$(LUA_OBJ) $(MZSCHEME_OBJ) $(PERL_OBJ) $(PYTHON_OBJ) $(PYTHON3_OBJ) $(RUBY_OBJ) \
 		$(TCL_OBJ) $(SNIFF_OBJ) $(CSCOPE_OBJ) $(NETBEANS_OBJ) \
 		$(XPM_OBJ) $(OUTDIR)\version.obj $(LINKARGS2)
 
@@ -825,7 +917,7 @@ $(OUTDIR):
 
 install.exe: dosinst.c
 	$(CC) /nologo -DNDEBUG -DWIN32 dosinst.c kernel32.lib shell32.lib \
-		ole32.lib advapi32.lib uuid.lib
+		user32.lib ole32.lib advapi32.lib uuid.lib
 	- if exist install.exe del install.exe
 	ren dosinst.exe install.exe
 
@@ -910,6 +1002,8 @@ testclean:
 !ENDIF
 	$(CC) $(CFLAGS) $<
 
+$(OUTDIR)/blowfish.obj:	$(OUTDIR) blowfish.c  $(INCL)
+
 $(OUTDIR)/buffer.obj:	$(OUTDIR) buffer.c  $(INCL)
 
 $(OUTDIR)/charset.obj:	$(OUTDIR) charset.c  $(INCL)
@@ -950,8 +1044,11 @@ $(OUTDIR)/gui_w32.obj:	$(OUTDIR) gui_w32.c gui_w48.c $(INCL) $(GUI_INCL)
 
 $(OUTDIR)/if_cscope.obj: $(OUTDIR) if_cscope.c  $(INCL)
 
+$(OUTDIR)/if_lua.obj: $(OUTDIR) if_lua.c  $(INCL)
+	$(CC) $(CFLAGS) $(LUA_INC) if_lua.c
+
 if_perl.c : if_perl.xs typemap
-	$(PERL_EXE) $(XSUBPP) -prototypes -typemap $(XSUBPP_TYPEMAP) \
+	$(XSUBPP) -prototypes -typemap $(XSUBPP_TYPEMAP) \
 		-typemap typemap if_perl.xs > if_perl.c
 
 $(OUTDIR)/if_perl.obj: $(OUTDIR) if_perl.c  $(INCL)
@@ -968,6 +1065,9 @@ mzscheme_base.c:
 
 $(OUTDIR)/if_python.obj: $(OUTDIR) if_python.c  $(INCL)
 	$(CC) $(CFLAGS) $(PYTHON_INC) if_python.c
+
+$(OUTDIR)/if_python3.obj: $(OUTDIR) if_python3.c  $(INCL)
+	$(CC) $(CFLAGS) $(PYTHON3_INC) if_python3.c
 
 $(OUTDIR)/if_ole.obj: $(OUTDIR) if_ole.cpp  $(INCL) if_ole.h
 
@@ -1027,6 +1127,8 @@ $(OUTDIR)/screen.obj:	$(OUTDIR) screen.c  $(INCL)
 
 $(OUTDIR)/search.obj:	$(OUTDIR) search.c  $(INCL)
 
+$(OUTDIR)/sha256.obj:	$(OUTDIR) sha256.c  $(INCL)
+
 $(OUTDIR)/spell.obj:	$(OUTDIR) spell.c  $(INCL)
 
 $(OUTDIR)/syntax.obj:	$(OUTDIR) syntax.c  $(INCL)
@@ -1044,8 +1146,9 @@ $(OUTDIR)/window.obj:	$(OUTDIR) window.c  $(INCL)
 $(OUTDIR)/xpm_w32.obj: $(OUTDIR) xpm_w32.c
 	$(CC) $(CFLAGS) $(XPM_INC) xpm_w32.c
 
-$(OUTDIR)/vim.res:	$(OUTDIR) vim.rc gvim.exe.mnf version.h tools.bmp tearoff.bmp \
-		vim.ico vim_error.ico vim_alert.ico vim_info.ico vim_quest.ico
+$(OUTDIR)/vim.res:	$(OUTDIR) vim.rc gvim.exe.mnf version.h tools.bmp \
+				tearoff.bmp vim.ico vim_error.ico \
+				vim_alert.ico vim_info.ico vim_quest.ico
 	$(RC) /l 0x409 /Fo$(OUTDIR)/vim.res $(RCFLAGS) vim.rc
 
 iid_ole.c if_ole.h vim.tlb: if_ole.idl
@@ -1063,6 +1166,10 @@ $(OUTDIR)/glbl_ime.obj:	$(OUTDIR) glbl_ime.cpp  dimm.h $(INCL)
 E0_CFLAGS = $(CFLAGS:\=\\)
 E_CFLAGS = $(E0_CFLAGS:"=\")
 # ") stop the string
+# $LINKARGS2 may contain backslashes and double quotes, escape them both.
+E0_LINKARGS2 = $(LINKARGS2:\=\\)
+E_LINKARGS2 = $(E0_LINKARGS2:"=\")
+# ") stop the string
 
 $(PATHDEF_SRC): auto
 	@echo creating $(PATHDEF_SRC)
@@ -1071,7 +1178,7 @@ $(PATHDEF_SRC): auto
 	@echo char_u *default_vim_dir = (char_u *)"$(VIMRCLOC:\=\\)"; >> $(PATHDEF_SRC)
 	@echo char_u *default_vimruntime_dir = (char_u *)"$(VIMRUNTIMEDIR:\=\\)"; >> $(PATHDEF_SRC)
 	@echo char_u *all_cflags = (char_u *)"$(CC:\=\\) $(E_CFLAGS)"; >> $(PATHDEF_SRC)
-	@echo char_u *all_lflags = (char_u *)"$(link:\=\\) $(LINKARGS1:\=\\) $(LINKARGS2:\=\\)"; >> $(PATHDEF_SRC)
+	@echo char_u *all_lflags = (char_u *)"$(link:\=\\) $(LINKARGS1:\=\\) $(E_LINKARGS2)"; >> $(PATHDEF_SRC)
 	@echo char_u *compiled_user = (char_u *)"$(USERNAME)"; >> $(PATHDEF_SRC)
 	@echo char_u *compiled_sys = (char_u *)"$(USERDOMAIN)"; >> $(PATHDEF_SRC)
 
@@ -1080,6 +1187,7 @@ auto:
 
 # End Custom Build
 proto.h: \
+	proto/blowfish.pro \
 	proto/buffer.pro \
 	proto/charset.pro \
 	proto/diff.pro \
@@ -1115,6 +1223,7 @@ proto.h: \
 	proto/regexp.pro \
 	proto/screen.pro \
 	proto/search.pro \
+	proto/sha256.pro \
 	proto/spell.pro \
 	proto/syntax.pro \
 	proto/tag.pro \

@@ -14,9 +14,11 @@
 # it's just run out of memory or something.  Run again, and it will continue
 # with 'xxd'.
 #
-# "make upx" makes *compressed* versions of the GUI and console EXEs, using the
-# excellent UPX compressor:
+# "make upx" makes *compressed* versions of the 32 bit GUI and console EXEs,
+# using the excellent UPX compressor:
 #     http://upx.sourceforge.net/
+# "make mpress" uses the MPRESS compressor for 32- and 64-bit EXEs:
+#     http://www.matcode.com/mpress.htm
 #
 # Maintained by Ron Aaron <ronaharon@yahoo.com>
 # updated 2003 Jan 20
@@ -49,12 +51,20 @@ POSTSCRIPT=no
 # set to yes to enable OLE support
 OLE=no
 # Set the default $(WINVER) to make it work with pre-Win2k
+ifndef WINVER
 WINVER = 0x0400
+endif
 # Set to yes to enable Cscope support
 CSCOPE=yes
 # Set to yes to enable Netbeans support
 NETBEANS=$(GUI)
 
+
+# Link against the shared version of libstdc++ by default.  Set
+# STATIC_STDCPLUS to "yes" to link against static version instead.
+ifndef STATIC_STDCPLUS
+STATIC_STDCPLUS=no
+endif
 
 # If the user doesn't want gettext, undefine it.
 ifeq (no, $(GETTEXT))
@@ -81,7 +91,7 @@ INTLLIB=gnu_gettext
 
 # If you are using gettext-0.10.35 from http://sourceforge.net/projects/gettext
 # or gettext-0.10.37 from http://sourceforge.net/projects/mingwrep/
-# uncomment the following, but I can't build a static versión with them, ?-(|
+# uncomment the following, but I can't build a static version with them, ?-(|
 #GETTEXT=c:/gettext-0.10.37-20010430
 #STATIC_GETTEXT=USE_STATIC_GETTEXT
 #DYNAMIC_GETTEXT=DYNAMIC_GETTEXT
@@ -102,6 +112,30 @@ endif
 # on NT, it's here:
 PERLLIB=$(PERL)/lib
 PERLLIBS=$(PERLLIB)/Core
+XSUBPPTRY=$(PERLLIB)/ExtUtils/xsubpp
+XSUBPP_EXISTS=$(shell perl -e "print 1 unless -e '$(XSUBPPTRY)'")
+ifeq "$(XSUBPP_EXISTS)" ""
+XSUBPP=perl $(XSUBPPTRY)
+else
+XSUBPP=xsubpp
+endif
+endif
+
+# uncomment 'LUA' if you want a Lua-enabled version
+#LUA=/usr/local
+ifdef LUA
+ifndef DYNAMIC_LUA
+DYNAMIC_LUA=yes
+endif
+
+ifndef LUA_VER
+LUA_VER=51
+endif
+
+ifeq (no,$(DYNAMIC_LUA))
+LUA_LIB = -L$(LUA)/lib -llua
+endif
+
 endif
 
 # uncomment 'MZSCHEME' if you want a MzScheme-enabled version
@@ -124,11 +158,17 @@ ifndef MZSCHEME_GENERATE_BASE
 MZSCHEME_GENERATE_BASE=no
 endif
 
+ifndef MZSCHEME_USE_RACKET
+MZSCHEME_MAIN_LIB=mzsch
+else
+MZSCHEME_MAIN_LIB=racket
+endif
+
 ifeq (no,$(DYNAMIC_MZSCHEME))
 ifeq (yes,$(MZSCHEME_PRECISE_GC))
-MZSCHEME_LIB=-lmzsch$(MZSCHEME_VER)
+MZSCHEME_LIB=-l$(MZSCHEME_MAIN_LIB)$(MZSCHEME_VER)
 else
-MZSCHEME_LIB = -lmzsch$(MZSCHEME_VER) -lmzgc$(MZSCHEME_VER)
+MZSCHEME_LIB = -l$(MZSCHEME_MAIN_LIB)$(MZSCHEME_VER) -lmzgc$(MZSCHEME_VER)
 endif
 # the modern MinGW can dynamically link to dlls directly.
 # point MZSCHEME_DLLS to where you put libmzschXXXXXXX.dll and libgcXXXXXXX.dll
@@ -174,6 +214,28 @@ ifeq ($(CROSS),no)
 PYTHONINC=-I $(PYTHON)/include
 else
 PYTHONINC=-I $(PYTHON)/win32inc
+endif
+endif
+
+#PYTHON3: See comment for Python 2 above
+
+ifdef PYTHON3
+ifndef DYNAMIC_PYTHON3
+DYNAMIC_PYTHON3=yes
+endif
+
+ifndef PYTHON3_VER
+PYTHON3_VER=31
+endif
+
+ifeq (no,$(DYNAMIC_PYTHON3))
+PYTHON3LIB=-L$(PYTHON3)/libs -lPYTHON$(PYTHON3_VER)
+endif
+
+ifeq ($(CROSS),no)
+PYTHON3INC=-I $(PYTHON3)/include
+else
+PYTHON3INC=-I $(PYTHON3)/win32inc
 endif
 endif
 
@@ -265,11 +327,13 @@ endif
 endif
 CC := $(CROSS_COMPILE)gcc
 WINDRES := $(CROSS_COMPILE)windres
+WINDRES_CC = $(CC)
 
 #>>>>> end of choices
 ###########################################################################
 
 CFLAGS = -Iproto $(DEFINES) -pipe -w -march=$(ARCH) -Wall
+WINDRES_FLAGS = --preprocessor="$(WINDRES_CC) -E -xc" -DRC_INVOKED
 
 ifdef GETTEXT
 DEFINES += -DHAVE_GETTEXT -DHAVE_LOCALE_H
@@ -294,10 +358,17 @@ CFLAGS += -DDYNAMIC_PERL -DDYNAMIC_PERL_DLL=\"perl$(PERL_VER).dll\"
 endif
 endif
 
+ifdef LUA
+CFLAGS += -I$(LUA)/include -DFEAT_LUA
+ifeq (yes, $(DYNAMIC_LUA))
+CFLAGS += -DDYNAMIC_LUA -DDYNAMIC_LUA_DLL=\"lua$(LUA_VER).dll\"
+endif
+endif
+
 ifdef MZSCHEME
 CFLAGS += -I$(MZSCHEME)/include -DFEAT_MZSCHEME -DMZSCHEME_COLLECTS=\"$(MZSCHEME)/collects\"
 ifeq (yes, $(DYNAMIC_MZSCHEME))
-CFLAGS += -DDYNAMIC_MZSCHEME -DDYNAMIC_MZSCH_DLL=\"libmzsch$(MZSCHEME_VER).dll\" -DDYNAMIC_MZGC_DLL=\"libmzgc$(MZSCHEME_VER).dll\"
+CFLAGS += -DDYNAMIC_MZSCHEME -DDYNAMIC_MZSCH_DLL=\"lib$(MZSCHEME_MAIN_LIB)$(MZSCHEME_VER).dll\" -DDYNAMIC_MZGC_DLL=\"libmzgc$(MZSCHEME_VER).dll\"
 endif
 endif
 
@@ -310,9 +381,16 @@ endif
 endif
 
 ifdef PYTHON
-CFLAGS += -DFEAT_PYTHON $(PYTHONINC)
+CFLAGS += -DFEAT_PYTHON 
 ifeq (yes, $(DYNAMIC_PYTHON))
-CFLAGS += -DDYNAMIC_PYTHON -DDYNAMIC_PYTHON_DLL=\"python$(PYTHON_VER).dll\"
+CFLAGS += -DDYNAMIC_PYTHON
+endif
+endif
+
+ifdef PYTHON3 
+CFLAGS += -DFEAT_PYTHON3 
+ifeq (yes, $(DYNAMIC_PYTHON3))
+CFLAGS += -DDYNAMIC_PYTHON3 
 endif
 endif
 
@@ -375,6 +453,7 @@ endif
 LIB = -lkernel32 -luser32 -lgdi32 -ladvapi32 -lcomdlg32 -lcomctl32 -lversion
 GUIOBJ =  $(OUTDIR)/gui.o $(OUTDIR)/gui_w32.o $(OUTDIR)/gui_beval.o $(OUTDIR)/os_w32exe.o
 OBJ = \
+	$(OUTDIR)/blowfish.o \
 	$(OUTDIR)/buffer.o \
 	$(OUTDIR)/charset.o \
 	$(OUTDIR)/diff.o \
@@ -412,6 +491,7 @@ OBJ = \
 	$(OUTDIR)/regexp.o \
 	$(OUTDIR)/screen.o \
 	$(OUTDIR)/search.o \
+	$(OUTDIR)/sha256.o \
 	$(OUTDIR)/spell.o \
 	$(OUTDIR)/syntax.o \
 	$(OUTDIR)/tag.o \
@@ -424,6 +504,9 @@ OBJ = \
 
 ifdef PERL
 OBJ += $(OUTDIR)/if_perl.o
+endif
+ifdef LUA
+OBJ += $(OUTDIR)/if_lua.o
 endif
 ifdef MZSCHEME
 OBJ += $(OUTDIR)/if_mzsch.o
@@ -438,6 +521,9 @@ endif
 endif
 ifdef PYTHON
 OBJ += $(OUTDIR)/if_python.o
+endif
+ifdef PYTHON3
+OBJ += $(OUTDIR)/if_python3.o
 endif
 ifdef RUBY
 OBJ += $(OUTDIR)/if_ruby.o
@@ -510,8 +596,13 @@ endif
 endif
 
 ifeq (yes, $(OLE))
-LIB += -loleaut32 -lstdc++
+LIB += -loleaut32
 OBJ += $(OUTDIR)/if_ole.o
+ifeq (yes, $(STATIC_STDCPLUS))
+LIB += -Wl,-Bstatic -lstdc++ -Wl,-Bdynamic
+else
+LIB += -lstdc++
+endif
 endif
 
 ifeq (yes, $(MBYTE))
@@ -547,14 +638,18 @@ uninstal.exe: uninstal.c
 	$(CC) $(CFLAGS) -o uninstal.exe uninstal.c $(LIB)
 
 $(TARGET): $(OUTDIR) $(OBJ)
-	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $(OBJ) $(LIB) -lole32 -luuid $(MZSCHEME_LIBDIR) $(MZSCHEME_LIB) $(PYTHONLIB) $(RUBYLIB)
+	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $(OBJ) $(LIB) -lole32 -luuid $(LUA_LIB) $(MZSCHEME_LIBDIR) $(MZSCHEME_LIB) $(PYTHONLIB) $(PYTHON3LIB) $(RUBYLIB)
 
 upx: exes
 	upx gvim.exe
 	upx vim.exe
 
+mpress: exes
+	mpress gvim.exe
+	mpress vim.exe
+
 xxd/xxd.exe: xxd/xxd.c
-	$(MAKE) -C xxd -f Make_cyg.mak CC=$(CC)
+	$(MAKE) -C xxd -f Make_ming.mak CC=$(CC)
 
 GvimExt/gvimext.dll: GvimExt/gvimext.cpp GvimExt/gvimext.rc GvimExt/gvimext.h
 	$(MAKE) -C GvimExt -f Make_ming.mak CROSS=$(CROSS) CROSS_COMPILE=$(CROSS_COMPILE)
@@ -572,21 +667,25 @@ ifdef MZSCHEME
 	-$(DEL) mzscheme_base.c
 endif
 	$(MAKE) -C GvimExt -f Make_ming.mak clean
-	$(MAKE) -C xxd -f Make_cyg.mak clean
+	$(MAKE) -C xxd -f Make_ming.mak clean
 
 ###########################################################################
 INCL = vim.h feature.h os_win32.h os_dos.h ascii.h keymap.h term.h macros.h \
 	structs.h regexp.h option.h ex_cmds.h proto.h globals.h farsi.h \
 	gui.h
 
+$(OUTDIR)/if_python.o : if_python.c $(INCL)
+	$(CC) -c $(CFLAGS) $(PYTHONINC) -DDYNAMIC_PYTHON_DLL=\"python$(PYTHON_VER).dll\" $< -o $@
+
+$(OUTDIR)/if_python3.o : if_python3.c $(INCL)
+	$(CC) -c $(CFLAGS) $(PYTHON3INC) -DDYNAMIC_PYTHON3_DLL=\"PYTHON$(PYTHON3_VER).dll\" $< -o $@
+
 $(OUTDIR)/%.o : %.c $(INCL)
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(OUTDIR)/vimres.res: vim.rc version.h gui_w32_rc.h
-	$(WINDRES) $(DEFINES) vim.rc $(OUTDIR)/vimres.res
-
-$(OUTDIR)/vimrc.o: $(OUTDIR)/vimres.res
-	$(WINDRES) $(OUTDIR)/vimres.res $(OUTDIR)/vimrc.o
+$(OUTDIR)/vimrc.o: vim.rc version.h gui_w32_rc.h
+	$(WINDRES) $(WINDRES_FLAGS) $(DEFINES) \
+	    --input-format=rc --output-format=coff -i vim.rc -o $@
 
 $(OUTDIR):
 	$(MKDIR) $(OUTDIR)
@@ -610,7 +709,7 @@ ifeq (16, $(RUBY))
 endif
 
 if_perl.c: if_perl.xs typemap
-	perl $(PERLLIB)/ExtUtils/xsubpp -prototypes -typemap \
+	$(XSUBPP) -prototypes -typemap \
 	     $(PERLLIB)/ExtUtils/typemap if_perl.xs > $@
 
 $(OUTDIR)/netbeans.o:	netbeans.c $(INCL) $(NBDEBUG_INCL) $(NBDEBUG_SRC)
@@ -630,7 +729,7 @@ ifneq (sh.exe, $(SHELL))
 	@echo 'char_u *default_vim_dir = (char_u *)"$(VIMRCLOC)";' >> pathdef.c
 	@echo 'char_u *default_vimruntime_dir = (char_u *)"$(VIMRUNTIMEDIR)";' >> pathdef.c
 	@echo 'char_u *all_cflags = (char_u *)"$(CC) $(CFLAGS)";' >> pathdef.c
-	@echo 'char_u *all_lflags = (char_u *)"$(CC) $(CFLAGS) $(LFLAGS) -o $(TARGET) $(LIB) -lole32 -luuid $(MZSCHEME_LIBDIR) $(MZSCHEME_LIB) $(PYTHONLIB) $(RUBYLIB)";' >> pathdef.c
+	@echo 'char_u *all_lflags = (char_u *)"$(CC) $(CFLAGS) $(LFLAGS) -o $(TARGET) $(LIB) -lole32 -luuid $(LUA_LIB) $(MZSCHEME_LIBDIR) $(MZSCHEME_LIB) $(PYTHONLIB) $(PYTHON3LIB) $(RUBYLIB)";' >> pathdef.c
 	@echo 'char_u *compiled_user = (char_u *)"$(USERNAME)";' >> pathdef.c
 	@echo 'char_u *compiled_sys = (char_u *)"$(USERDOMAIN)";' >> pathdef.c
 else
@@ -640,7 +739,7 @@ else
 	@echo char_u *default_vim_dir = (char_u *)"$(VIMRCLOC)"; >> pathdef.c
 	@echo char_u *default_vimruntime_dir = (char_u *)"$(VIMRUNTIMEDIR)"; >> pathdef.c
 	@echo char_u *all_cflags = (char_u *)"$(CC) $(CFLAGS)"; >> pathdef.c
-	@echo char_u *all_lflags = (char_u *)"$(CC) $(CFLAGS) $(LFLAGS) -o $(TARGET) $(LIB) -lole32 -luuid $(MZSCHEME_LIBDIR) $(MZSCHEME_LIB) $(PYTHONLIB) $(RUBYLIB)"; >> pathdef.c
+	@echo char_u *all_lflags = (char_u *)"$(CC) $(CFLAGS) $(LFLAGS) -o $(TARGET) $(LIB) -lole32 -luuid $(LUA_LIB) $(MZSCHEME_LIBDIR) $(MZSCHEME_LIB) $(PYTHONLIB) $(PYTHON3LIB) $(RUBYLIB)"; >> pathdef.c
 	@echo char_u *compiled_user = (char_u *)"$(USERNAME)"; >> pathdef.c
 	@echo char_u *compiled_sys = (char_u *)"$(USERDOMAIN)"; >> pathdef.c
 endif

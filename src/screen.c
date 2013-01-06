@@ -139,6 +139,7 @@ static void redraw_custom_statusline __ARGS((win_T *wp));
 #define SEARCH_HL_PRIORITY 0
 static void start_search_hl __ARGS((void));
 static void end_search_hl __ARGS((void));
+static void init_search_hl __ARGS((win_T *wp));
 static void prepare_search_hl __ARGS((win_T *wp, linenr_T lnum));
 static void next_search_hl __ARGS((win_T *win, match_T *shl, linenr_T lnum, colnr_T mincol));
 #endif
@@ -297,6 +298,8 @@ redrawWinline(lnum, invalid)
 #endif
 }
 
+#if defined(FEAT_RUBY) || defined(FEAT_PERL) || defined(FEAT_VISUAL) || \
+    (defined(FEAT_CLIPBOARD) && defined(FEAT_X11)) || defined(PROTO)
 /*
  * update all windows that are editing the current buffer
  */
@@ -307,6 +310,7 @@ update_curbuf(type)
     redraw_curbuf_later(type);
     update_screen(type);
 }
+#endif
 
 /*
  * update_screen()
@@ -423,9 +427,11 @@ update_screen(type)
 	check_for_delay(FALSE);
 
 #ifdef FEAT_LINEBREAK
-    /* Force redraw when width of 'number' column changes. */
+    /* Force redraw when width of 'number' or 'relativenumber' column
+     * changes. */
     if (curwin->w_redr_type < NOT_VALID
-	   && curwin->w_nrwidth != (curwin->w_p_nu ? number_width(curwin) : 0))
+	   && curwin->w_nrwidth != ((curwin->w_p_nu || curwin->w_p_rnu)
+				    ? number_width(curwin) : 0))
 	curwin->w_redr_type = NOT_VALID;
 #endif
 
@@ -480,7 +486,7 @@ update_screen(type)
 # ifdef FEAT_WINDOWS
 		    wwp == wp &&
 # endif
-		    syntax_present(wp->w_buffer))
+		    syntax_present(wp))
 		syn_stack_apply_changes(wp->w_buffer);
 	}
     }
@@ -580,6 +586,96 @@ update_screen(type)
 #endif
 }
 
+#if defined(FEAT_CONCEAL) || defined(PROTO)
+/*
+ * Return TRUE if the cursor line in window "wp" may be concealed, according
+ * to the 'concealcursor' option.
+ */
+    int
+conceal_cursor_line(wp)
+    win_T	*wp;
+{
+    int		c;
+
+    if (*wp->w_p_cocu == NUL)
+	return FALSE;
+    if (get_real_state() & VISUAL)
+	c = 'v';
+    else if (State & INSERT)
+	c = 'i';
+    else if (State & NORMAL)
+	c = 'n';
+    else if (State & CMDLINE)
+	c = 'c';
+    else
+	return FALSE;
+    return vim_strchr(wp->w_p_cocu, c) != NULL;
+}
+
+/*
+ * Check if the cursor line needs to be redrawn because of 'concealcursor'.
+ */
+    void
+conceal_check_cursur_line()
+{
+    if (curwin->w_p_cole > 0 && conceal_cursor_line(curwin))
+    {
+	need_cursor_line_redraw = TRUE;
+	/* Need to recompute cursor column, e.g., when starting Visual mode
+	 * without concealing. */
+	curs_columns(TRUE);
+    }
+}
+
+    void
+update_single_line(wp, lnum)
+    win_T	*wp;
+    linenr_T	lnum;
+{
+    int		row;
+    int		j;
+
+    if (lnum >= wp->w_topline && lnum < wp->w_botline
+				 && foldedCount(wp, lnum, &win_foldinfo) == 0)
+    {
+# ifdef FEAT_GUI
+	/* Remove the cursor before starting to do anything, because scrolling
+	 * may make it difficult to redraw the text under it. */
+	if (gui.in_use)
+	    gui_undraw_cursor();
+# endif
+	row = 0;
+	for (j = 0; j < wp->w_lines_valid; ++j)
+	{
+	    if (lnum == wp->w_lines[j].wl_lnum)
+	    {
+		screen_start();	/* not sure of screen cursor */
+# ifdef FEAT_SEARCH_EXTRA
+		init_search_hl(wp);
+		start_search_hl();
+		prepare_search_hl(wp, lnum);
+# endif
+		win_line(wp, lnum, row, row + wp->w_lines[j].wl_size, FALSE);
+# if defined(FEAT_SEARCH_EXTRA)
+		end_search_hl();
+# endif
+		break;
+	    }
+	    row += wp->w_lines[j].wl_size;
+	}
+# ifdef FEAT_GUI
+	/* Redraw the cursor */
+	if (gui.in_use)
+	{
+	    out_flush();	/* required before updating the cursor */
+	    gui_update_cursor(FALSE, FALSE);
+	}
+# endif
+    }
+    need_cursor_line_redraw = FALSE;
+}
+#endif
+
 #if defined(FEAT_SIGNS) || defined(FEAT_GUI)
 static void update_prepare __ARGS((void));
 static void update_finish __ARGS((void));
@@ -668,9 +764,13 @@ update_debug_sign(buf, lnum)
 	    doit = TRUE;
     }
 
-    /* Return when there is nothing to do or screen updating already
-     * happening. */
-    if (!doit || updating_screen)
+    /* Return when there is nothing to do, screen updating is already
+     * happening (recursive call) or still starting up. */
+    if (!doit || updating_screen
+#ifdef FEAT_GUI
+	    || gui.starting
+#endif
+	    || starting)
 	return;
 
     /* update all windows that need updating */
@@ -845,34 +945,13 @@ win_update(wp)
 #endif
 
 #ifdef FEAT_SEARCH_EXTRA
-    /* Setup for match and 'hlsearch' highlighting.  Disable any previous
-     * match */
-    cur = wp->w_match_head;
-    while (cur != NULL)
-    {
-	cur->hl.rm = cur->match;
-	if (cur->hlg_id == 0)
-	    cur->hl.attr = 0;
-	else
-	    cur->hl.attr = syn_id2attr(cur->hlg_id);
-	cur->hl.buf = buf;
-	cur->hl.lnum = 0;
-	cur->hl.first_lnum = 0;
-# ifdef FEAT_RELTIME
-	/* Set the time limit to 'redrawtime'. */
-	profile_setlimit(p_rdt, &(cur->hl.tm));
-# endif
-	cur = cur->next;
-    }
-    search_hl.buf = buf;
-    search_hl.lnum = 0;
-    search_hl.first_lnum = 0;
-    /* time limit is set at the toplevel, for all windows */
+    init_search_hl(wp);
 #endif
 
 #ifdef FEAT_LINEBREAK
-    /* Force redraw when width of 'number' column changes. */
-    i = wp->w_p_nu ? number_width(wp) : 0;
+    /* Force redraw when width of 'number' or 'relativenumber' column
+     * changes. */
+    i = (wp->w_p_nu || wp->w_p_rnu) ? number_width(wp) : 0;
     if (wp->w_nrwidth != i)
     {
 	type = NOT_VALID;
@@ -911,9 +990,9 @@ win_update(wp)
 #ifdef FEAT_SYN_HL
 		/* Need to redraw lines above the change that may be included
 		 * in a pattern match. */
-		if (syntax_present(buf))
+		if (syntax_present(wp))
 		{
-		    mod_top -= buf->b_syn_sync_linebreaks;
+		    mod_top -= buf->b_s.b_syn_sync_linebreaks;
 		    if (mod_top < 1)
 			mod_top = 1;
 		}
@@ -1004,7 +1083,7 @@ win_update(wp)
 	    if (mod_bot > wp->w_topline)
 		mod_top = wp->w_topline;
 #ifdef FEAT_SYN_HL
-	    else if (syntax_present(buf))
+	    else if (syntax_present(wp))
 		top_end = 1;
 #endif
 	}
@@ -1539,7 +1618,7 @@ win_update(wp)
 #ifdef FEAT_SYN_HL
 				|| did_update == DID_FOLD
 				|| (did_update == DID_LINE
-				    && syntax_present(buf)
+				    && syntax_present(wp)
 				    && (
 # ifdef FEAT_FOLDING
 					(foldmethodIsSyntax(wp)
@@ -1558,11 +1637,11 @@ win_update(wp)
 	     * When at start of changed lines: May scroll following lines
 	     * up or down to minimize redrawing.
 	     * Don't do this when the change continues until the end.
-	     * Don't scroll when dollar_vcol is non-zero, keep the "$".
+	     * Don't scroll when dollar_vcol >= 0, keep the "$".
 	     */
 	    if (lnum == mod_top
 		    && mod_bot != MAXLNUM
-		    && !(dollar_vcol != 0 && mod_bot == mod_top + 1))
+		    && !(dollar_vcol >= 0 && mod_bot == mod_top + 1))
 	    {
 		int		old_rows = 0;
 		int		new_rows = 0;
@@ -1765,7 +1844,7 @@ win_update(wp)
 #ifdef FEAT_SYN_HL
 		/* Let the syntax stuff know we skipped a few lines. */
 		if (syntax_last_parsed != 0 && syntax_last_parsed + 1 < lnum
-						       && syntax_present(buf))
+						       && syntax_present(wp))
 		    syntax_end_parsing(syntax_last_parsed + 1);
 #endif
 
@@ -1789,12 +1868,12 @@ win_update(wp)
 	    if (row > wp->w_height)	/* past end of screen */
 	    {
 		/* we may need the size of that too long line later on */
-		if (dollar_vcol == 0)
+		if (dollar_vcol == -1)
 		    wp->w_lines[idx].wl_size = plines_win(wp, lnum, TRUE);
 		++idx;
 		break;
 	    }
-	    if (dollar_vcol == 0)
+	    if (dollar_vcol == -1)
 		wp->w_lines[idx].wl_size = row - srow;
 	    ++idx;
 #ifdef FEAT_FOLDING
@@ -1837,7 +1916,7 @@ win_update(wp)
     /*
      * Let the syntax stuff know we stop parsing here.
      */
-    if (syntax_last_parsed != 0 && syntax_present(buf))
+    if (syntax_last_parsed != 0 && syntax_present(wp))
 	syntax_end_parsing(syntax_last_parsed + 1);
 #endif
 
@@ -1911,7 +1990,7 @@ win_update(wp)
 	    }
 #endif
 	}
-	else if (dollar_vcol == 0)
+	else if (dollar_vcol == -1)
 	    wp->w_botline = lnum;
 
 	/* make sure the rest of the screen is blank */
@@ -1926,7 +2005,7 @@ win_update(wp)
     wp->w_old_botfill = wp->w_botfill;
 #endif
 
-    if (dollar_vcol == 0)
+    if (dollar_vcol == -1)
     {
 	/*
 	 * There is a trick with w_botline.  If we invalidate it on each
@@ -1978,7 +2057,7 @@ draw_signcolumn(wp)
 {
     return (wp->w_buffer->b_signlist != NULL
 # ifdef FEAT_NETBEANS_INTG
-			    || usingNetbeans
+			    || netbeans_active()
 # endif
 		    );
 }
@@ -2092,6 +2171,23 @@ win_draw_end(wp, c1, c2, row, endrow, hl)
     set_empty_rows(wp, row);
 }
 
+#ifdef FEAT_SYN_HL
+static int advance_color_col __ARGS((int vcol, int **color_cols));
+
+/*
+ * Advance **color_cols and return TRUE when there are columns to draw.
+ */
+    static int
+advance_color_col(vcol, color_cols)
+    int	    vcol;
+    int	    **color_cols;
+{
+    while (**color_cols >= 0 && vcol > **color_cols)
+	++*color_cols;
+    return (**color_cols >= 0);
+}
+#endif
+
 #ifdef FEAT_FOLDING
 /*
  * Display one folded line.
@@ -2118,7 +2214,7 @@ fold_line(wp, fold_count, foldinfo, lnum, row)
     /* Build the fold line:
      * 1. Add the cmdwin_type for the command-line window
      * 2. Add the 'foldcolumn'
-     * 3. Add the 'number' column
+     * 3. Add the 'number' or 'relativenumber' column
      * 4. Compose the text
      * 5. Add the text
      * 6. set highlighting for the Visual area an other text
@@ -2180,7 +2276,8 @@ fold_line(wp, fold_count, foldinfo, lnum, row)
 				 ScreenAttrs[off + (p) + ri] = v
 #endif
 
-    /* Set all attributes of the 'number' column and the text */
+    /* Set all attributes of the 'number' or 'relativenumber' column and the
+     * text */
     RL_MEMSET(col, hl_attr(HLF_FL), W_WIDTH(wp) - col);
 
 #ifdef FEAT_SIGNS
@@ -2206,18 +2303,27 @@ fold_line(wp, fold_count, foldinfo, lnum, row)
 #endif
 
     /*
-     * 3. Add the 'number' column
+     * 3. Add the 'number' or 'relativenumber' column
      */
-    if (wp->w_p_nu)
+    if (wp->w_p_nu || wp->w_p_rnu)
     {
 	len = W_WIDTH(wp) - col;
 	if (len > 0)
 	{
 	    int	    w = number_width(wp);
+	    long num;
 
 	    if (len > w + 1)
 		len = w + 1;
-	    sprintf((char *)buf, "%*ld ", w, (long)lnum);
+
+	    if (wp->w_p_nu)
+		/* 'number' */
+		num = (long)lnum;
+	    else
+		/* 'relativenumber', don't use negative numbers */
+		num = labs((long)get_cursor_rel_lnum(wp, lnum));
+
+	    sprintf((char *)buf, "%*ld ", w, num);
 #ifdef FEAT_RIGHTLEFT
 	    if (wp->w_p_rl)
 		/* the line number isn't reversed */
@@ -2429,7 +2535,9 @@ fold_line(wp, fold_count, foldinfo, lnum, row)
 		/* Visual block mode: highlight the chars part of the block */
 		if (wp->w_old_cursor_fcol + txtcol < (colnr_T)W_WIDTH(wp))
 		{
-		    if (wp->w_old_cursor_lcol + txtcol < (colnr_T)W_WIDTH(wp))
+		    if (wp->w_old_cursor_lcol != MAXCOL
+			     && wp->w_old_cursor_lcol + txtcol
+						       < (colnr_T)W_WIDTH(wp))
 			len = wp->w_old_cursor_lcol;
 		    else
 			len = W_WIDTH(wp) - txtcol;
@@ -2622,6 +2730,8 @@ win_line(wp, lnum, startrow, endrow, nochange)
     int		has_syntax = FALSE;	/* this buffer has syntax highl. */
     int		save_did_emsg;
     int		eol_hl_off = 0;		/* 1 if highlighted char after EOL */
+    int		draw_color_col = FALSE;	/* highlight colorcolumn */
+    int		*color_cols = NULL;	/* pointer to according columns array */
 #endif
 #ifdef FEAT_SPELL
     int		has_spell = FALSE;	/* this buffer has spell checking */
@@ -2710,6 +2820,20 @@ win_line(wp, lnum, startrow, endrow, nochange)
     int		feedback_old_attr = -1;
 #endif
 
+#ifdef FEAT_CONCEAL
+    int		syntax_flags	= 0;
+    int		syntax_seqnr	= 0;
+    int		prev_syntax_id	= 0;
+    int		conceal_attr	= hl_attr(HLF_CONCEAL);
+    int		is_concealing	= FALSE;
+    int		boguscols	= 0;	/* nonexistent columns added to force
+					   wrapping */
+    int		vcol_off	= 0;	/* offset for concealed characters */
+    int		did_wcol	= FALSE;
+# define VCOL_HLC (vcol - vcol_off)
+#else
+# define VCOL_HLC (vcol)
+#endif
 
     if (startrow > endrow)		/* past the end already! */
 	return startrow;
@@ -2727,7 +2851,7 @@ win_line(wp, lnum, startrow, endrow, nochange)
     extra_check = 0;
 #endif
 #ifdef FEAT_SYN_HL
-    if (syntax_present(wp->w_buffer) && !wp->w_buffer->b_syn_error)
+    if (syntax_present(wp) && !wp->w_s->b_syn_error)
     {
 	/* Prepare for syntax highlighting in this line.  When there is an
 	 * error, stop syntax highlighting. */
@@ -2735,7 +2859,7 @@ win_line(wp, lnum, startrow, endrow, nochange)
 	did_emsg = FALSE;
 	syntax_start(wp, lnum);
 	if (did_emsg)
-	    wp->w_buffer->b_syn_error = TRUE;
+	    wp->w_s->b_syn_error = TRUE;
 	else
 	{
 	    did_emsg = save_did_emsg;
@@ -2743,13 +2867,18 @@ win_line(wp, lnum, startrow, endrow, nochange)
 	    extra_check = TRUE;
 	}
     }
+
+    /* Check for columns to display for 'colorcolumn'. */
+    color_cols = wp->w_p_cc_cols;
+    if (color_cols != NULL)
+	draw_color_col = advance_color_col(VCOL_HLC, &color_cols);
 #endif
 
 #ifdef FEAT_SPELL
     if (wp->w_p_spell
-	    && *wp->w_buffer->b_p_spl != NUL
-	    && wp->w_buffer->b_langp.ga_len > 0
-	    && *(char **)(wp->w_buffer->b_langp.ga_data) != NULL)
+	    && *wp->w_s->b_p_spl != NUL
+	    && wp->w_s->b_langp.ga_len > 0
+	    && *(char **)(wp->w_s->b_langp.ga_data) != NULL)
     {
 	/* Prepare for spell checking. */
 	has_spell = TRUE;
@@ -3021,6 +3150,7 @@ win_line(wp, lnum, startrow, endrow, nochange)
 #if defined(FEAT_SYN_HL) || defined(FEAT_VIRTUALEDIT) || defined(FEAT_VISUAL)
 	/* When:
 	 * - 'cuc' is set, or
+	 * - 'colorcolumn' is set, or
 	 * - 'virtualedit' is set, or
 	 * - the visual mode is active,
 	 * the end of the line may be before the start of the displayed part.
@@ -3028,6 +3158,7 @@ win_line(wp, lnum, startrow, endrow, nochange)
 	if (vcol < v && (
 # ifdef FEAT_SYN_HL
 	     wp->w_p_cuc
+	     || draw_color_col
 #  if defined(FEAT_VIRTUALEDIT) || defined(FEAT_VISUAL)
 	     ||
 #  endif
@@ -3097,8 +3228,7 @@ win_line(wp, lnum, startrow, endrow, nochange)
 		/* no bad word found at line start, don't check until end of a
 		 * word */
 		spell_hlf = HLF_COUNT;
-		word_end = (int)(spell_to_word_end(ptr, wp->w_buffer)
-								  - line + 1);
+		word_end = (int)(spell_to_word_end(ptr, wp) - line + 1);
 	    }
 	    else
 	    {
@@ -3280,9 +3410,9 @@ win_line(wp, lnum, startrow, endrow, nochange)
 # endif
 		   )
 		{
-		    int_u	text_sign;
+		    int	text_sign;
 # ifdef FEAT_SIGN_ICONS
-		    int_u	icon_sign;
+		    int	icon_sign;
 # endif
 
 		    /* Draw two cells with the sign value or blank. */
@@ -3327,9 +3457,9 @@ win_line(wp, lnum, startrow, endrow, nochange)
 	    if (draw_state == WL_NR - 1 && n_extra == 0)
 	    {
 		draw_state = WL_NR;
-		/* Display the line number.  After the first fill with blanks
-		 * when the 'n' flag isn't in 'cpo' */
-		if (wp->w_p_nu
+		/* Display the absolute or relative line number. After the
+		 * first fill with blanks when the 'n' flag isn't in 'cpo' */
+		if ((wp->w_p_nu || wp->w_p_rnu)
 			&& (row == startrow
 #ifdef FEAT_DIFF
 			    + filler_lines
@@ -3343,8 +3473,17 @@ win_line(wp, lnum, startrow, endrow, nochange)
 #endif
 			    )
 		    {
+			long num;
+
+			if (wp->w_p_nu)
+			    /* 'number' */
+			    num = (long)lnum;
+			else
+			    /* 'relativenumber', don't use negative numbers */
+			    num = labs((long)get_cursor_rel_lnum(wp, lnum));
+
 			sprintf((char *)extra, "%*ld ",
-						number_width(wp), (long)lnum);
+						number_width(wp), num);
 			if (wp->w_skipcol > 0)
 			    for (p_extra = extra; *p_extra == ' '; ++p_extra)
 				*p_extra = '-';
@@ -3361,9 +3500,11 @@ win_line(wp, lnum, startrow, endrow, nochange)
 		    char_attr = hl_attr(HLF_N);
 #ifdef FEAT_SYN_HL
 		    /* When 'cursorline' is set highlight the line number of
-		     * the current line differently. */
+		     * the current line differently.
+		     * TODO: Can we use CursorLine instead of CursorLineNr
+		     * when CursorLineNr isn't set? */
 		    if (wp->w_p_cul && lnum == wp->w_cursor.lnum)
-			char_attr = hl_combine_attr(hl_attr(HLF_CUL), char_attr);
+			char_attr = hl_attr(HLF_CLN);
 #endif
 		}
 	    }
@@ -3424,7 +3565,7 @@ win_line(wp, lnum, startrow, endrow, nochange)
 	}
 
 	/* When still displaying '$' of change command, stop at cursor */
-	if (dollar_vcol != 0 && wp == curwin
+	if (dollar_vcol >= 0 && wp == curwin
 		   && lnum == wp->w_cursor.lnum && vcol >= (long)wp->w_virtcol
 #ifdef FEAT_DIFF
 				   && filler_todo <= 0
@@ -3870,8 +4011,9 @@ win_line(wp, lnum, startrow, endrow, nochange)
 		    ptr += mb_l - 1;
 
 		/* If a double-width char doesn't fit at the left side display
-		 * a '<' in the first column. */
-		if (n_skip > 0 && mb_l > 1)
+		 * a '<' in the first column.  Don't do this for unprintable
+		 * charactes. */
+		if (n_skip > 0 && mb_l > 1 && n_extra == 0)
 		{
 		    n_extra = 1;
 		    c_extra = '<';
@@ -3937,13 +4079,13 @@ win_line(wp, lnum, startrow, endrow, nochange)
 
 		    syntax_attr = get_syntax_attr((colnr_T)v - 1,
 # ifdef FEAT_SPELL
-					       has_spell ? &can_spell :
+						has_spell ? &can_spell :
 # endif
-					       NULL, FALSE);
+						NULL, FALSE);
 
 		    if (did_emsg)
 		    {
-			wp->w_buffer->b_syn_error = TRUE;
+			wp->w_s->b_syn_error = TRUE;
 			has_syntax = FALSE;
 		    }
 		    else
@@ -3958,6 +4100,14 @@ win_line(wp, lnum, startrow, endrow, nochange)
 			char_attr = syntax_attr;
 		    else
 			char_attr = hl_combine_attr(syntax_attr, char_attr);
+# ifdef FEAT_CONCEAL
+		    /* no concealing past the end of the line, it interferes
+		     * with line highlighting */
+		    if (c == NUL)
+			syntax_flags = 0;
+		    else
+			syntax_flags = get_syntax_info(&syntax_seqnr);
+# endif
 		}
 #endif
 
@@ -4109,7 +4259,7 @@ win_line(wp, lnum, startrow, endrow, nochange)
 		{
 		    /* tab amount depends on current column */
 		    n_extra = (int)wp->w_buffer->b_p_ts
-				   - vcol % (int)wp->w_buffer->b_p_ts - 1;
+				   - VCOL_HLC % (int)wp->w_buffer->b_p_ts - 1;
 #ifdef FEAT_MBYTE
 		    mb_utf8 = FALSE;	/* don't draw as UTF-8 */
 #endif
@@ -4255,7 +4405,11 @@ win_line(wp, lnum, startrow, endrow, nochange)
 # ifdef FEAT_RIGHTLEFT
 			    wp->w_p_rl ? (col >= 0) :
 # endif
-			    (col < W_WIDTH(wp))))
+			    (col
+# ifdef FEAT_CONCEAL
+				- boguscols
+# endif
+					    < W_WIDTH(wp))))
 		{
 		    /* Highlight until the right side of the window */
 		    c = ' ';
@@ -4278,7 +4432,90 @@ win_line(wp, lnum, startrow, endrow, nochange)
 		}
 #endif
 	    }
+
+#ifdef FEAT_CONCEAL
+	    if (   wp->w_p_cole > 0
+		&& (wp != curwin || lnum != wp->w_cursor.lnum ||
+						      conceal_cursor_line(wp))
+		&& (syntax_flags & HL_CONCEAL) != 0
+		&& !(lnum_in_visual_area
+				    && vim_strchr(wp->w_p_cocu, 'v') == NULL))
+	    {
+		char_attr = conceal_attr;
+		if (prev_syntax_id != syntax_seqnr
+			&& (syn_get_sub_char() != NUL || wp->w_p_cole == 1)
+			&& wp->w_p_cole != 3)
+		{
+		    /* First time at this concealed item: display one
+		     * character. */
+		    if (syn_get_sub_char() != NUL)
+			c = syn_get_sub_char();
+		    else if (lcs_conceal != NUL)
+			c = lcs_conceal;
+		    else
+			c = ' ';
+
+		    prev_syntax_id = syntax_seqnr;
+
+		    if (n_extra > 0)
+			vcol_off += n_extra;
+		    vcol += n_extra;
+		    if (wp->w_p_wrap && n_extra > 0)
+		    {
+# ifdef FEAT_RIGHTLEFT
+			if (wp->w_p_rl)
+			{
+			    col -= n_extra;
+			    boguscols -= n_extra;
+			}
+			else
+# endif
+			{
+			    boguscols += n_extra;
+			    col += n_extra;
+			}
+		    }
+		    n_extra = 0;
+		    n_attr = 0;
+		}
+		else if (n_skip == 0)
+		{
+		    is_concealing = TRUE;
+		    n_skip = 1;
+		}
+# ifdef FEAT_MBYTE
+		mb_c = c;
+		if (enc_utf8 && (*mb_char2len)(c) > 1)
+		{
+		    mb_utf8 = TRUE;
+		    u8cc[0] = 0;
+		    c = 0xc0;
+		}
+		else
+		    mb_utf8 = FALSE;	/* don't draw as UTF-8 */
+# endif
+	    }
+	    else
+	    {
+		prev_syntax_id = 0;
+		is_concealing = FALSE;
+	    }
+#endif /* FEAT_CONCEAL */
 	}
+
+#ifdef FEAT_CONCEAL
+	/* In the cursor line and we may be concealing characters: correct
+	 * the cursor column when we reach its position. */
+	if (!did_wcol && draw_state == WL_LINE
+		&& wp == curwin && lnum == wp->w_cursor.lnum
+		&& conceal_cursor_line(wp)
+		&& (int)wp->w_virtcol <= vcol + n_skip)
+	{
+	    wp->w_wcol = col - boguscols;
+	    wp->w_wrow = row;
+	    did_wcol = TRUE;
+	}
+#endif
 
 	/* Don't override visual selection highlighting. */
 	if (n_attr > 0
@@ -4374,7 +4611,7 @@ win_line(wp, lnum, startrow, endrow, nochange)
 		++prevcol;
 #endif
 
-	    /* invert at least one char, used for Visual and empty line or
+	    /* Invert at least one char, used for Visual and empty line or
 	     * highlight match at end of line. If it's beyond the last
 	     * char on the screen, just overwrite that one (tricky!)  Not
 	     * needed when a '$' was displayed for 'list'. */
@@ -4506,25 +4743,47 @@ win_line(wp, lnum, startrow, endrow, nochange)
 		--vcol;
 	    }
 
-	    /* Highlight 'cursorcolumn' past end of the line. */
+	    /* Highlight 'cursorcolumn' & 'colorcolumn' past end of the line. */
 	    if (wp->w_p_wrap)
 		v = wp->w_skipcol;
 	    else
 		v = wp->w_leftcol;
+
 	    /* check if line ends before left margin */
 	    if (vcol < v + col - win_col_off(wp))
-
 		vcol = v + col - win_col_off(wp);
-	    if (wp->w_p_cuc
-		    && (int)wp->w_virtcol >= vcol - eol_hl_off
-		    && (int)wp->w_virtcol < W_WIDTH(wp) * (row - startrow + 1)
-									   + v
-		    && lnum != wp->w_cursor.lnum
+#ifdef FEAT_CONCEAL
+	    /* Get rid of the boguscols now, we want to draw until the right
+	     * edge for 'cursorcolumn'. */
+	    col -= boguscols;
+	    boguscols = 0;
+#endif
+
+	    if (draw_color_col)
+		draw_color_col = advance_color_col(VCOL_HLC, &color_cols);
+
+	    if (((wp->w_p_cuc
+		      && (int)wp->w_virtcol >= VCOL_HLC - eol_hl_off
+		      && (int)wp->w_virtcol <
+					W_WIDTH(wp) * (row - startrow + 1) + v
+		      && lnum != wp->w_cursor.lnum)
+		    || draw_color_col)
 # ifdef FEAT_RIGHTLEFT
 		    && !wp->w_p_rl
 # endif
 		    )
 	    {
+		int	rightmost_vcol = 0;
+		int	i;
+
+		if (wp->w_p_cuc)
+		    rightmost_vcol = wp->w_virtcol;
+		if (draw_color_col)
+		    /* determine rightmost colorcolumn to possibly draw */
+		    for (i = 0; color_cols[i] >= 0; ++i)
+			if (rightmost_vcol < color_cols[i])
+			    rightmost_vcol = color_cols[i];
+
 		while (col < W_WIDTH(wp))
 		{
 		    ScreenLines[off] = ' ';
@@ -4533,19 +4792,27 @@ win_line(wp, lnum, startrow, endrow, nochange)
 			ScreenLinesUC[off] = 0;
 #endif
 		    ++col;
-		    if (vcol == (long)wp->w_virtcol)
-		    {
-			ScreenAttrs[off] = hl_attr(HLF_CUC);
+		    if (draw_color_col)
+			draw_color_col = advance_color_col(VCOL_HLC,
+								 &color_cols);
+
+		    if (wp->w_p_cuc && VCOL_HLC == (long)wp->w_virtcol)
+			ScreenAttrs[off++] = hl_attr(HLF_CUC);
+		    else if (draw_color_col && VCOL_HLC == *color_cols)
+			ScreenAttrs[off++] = hl_attr(HLF_MC);
+		    else
+			ScreenAttrs[off++] = 0;
+
+		    if (VCOL_HLC >= rightmost_vcol)
 			break;
-		    }
-		    ScreenAttrs[off++] = 0;
+
 		    ++vcol;
 		}
 	    }
 #endif
 
-	    SCREEN_LINE(screen_row, W_WINCOL(wp), col, (int)W_WIDTH(wp),
-								  wp->w_p_rl);
+	    SCREEN_LINE(screen_row, W_WINCOL(wp), col,
+						(int)W_WIDTH(wp), wp->w_p_rl);
 	    row++;
 
 	    /*
@@ -4596,18 +4863,29 @@ win_line(wp, lnum, startrow, endrow, nochange)
 	}
 
 #ifdef FEAT_SYN_HL
+	/* advance to the next 'colorcolumn' */
+	if (draw_color_col)
+	    draw_color_col = advance_color_col(VCOL_HLC, &color_cols);
+
 	/* Highlight the cursor column if 'cursorcolumn' is set.  But don't
-	 * highlight the cursor position itself. */
-	if (wp->w_p_cuc && vcol == (long)wp->w_virtcol
-		&& lnum != wp->w_cursor.lnum
-		&& draw_state == WL_LINE
-		&& !lnum_in_visual_area)
+	 * highlight the cursor position itself.
+	 * Also highlight the 'colorcolumn' if it is different than
+	 * 'cursorcolumn' */
+	vcol_save_attr = -1;
+	if (draw_state == WL_LINE && !lnum_in_visual_area)
 	{
-	    vcol_save_attr = char_attr;
-	    char_attr = hl_combine_attr(char_attr, hl_attr(HLF_CUC));
+	    if (wp->w_p_cuc && VCOL_HLC == (long)wp->w_virtcol
+						 && lnum != wp->w_cursor.lnum)
+	    {
+		vcol_save_attr = char_attr;
+		char_attr = hl_combine_attr(char_attr, hl_attr(HLF_CUC));
+	    }
+	    else if (draw_color_col && VCOL_HLC == *color_cols)
+	    {
+		vcol_save_attr = char_attr;
+		char_attr = hl_combine_attr(char_attr, hl_attr(HLF_MC));
+	    }
 	}
-	else
-	    vcol_save_attr = -1;
 #endif
 
 	/*
@@ -4704,10 +4982,97 @@ win_line(wp, lnum, startrow, endrow, nochange)
 		++col;
 	    }
 	}
+#ifdef FEAT_CONCEAL
+	else if (wp->w_p_cole > 0 && is_concealing)
+	{
+	    --n_skip;
+	    ++vcol_off;
+	    if (n_extra > 0)
+		vcol_off += n_extra;
+	    if (wp->w_p_wrap)
+	    {
+		/*
+		 * Special voodoo required if 'wrap' is on.
+		 *
+		 * Advance the column indicator to force the line
+		 * drawing to wrap early. This will make the line
+		 * take up the same screen space when parts are concealed,
+		 * so that cursor line computations aren't messed up.
+		 *
+		 * To avoid the fictitious advance of 'col' causing
+		 * trailing junk to be written out of the screen line
+		 * we are building, 'boguscols' keeps track of the number
+		 * of bad columns we have advanced.
+		 */
+		if (n_extra > 0)
+		{
+		    vcol += n_extra;
+# ifdef FEAT_RIGHTLEFT
+		    if (wp->w_p_rl)
+		    {
+			col -= n_extra;
+			boguscols -= n_extra;
+		    }
+		    else
+# endif
+		    {
+			col += n_extra;
+			boguscols += n_extra;
+		    }
+		    n_extra = 0;
+		    n_attr = 0;
+		}
+
+
+# ifdef FEAT_MBYTE
+		if (has_mbyte && (*mb_char2cells)(mb_c) > 1)
+		{
+		    /* Need to fill two screen columns. */
+#  ifdef FEAT_RIGHTLEFT
+		    if (wp->w_p_rl)
+		    {
+			--boguscols;
+			--col;
+		    }
+		    else
+#  endif
+		    {
+			++boguscols;
+			++col;
+		    }
+		}
+# endif
+
+# ifdef FEAT_RIGHTLEFT
+		if (wp->w_p_rl)
+		{
+		    --boguscols;
+		    --col;
+		}
+		else
+# endif
+		{
+		    ++boguscols;
+		    ++col;
+		}
+	    }
+	    else
+	    {
+		if (n_extra > 0)
+		{
+		    vcol += n_extra;
+		    n_extra = 0;
+		    n_attr = 0;
+		}
+	    }
+
+	}
+#endif /* FEAT_CONCEAL */
 	else
 	    --n_skip;
 
-	/* Only advance the "vcol" when after the 'number' column. */
+	/* Only advance the "vcol" when after the 'number' or 'relativenumber'
+	 * column. */
 	if (draw_state > WL_NR
 #ifdef FEAT_DIFF
 		&& filler_todo <= 0
@@ -4745,8 +5110,14 @@ win_line(wp, lnum, startrow, endrow, nochange)
 		    || (n_extra != 0 && (c_extra != NUL || *p_extra != NUL)))
 		)
 	{
-	    SCREEN_LINE(screen_row, W_WINCOL(wp), col, (int)W_WIDTH(wp),
-								  wp->w_p_rl);
+#ifdef FEAT_CONCEAL
+	    SCREEN_LINE(screen_row, W_WINCOL(wp), col - boguscols,
+						(int)W_WIDTH(wp), wp->w_p_rl);
+	    boguscols = 0;
+#else
+	    SCREEN_LINE(screen_row, W_WINCOL(wp), col,
+						(int)W_WIDTH(wp), wp->w_p_rl);
+#endif
 	    ++row;
 	    ++screen_row;
 
@@ -5000,6 +5371,12 @@ screen_line(row, coloff, endcol, clear_width
 #else
 # define CHAR_CELLS 1
 #endif
+
+    /* Check for illegal row and col, just in case. */
+    if (row >= Rows)
+	row = Rows - 1;
+    if (endcol > Columns)
+	endcol = Columns;
 
 # ifdef FEAT_CLIPBOARD
     clip_may_clear_selection(row, row);
@@ -5871,8 +6248,8 @@ win_redr_status(wp)
 		int	clen = 0, i;
 
 		/* Count total number of display cells. */
-		for (i = 0; p[i] != NUL; i += (*mb_ptr2len)(p + i))
-		    clen += (*mb_ptr2cells)(p + i);
+		clen = mb_string2cells(p, -1);
+
 		/* Find first character that will fit.
 		 * Going from start to end is much faster for DBCS. */
 		for (i = 0; p[i] != NUL && clen >= this_ru_col - 1;
@@ -6071,6 +6448,8 @@ win_redr_custom(wp, draw_ruler)
     struct	stl_hlrec hltab[STL_MAX_ITEM];
     struct	stl_hlrec tabtab[STL_MAX_ITEM];
     int		use_sandbox = FALSE;
+    win_T	*ewp;
+    int		p_crb_save;
 
     /* setup environment for the task at hand */
     if (wp == NULL)
@@ -6149,16 +6528,31 @@ win_redr_custom(wp, draw_ruler)
     if (maxwidth <= 0)
 	return;
 
+    /* Temporarily reset 'cursorbind', we don't want a side effect from moving
+     * the cursor away and back. */
+    ewp = wp == NULL ? curwin : wp;
+    p_crb_save = ewp->w_p_crb;
+    ewp->w_p_crb = FALSE;
+
     /* Make a copy, because the statusline may include a function call that
      * might change the option value and free the memory. */
     stl = vim_strsave(stl);
-    width = build_stl_str_hl(wp == NULL ? curwin : wp,
-				buf, sizeof(buf),
+    width = build_stl_str_hl(ewp, buf, sizeof(buf),
 				stl, use_sandbox,
 				fillchar, maxwidth, hltab, tabtab);
     vim_free(stl);
-    len = (int)STRLEN(buf);
+    ewp->w_p_crb = p_crb_save;
 
+    /* Make all characters printable. */
+    p = transstr(buf);
+    if (p != NULL)
+    {
+	vim_strncpy(buf, p, sizeof(buf) - 1);
+	vim_free(p);
+    }
+
+    /* fill up with "fillchar" */
+    len = (int)STRLEN(buf);
     while (width < maxwidth && len < (int)sizeof(buf) - 1)
     {
 #ifdef FEAT_MBYTE
@@ -6226,16 +6620,17 @@ screen_putchar(c, row, col, attr)
     int	    row, col;
     int	    attr;
 {
-#ifdef FEAT_MBYTE
     char_u	buf[MB_MAXBYTES + 1];
 
-    buf[(*mb_char2bytes)(c, buf)] = NUL;
-#else
-    char_u	buf[2];
-
-    buf[0] = c;
-    buf[1] = NUL;
+#ifdef FEAT_MBYTE
+    if (has_mbyte)
+	buf[(*mb_char2bytes)(c, buf)] = NUL;
+    else
 #endif
+    {
+	buf[0] = c;
+	buf[1] = NUL;
+    }
     screen_puts(buf, row, col, attr);
 }
 
@@ -6635,6 +7030,40 @@ end_search_hl()
 }
 
 /*
+ * Init for calling prepare_search_hl().
+ */
+    static void
+init_search_hl(wp)
+    win_T	*wp;
+{
+    matchitem_T *cur;
+
+    /* Setup for match and 'hlsearch' highlighting.  Disable any previous
+     * match */
+    cur = wp->w_match_head;
+    while (cur != NULL)
+    {
+	cur->hl.rm = cur->match;
+	if (cur->hlg_id == 0)
+	    cur->hl.attr = 0;
+	else
+	    cur->hl.attr = syn_id2attr(cur->hlg_id);
+	cur->hl.buf = wp->w_buffer;
+	cur->hl.lnum = 0;
+	cur->hl.first_lnum = 0;
+# ifdef FEAT_RELTIME
+	/* Set the time limit to 'redrawtime'. */
+	profile_setlimit(p_rdt, &(cur->hl.tm));
+# endif
+	cur = cur->next;
+    }
+    search_hl.buf = wp->w_buffer;
+    search_hl.lnum = 0;
+    search_hl.first_lnum = 0;
+    /* time limit is set at the toplevel, for all windows */
+}
+
+/*
  * Advance to the match in window "wp" line "lnum" or past it.
  */
     static void
@@ -6791,7 +7220,7 @@ next_search_hl(win, shl, lnum, mincol)
 		NULL
 #endif
 		);
-	if (called_emsg)
+	if (called_emsg || got_int)
 	{
 	    /* Error while handling regexp: stop using this regexp. */
 	    if (shl == &search_hl)
@@ -7428,15 +7857,15 @@ check_for_delay(check_msg_scroll)
 
 /*
  * screen_valid -  allocate screen buffers if size changed
- *   If "clear" is TRUE: clear screen if it has been resized.
+ *   If "doclear" is TRUE: clear screen if it has been resized.
  *	Returns TRUE if there is a valid screen to write to.
  *	Returns FALSE when starting up and screen not initialized yet.
  */
     int
-screen_valid(clear)
-    int	    clear;
+screen_valid(doclear)
+    int	    doclear;
 {
-    screenalloc(clear);	    /* allocate screen buffers if size changed */
+    screenalloc(doclear);	   /* allocate screen buffers if size changed */
     return (ScreenLines != NULL);
 }
 
@@ -7451,8 +7880,8 @@ screen_valid(clear)
  * final size of the shell is needed.
  */
     void
-screenalloc(clear)
-    int	    clear;
+screenalloc(doclear)
+    int	    doclear;
 {
     int		    new_row, old_row;
 #ifdef FEAT_GUI
@@ -7648,7 +8077,7 @@ give_up:
 	     * (used when resizing the window at the "--more--" prompt or when
 	     * executing an external command, for the GUI).
 	     */
-	    if (!clear)
+	    if (!doclear)
 	    {
 		(void)vim_memset(new_ScreenLines + new_row * Columns,
 				      ' ', (size_t)Columns * sizeof(schar_T));
@@ -7738,7 +8167,7 @@ give_up:
     screen_Columns = Columns;
 
     must_redraw = CLEAR;	/* need to clear the screen later */
-    if (clear)
+    if (doclear)
 	screenclear2();
 
 #ifdef FEAT_GUI
@@ -9034,19 +9463,14 @@ showmode()
 	{
 	    MSG_PUTS_ATTR("--", attr);
 #if defined(FEAT_XIM)
-# if 0  /* old version, changed by SungHyun Nam July 2008 */
-	    if (xic != NULL && im_get_status() && !p_imdisable
-					&& curbuf->b_p_iminsert == B_IMODE_IM)
-# else
 	    if (
-#  ifdef HAVE_GTK2
+# ifdef FEAT_GUI_GTK
 		    preedit_get_status()
-#  else
+# else
 		    im_get_status()
-#  endif
-	       )
 # endif
-# ifdef HAVE_GTK2 /* most of the time, it's not XIM being used */
+	       )
+# ifdef FEAT_GUI_GTK /* most of the time, it's not XIM being used */
 		MSG_PUTS_ATTR(" IM", attr);
 # else
 		MSG_PUTS_ATTR(" XIM", attr);
@@ -9770,8 +10194,8 @@ win_redr_ruler(wp, always)
 
 #if defined(FEAT_LINEBREAK) || defined(PROTO)
 /*
- * Return the width of the 'number' column.
- * Caller may need to check if 'number' is set.
+ * Return the width of the 'number' and 'relativenumber' column.
+ * Caller may need to check if 'number' or 'relativenumber' is set.
  * Otherwise it depends on 'numberwidth' and the line count.
  */
     int
@@ -9781,7 +10205,13 @@ number_width(wp)
     int		n;
     linenr_T	lnum;
 
-    lnum = wp->w_buffer->b_ml.ml_line_count;
+    if (wp->w_p_nu)
+	/* 'number' */
+	lnum = wp->w_buffer->b_ml.ml_line_count;
+    else
+	/* 'relativenumber' */
+	lnum = wp->w_height;
+
     if (lnum == wp->w_nrwidth_line_count)
 	return wp->w_nrwidth_width;
     wp->w_nrwidth_line_count = lnum;

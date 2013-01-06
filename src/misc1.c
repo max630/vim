@@ -363,7 +363,7 @@ copy_indent(size, src)
 
 	/* Fill to next tabstop with a tab, if possible */
 	tab_pad = (int)curbuf->b_p_ts - (ind_done % (int)curbuf->b_p_ts);
-	if (todo >= tab_pad)
+	if (todo >= tab_pad && !curbuf->b_p_et)
 	{
 	    todo -= tab_pad;
 	    ++ind_len;
@@ -372,7 +372,7 @@ copy_indent(size, src)
 	}
 
 	/* Add tabs required for indent */
-	while (todo >= (int)curbuf->b_p_ts)
+	while (todo >= (int)curbuf->b_p_ts && !curbuf->b_p_et)
 	{
 	    todo -= (int)curbuf->b_p_ts;
 	    ++ind_len;
@@ -671,7 +671,7 @@ open_line(dir, flags, old_indent)
 	    ptr = saved_line;
 # ifdef FEAT_COMMENTS
 	    if (flags & OPENLINE_DO_COM)
-		lead_len = get_leader_len(ptr, NULL, FALSE);
+		lead_len = get_leader_len(ptr, NULL, FALSE, TRUE);
 	    else
 		lead_len = 0;
 # endif
@@ -693,7 +693,7 @@ open_line(dir, flags, old_indent)
 		}
 # ifdef FEAT_COMMENTS
 		if (flags & OPENLINE_DO_COM)
-		    lead_len = get_leader_len(ptr, NULL, FALSE);
+		    lead_len = get_leader_len(ptr, NULL, FALSE, TRUE);
 		else
 		    lead_len = 0;
 		if (lead_len > 0)
@@ -836,7 +836,7 @@ open_line(dir, flags, old_indent)
      */
     end_comment_pending = NUL;
     if (flags & OPENLINE_DO_COM)
-	lead_len = get_leader_len(saved_line, &lead_flags, dir == BACKWARD);
+	lead_len = get_leader_len(saved_line, &lead_flags, dir == BACKWARD, TRUE);
     else
 	lead_len = 0;
     if (lead_len > 0)
@@ -1548,28 +1548,35 @@ theend:
  * When "flags" is not NULL, it is set to point to the flags of the recognized
  * comment leader.
  * "backward" must be true for the "O" command.
+ * If "include_space" is set, include trailing whitespace while calculating the
+ * length.
  */
     int
-get_leader_len(line, flags, backward)
+get_leader_len(line, flags, backward, include_space)
     char_u	*line;
     char_u	**flags;
     int		backward;
+    int		include_space;
 {
     int		i, j;
+    int		result;
     int		got_com = FALSE;
     int		found_one;
     char_u	part_buf[COM_MAX_LEN];	/* buffer for one option part */
     char_u	*string;		/* pointer to comment string */
     char_u	*list;
+    int		middle_match_len = 0;
+    char_u	*prev_list;
+    char_u	*saved_flags = NULL;
 
-    i = 0;
+    result = i = 0;
     while (vim_iswhite(line[i]))    /* leading white space is ignored */
 	++i;
 
     /*
      * Repeat to match several nested comment strings.
      */
-    while (line[i])
+    while (line[i] != NUL)
     {
 	/*
 	 * scan through the 'comments' option for a match
@@ -1577,28 +1584,160 @@ get_leader_len(line, flags, backward)
 	found_one = FALSE;
 	for (list = curbuf->b_p_com; *list; )
 	{
-	    /*
-	     * Get one option part into part_buf[].  Advance list to next one.
-	     * put string at start of string.
-	     */
-	    if (!got_com && flags != NULL)  /* remember where flags started */
-		*flags = list;
+	    /* Get one option part into part_buf[].  Advance "list" to next
+	     * one.  Put "string" at start of string.  */
+	    if (!got_com && flags != NULL)
+		*flags = list;	    /* remember where flags started */
+	    prev_list = list;
 	    (void)copy_option_part(&list, part_buf, COM_MAX_LEN, ",");
 	    string = vim_strchr(part_buf, ':');
 	    if (string == NULL)	    /* missing ':', ignore this part */
 		continue;
 	    *string++ = NUL;	    /* isolate flags from string */
 
-	    /*
-	     * When already found a nested comment, only accept further
-	     * nested comments.
-	     */
+	    /* If we found a middle match previously, use that match when this
+	     * is not a middle or end. */
+	    if (middle_match_len != 0
+		    && vim_strchr(part_buf, COM_MIDDLE) == NULL
+		    && vim_strchr(part_buf, COM_END) == NULL)
+		break;
+
+	    /* When we already found a nested comment, only accept further
+	     * nested comments. */
 	    if (got_com && vim_strchr(part_buf, COM_NEST) == NULL)
 		continue;
 
-	    /* When 'O' flag used don't use for "O" command */
+	    /* When 'O' flag present and using "O" command skip this one. */
 	    if (backward && vim_strchr(part_buf, COM_NOBACK) != NULL)
 		continue;
+
+	    /* Line contents and string must match.
+	     * When string starts with white space, must have some white space
+	     * (but the amount does not need to match, there might be a mix of
+	     * TABs and spaces). */
+	    if (vim_iswhite(string[0]))
+	    {
+		if (i == 0 || !vim_iswhite(line[i - 1]))
+		    continue;  /* missing shite space */
+		while (vim_iswhite(string[0]))
+		    ++string;
+	    }
+	    for (j = 0; string[j] != NUL && string[j] == line[i + j]; ++j)
+		;
+	    if (string[j] != NUL)
+		continue;  /* string doesn't match */
+
+	    /* When 'b' flag used, there must be white space or an
+	     * end-of-line after the string in the line. */
+	    if (vim_strchr(part_buf, COM_BLANK) != NULL
+			   && !vim_iswhite(line[i + j]) && line[i + j] != NUL)
+		continue;
+
+	    /* We have found a match, stop searching unless this is a middle
+	     * comment. The middle comment can be a substring of the end
+	     * comment in which case it's better to return the length of the
+	     * end comment and its flags.  Thus we keep searching with middle
+	     * and end matches and use an end match if it matches better. */
+	    if (vim_strchr(part_buf, COM_MIDDLE) != NULL)
+	    {
+		if (middle_match_len == 0)
+		{
+		    middle_match_len = j;
+		    saved_flags = prev_list;
+		}
+		continue;
+	    }
+	    if (middle_match_len != 0 && j > middle_match_len)
+		/* Use this match instead of the middle match, since it's a
+		 * longer thus better match. */
+		middle_match_len = 0;
+
+	    if (middle_match_len == 0)
+		i += j;
+	    found_one = TRUE;
+	    break;
+	}
+
+	if (middle_match_len != 0)
+	{
+	    /* Use the previously found middle match after failing to find a
+	     * match with an end. */
+	    if (!got_com && flags != NULL)
+		*flags = saved_flags;
+	    i += middle_match_len;
+	    found_one = TRUE;
+	}
+
+	/* No match found, stop scanning. */
+	if (!found_one)
+	    break;
+
+	result = i;
+
+	/* Include any trailing white space. */
+	while (vim_iswhite(line[i]))
+	    ++i;
+
+	if (include_space)
+	    result = i;
+
+	/* If this comment doesn't nest, stop here. */
+	got_com = TRUE;
+	if (vim_strchr(part_buf, COM_NEST) == NULL)
+	    break;
+    }
+    return result;
+}
+
+/*
+ * Return the offset at which the last comment in line starts. If there is no
+ * comment in the whole line, -1 is returned.
+ *
+ * When "flags" is not null, it is set to point to the flags describing the
+ * recognized comment leader.
+ */
+    int
+get_last_leader_offset(line, flags)
+    char_u	*line;
+    char_u	**flags;
+{
+    int		result = -1;
+    int		i, j;
+    int		lower_check_bound = 0;
+    char_u	*string;
+    char_u	*com_leader;
+    char_u	*com_flags;
+    char_u	*list;
+    int		found_one;
+    char_u	part_buf[COM_MAX_LEN];	/* buffer for one option part */
+
+    /*
+     * Repeat to match several nested comment strings.
+     */
+    i = (int)STRLEN(line);
+    while (--i >= lower_check_bound)
+    {
+	/*
+	 * scan through the 'comments' option for a match
+	 */
+	found_one = FALSE;
+	for (list = curbuf->b_p_com; *list; )
+	{
+	    char_u *flags_save = list;
+
+	    /*
+	     * Get one option part into part_buf[].  Advance list to next one.
+	     * put string at start of string.
+	     */
+	    (void)copy_option_part(&list, part_buf, COM_MAX_LEN, ",");
+	    string = vim_strchr(part_buf, ':');
+	    if (string == NULL)	/* If everything is fine, this cannot actually
+				 * happen. */
+	    {
+		continue;
+	    }
+	    *string++ = NUL;	/* Isolate flags from string. */
+	    com_leader = string;
 
 	    /*
 	     * Line contents and string must match.
@@ -1614,7 +1753,7 @@ get_leader_len(line, flags, backward)
 		    ++string;
 	    }
 	    for (j = 0; string[j] != NUL && string[j] == line[i + j]; ++j)
-		;
+		/* do nothing */;
 	    if (string[j] != NUL)
 		continue;
 
@@ -1623,37 +1762,77 @@ get_leader_len(line, flags, backward)
 	     * end-of-line after the string in the line.
 	     */
 	    if (vim_strchr(part_buf, COM_BLANK) != NULL
-			   && !vim_iswhite(line[i + j]) && line[i + j] != NUL)
+		    && !vim_iswhite(line[i + j]) && line[i + j] != NUL)
+	    {
 		continue;
+	    }
 
 	    /*
 	     * We have found a match, stop searching.
 	     */
-	    i += j;
-	    got_com = TRUE;
 	    found_one = TRUE;
+
+	    if (flags)
+		*flags = flags_save;
+	    com_flags = flags_save;
+
 	    break;
 	}
 
-	/*
-	 * No match found, stop scanning.
-	 */
-	if (!found_one)
-	    break;
+	if (found_one)
+	{
+	    char_u  part_buf2[COM_MAX_LEN];	/* buffer for one option part */
+	    int     len1, len2, off;
 
-	/*
-	 * Include any trailing white space.
-	 */
-	while (vim_iswhite(line[i]))
-	    ++i;
+	    result = i;
+	    /*
+	     * If this comment nests, continue searching.
+	     */
+	    if (vim_strchr(part_buf, COM_NEST) != NULL)
+		continue;
 
-	/*
-	 * If this comment doesn't nest, stop here.
-	 */
-	if (vim_strchr(part_buf, COM_NEST) == NULL)
-	    break;
+	    lower_check_bound = i;
+
+	    /* Let's verify whether the comment leader found is a substring
+	     * of other comment leaders. If it is, let's adjust the
+	     * lower_check_bound so that we make sure that we have determined
+	     * the comment leader correctly.
+	     */
+
+	    while (vim_iswhite(*com_leader))
+		++com_leader;
+	    len1 = (int)STRLEN(com_leader);
+
+	    for (list = curbuf->b_p_com; *list; )
+	    {
+		char_u *flags_save = list;
+
+		(void)copy_option_part(&list, part_buf2, COM_MAX_LEN, ",");
+		if (flags_save == com_flags)
+		    continue;
+		string = vim_strchr(part_buf2, ':');
+		++string;
+		while (vim_iswhite(*string))
+		    ++string;
+		len2 = (int)STRLEN(string);
+		if (len2 == 0)
+		    continue;
+
+		/* Now we have to verify whether string ends with a substring
+		 * beginning the com_leader. */
+		for (off = (len2 > i ? i : len2); off > 0 && off + len1 > len2;)
+		{
+		    --off;
+		    if (!STRNCMP(string + off, com_leader, len2 - off))
+		    {
+			if (i - off < lower_check_bound)
+			    lower_check_bound = i - off;
+		    }
+		}
+	    }
+	}
     }
-    return (got_com ? i : 0);
+    return result;
 }
 #endif
 
@@ -1742,7 +1921,7 @@ plines_win_nofold(wp, lnum)
 	col += 1;
 
     /*
-     * Add column offset for 'number' and 'foldcolumn'.
+     * Add column offset for 'number', 'relativenumber' and 'foldcolumn'.
      */
     width = W_WIDTH(wp) - win_col_off(wp);
     if (width <= 0)
@@ -1803,7 +1982,7 @@ plines_win_col(wp, lnum, column)
 	col += win_lbr_chartabsize(wp, s, (colnr_T)col, NULL) - 1;
 
     /*
-     * Add column offset for 'number', 'foldcolumn', etc.
+     * Add column offset for 'number', 'relativenumber', 'foldcolumn', etc.
      */
     width = W_WIDTH(wp) - win_col_off(wp);
     if (width <= 0)
@@ -1907,7 +2086,7 @@ ins_char(c)
     int		c;
 {
 #if defined(FEAT_MBYTE) || defined(PROTO)
-    char_u	buf[MB_MAXBYTES];
+    char_u	buf[MB_MAXBYTES + 1];
     int		n;
 
     n = (*mb_char2bytes)(c, buf);
@@ -2274,10 +2453,10 @@ del_bytes(count, fixpos_arg, use_delcombine)
      * existing line. Otherwise a new line has to be allocated
      * Can't do this when using Netbeans, because we would need to invoke
      * netbeans_removed(), which deallocates the line.  Let ml_replace() take
-     * care of notifiying Netbeans.
+     * care of notifying Netbeans.
      */
 #ifdef FEAT_NETBEANS_INTG
-    if (usingNetbeans)
+    if (netbeans_active())
 	was_alloced = FALSE;
     else
 #endif
@@ -2413,24 +2592,6 @@ pchar_cursor(c)
 						  + curwin->w_cursor.col) = c;
 }
 
-#if 0 /* not used */
-/*
- * Put *pos at end of current buffer
- */
-    void
-goto_endofbuf(pos)
-    pos_T    *pos;
-{
-    char_u  *p;
-
-    pos->lnum = curbuf->b_ml.ml_line_count;
-    pos->col = 0;
-    p = ml_get(pos->lnum);
-    while (*p++)
-	++pos->col;
-}
-#endif
-
 /*
  * When extra == 0: Return TRUE if the cursor is before or on the first
  *		    non-blank in the line.
@@ -2516,17 +2677,26 @@ changed()
 		msg_scroll = save_msg_scroll;
 	    }
 	}
-	curbuf->b_changed = TRUE;
-	ml_setflags(curbuf);
-#ifdef FEAT_WINDOWS
-	check_status(curbuf);
-	redraw_tabline = TRUE;
-#endif
-#ifdef FEAT_TITLE
-	need_maketitle = TRUE;	    /* set window title later */
-#endif
+	changed_int();
     }
     ++curbuf->b_changedtick;
+}
+
+/*
+ * Internal part of changed(), no user interaction.
+ */
+    void
+changed_int()
+{
+    curbuf->b_changed = TRUE;
+    ml_setflags(curbuf);
+#ifdef FEAT_WINDOWS
+    check_status(curbuf);
+    redraw_tabline = TRUE;
+#endif
+#ifdef FEAT_TITLE
+    need_maketitle = TRUE;	    /* set window title later */
+#endif
 }
 
 static void changedOneline __ARGS((buf_T *buf, linenr_T lnum));
@@ -2928,7 +3098,7 @@ unchanged(buf, ff)
     buf_T	*buf;
     int		ff;	/* also reset 'fileformat' */
 {
-    if (buf->b_changed || (ff && file_ff_differs(buf)))
+    if (buf->b_changed || (ff && file_ff_differs(buf, FALSE)))
     {
 	buf->b_changed = 0;
 	ml_setflags(buf);
@@ -3089,8 +3259,9 @@ ask_yesno(str, direct)
     int
 get_keystroke()
 {
-#define CBUFLEN 151
-    char_u	buf[CBUFLEN];
+    char_u	*buf = NULL;
+    int		buflen = 150;
+    int		maxlen;
     int		len = 0;
     int		n;
     int		save_mapped_ctrl_c = mapped_ctrl_c;
@@ -3102,12 +3273,29 @@ get_keystroke()
 	cursor_on();
 	out_flush();
 
+	/* Leave some room for check_termcode() to insert a key code into (max
+	 * 5 chars plus NUL).  And fix_input_buffer() can triple the number of
+	 * bytes. */
+	maxlen = (buflen - 6 - len) / 3;
+	if (buf == NULL)
+	    buf = alloc(buflen);
+	else if (maxlen < 10)
+	{
+	    /* Need some more space. This migth happen when receiving a long
+	     * escape sequence. */
+	    buflen += 100;
+	    buf = vim_realloc(buf, buflen);
+	    maxlen = (buflen - 6 - len) / 3;
+	}
+	if (buf == NULL)
+	{
+	    do_outofmem_msg((long_u)buflen);
+	    return ESC;  /* panic! */
+	}
+
 	/* First time: blocking wait.  Second time: wait up to 100ms for a
-	 * terminal code to complete.  Leave some room for check_termcode() to
-	 * insert a key code into (max 5 chars plus NUL).  And
-	 * fix_input_buffer() can triple the number of bytes. */
-	n = ui_inchar(buf + len, (CBUFLEN - 6 - len) / 3,
-						    len == 0 ? -1L : 100L, 0);
+	 * terminal code to complete. */
+	n = ui_inchar(buf + len, maxlen, len == 0 ? -1L : 100L, 0);
 	if (n > 0)
 	{
 	    /* Replace zero and CSI by a special key code. */
@@ -3119,14 +3307,23 @@ get_keystroke()
 	    ++waited;	    /* keep track of the waiting time */
 
 	/* Incomplete termcode and not timed out yet: get more characters */
-	if ((n = check_termcode(1, buf, len)) < 0
+	if ((n = check_termcode(1, buf, buflen, &len)) < 0
 	       && (!p_ttimeout || waited * 100L < (p_ttm < 0 ? p_tm : p_ttm)))
 	    continue;
 
-	/* found a termcode: adjust length */
-	if (n > 0)
+	if (n == KEYLEN_REMOVED)  /* key code removed */
+	{
+	    if (must_redraw != 0 && !need_wait_return && (State & CMDLINE) == 0)
+	    {
+		/* Redrawing was postponed, do it now. */
+		update_screen(0);
+		setcursor(); /* put cursor back where it belongs */
+	    }
+	    continue;
+	}
+	if (n > 0)		/* found a termcode: adjust length */
 	    len = n;
-	if (len == 0)	    /* nothing typed yet */
+	if (len == 0)		/* nothing typed yet */
 	    continue;
 
 	/* Handle modifier and/or special key code. */
@@ -3149,6 +3346,8 @@ get_keystroke()
 		    || n == K_RIGHTRELEASE
 		    || n == K_MOUSEDOWN
 		    || n == K_MOUSEUP
+		    || n == K_MOUSELEFT
+		    || n == K_MOUSERIGHT
 		    || n == K_X1MOUSE
 		    || n == K_X1DRAG
 		    || n == K_X1RELEASE
@@ -3176,7 +3375,7 @@ get_keystroke()
 	{
 	    if (MB_BYTE2LEN(n) > len)
 		continue;	/* more bytes to get */
-	    buf[len >= CBUFLEN ? CBUFLEN - 1 : len] = NUL;
+	    buf[len >= buflen ? buflen - 1 : len] = NUL;
 	    n = (*mb_ptr2char)(buf);
 	}
 #endif
@@ -3186,6 +3385,7 @@ get_keystroke()
 #endif
 	break;
     }
+    vim_free(buf);
 
     mapped_ctrl_c = save_mapped_ctrl_c;
     return n;
@@ -3330,19 +3530,23 @@ msgmore(n)
 	if (pn == 1)
 	{
 	    if (n > 0)
-		STRCPY(msg_buf, _("1 more line"));
+		vim_strncpy(msg_buf, (char_u *)_("1 more line"),
+							     MSG_BUF_LEN - 1);
 	    else
-		STRCPY(msg_buf, _("1 line less"));
+		vim_strncpy(msg_buf, (char_u *)_("1 line less"),
+							     MSG_BUF_LEN - 1);
 	}
 	else
 	{
 	    if (n > 0)
-		sprintf((char *)msg_buf, _("%ld more lines"), pn);
+		vim_snprintf((char *)msg_buf, MSG_BUF_LEN,
+						     _("%ld more lines"), pn);
 	    else
-		sprintf((char *)msg_buf, _("%ld fewer lines"), pn);
+		vim_snprintf((char *)msg_buf, MSG_BUF_LEN,
+						    _("%ld fewer lines"), pn);
 	}
 	if (got_int)
-	    STRCAT(msg_buf, _(" (Interrupted)"));
+	    vim_strcat(msg_buf, (char_u *)_(" (Interrupted)"), MSG_BUF_LEN);
 	if (msg(msg_buf))
 	{
 	    set_keep_msg(msg_buf, 0);
@@ -3499,7 +3703,7 @@ init_homedir()
     if (enc_utf8 && var != NULL)
     {
 	int	len;
-	char_u  *pp;
+	char_u  *pp = NULL;
 
 	/* Convert from active codepage to UTF-8.  Other conversions are
 	 * not done, because they would fail for non-ASCII characters. */
@@ -3866,11 +4070,13 @@ expand_env_esc(srcp, dst, dstlen, esc, one, startstr)
  * Vim's version of getenv().
  * Special handling of $HOME, $VIM and $VIMRUNTIME.
  * Also does ACP to 'enc' conversion for Win32.
+ * "mustfree" is set to TRUE when returned is allocated, it must be
+ * initialized to FALSE by the caller.
  */
     char_u *
 vim_getenv(name, mustfree)
     char_u	*name;
-    int		*mustfree;	/* set to TRUE when returned is allocated */
+    int		*mustfree;
 {
     char_u	*p;
     char_u	*pend;
@@ -3892,7 +4098,7 @@ vim_getenv(name, mustfree)
 	if (enc_utf8)
 	{
 	    int	    len;
-	    char_u  *pp;
+	    char_u  *pp = NULL;
 
 	    /* Convert from active codepage to UTF-8.  Other conversions are
 	     * not done, because they would fail for non-ASCII characters. */
@@ -3936,7 +4142,7 @@ vim_getenv(name, mustfree)
 	    if (enc_utf8)
 	    {
 		int	len;
-		char_u  *pp;
+		char_u  *pp = NULL;
 
 		/* Convert from active codepage to UTF-8.  Other conversions
 		 * are not done, because they would fail for non-ASCII
@@ -3944,7 +4150,7 @@ vim_getenv(name, mustfree)
 		acp_to_enc(p, (int)STRLEN(p), &pp, &len);
 		if (pp != NULL)
 		{
-		    if (mustfree)
+		    if (*mustfree)
 			vim_free(p);
 		    p = pp;
 		    *mustfree = TRUE;
@@ -4081,17 +4287,6 @@ vim_getenv(name, mustfree)
 	{
 	    vim_setenv((char_u *)"VIMRUNTIME", p);
 	    didset_vimruntime = TRUE;
-#ifdef FEAT_GETTEXT
-	    {
-		char_u	*buf = concat_str(p, (char_u *)"/lang");
-
-		if (buf != NULL)
-		{
-		    bindtextdomain(VIMPACKAGE, (char *)buf);
-		    vim_free(buf);
-		}
-	    }
-#endif
 	}
 	else
 	{
@@ -4167,6 +4362,22 @@ vim_setenv(name, val)
     {
 	sprintf((char *)envbuf, "%s=%s", name, val);
 	putenv((char *)envbuf);
+    }
+#endif
+#ifdef FEAT_GETTEXT
+    /*
+     * When setting $VIMRUNTIME adjust the directory to find message
+     * translations to $VIMRUNTIME/lang.
+     */
+    if (*val != NUL && STRICMP(name, "VIMRUNTIME") == 0)
+    {
+	char_u	*buf = concat_str(val, (char_u *)"/lang");
+
+	if (buf != NULL)
+	{
+	    bindtextdomain(VIMPACKAGE, (char *)buf);
+	    vim_free(buf);
+	}
     }
 #endif
 }
@@ -4418,6 +4629,7 @@ fullpathcmp(s1, s2, checkname)
 
 /*
  * Get the tail of a path: the file name.
+ * When the path ends in a path separator the tail is the NUL after it.
  * Fail safe: never returns NULL.
  */
     char_u *
@@ -4436,6 +4648,46 @@ gettail(fname)
     }
     return p1;
 }
+
+#if defined(FEAT_SEARCHPATH)
+static char_u *gettail_dir __ARGS((char_u *fname));
+
+/*
+ * Return the end of the directory name, on the first path
+ * separator:
+ * "/path/file", "/path/dir/", "/path//dir", "/file"
+ *	 ^	       ^	     ^	      ^
+ */
+    static char_u *
+gettail_dir(fname)
+    char_u *fname;
+{
+    char_u	*dir_end = fname;
+    char_u	*next_dir_end = fname;
+    int		look_for_sep = TRUE;
+    char_u	*p;
+
+    for (p = fname; *p != NUL; )
+    {
+	if (vim_ispathsep(*p))
+	{
+	    if (look_for_sep)
+	    {
+		next_dir_end = p;
+		look_for_sep = FALSE;
+	    }
+	}
+	else
+	{
+	    if (!look_for_sep)
+		dir_end = next_dir_end;
+	    look_for_sep = TRUE;
+	}
+	mb_ptr_adv(p);
+    }
+    return dir_end;
+}
+#endif
 
 /*
  * Get pointer to tail of "fname", including path separators.  Putting a NUL
@@ -4515,25 +4767,21 @@ get_past_head(path)
 vim_ispathsep(c)
     int c;
 {
-#ifdef RISCOS
-    return (c == '.' || c == ':');
-#else
-# ifdef UNIX
+#ifdef UNIX
     return (c == '/');	    /* UNIX has ':' inside file names */
-# else
-#  ifdef BACKSLASH_IN_FILENAME
+#else
+# ifdef BACKSLASH_IN_FILENAME
     return (c == ':' || c == '/' || c == '\\');
-#  else
-#   ifdef VMS
+# else
+#  ifdef VMS
     /* server"user passwd"::device:[full.path.name]fname.extension;version" */
     return (c == ':' || c == '[' || c == ']' || c == '/'
 	    || c == '<' || c == '>' || c == '"' );
-#   else		/* Amiga */
+#  else
     return (c == ':' || c == '/');
-#   endif /* VMS */
-#  endif
+#  endif /* VMS */
 # endif
-#endif /* RISC OS */
+#endif
 }
 
 #if defined(FEAT_SEARCHPATH) || defined(PROTO)
@@ -4873,11 +5121,12 @@ static int	cin_iscomment __ARGS((char_u *));
 static int	cin_islinecomment __ARGS((char_u *));
 static int	cin_isterminated __ARGS((char_u *, int, int));
 static int	cin_isinit __ARGS((void));
-static int	cin_isfuncdecl __ARGS((char_u **, linenr_T));
+static int	cin_isfuncdecl __ARGS((char_u **, linenr_T, linenr_T, int, int));
 static int	cin_isif __ARGS((char_u *));
 static int	cin_iselse __ARGS((char_u *));
 static int	cin_isdo __ARGS((char_u *));
 static int	cin_iswhileofdo __ARGS((char_u *, linenr_T, int));
+static int	cin_is_if_for_while_before_offset __ARGS((char_u *line, int *poffset));
 static int	cin_iswhileofdo_end __ARGS((int terminated, int	ind_maxparen, int ind_maxcomment));
 static int	cin_isbreak __ARGS((char_u *));
 static int	cin_is_cpp_baseclass __ARGS((colnr_T *col));
@@ -4889,6 +5138,7 @@ static pos_T	*find_match_paren __ARGS((int, int));
 static int	corr_ind_maxparen __ARGS((int ind_maxparen, pos_T *startpos));
 static int	find_last_paren __ARGS((char_u *l, int start, int end));
 static int	find_match __ARGS((int lookfor, linenr_T ourscope, int ind_maxparen, int ind_maxcomment));
+static int	cin_is_cpp_namespace __ARGS((char_u *));
 
 static int	ind_hash_comment = 0;   /* # starts a comment */
 
@@ -4934,7 +5184,7 @@ cin_skipcomment(s)
 }
 
 /*
- * Return TRUE if there there is no code at *s.  White space and comments are
+ * Return TRUE if there is no code at *s.  White space and comments are
  * not considered code.
  */
     static int
@@ -5041,7 +5291,7 @@ cin_islabel(ind_maxcomment)		/* XXX */
 	    curwin->w_cursor = cursor_save;
 	    if (cin_isterminated(line, TRUE, FALSE)
 		    || cin_isscopedecl(line)
-		    || cin_iscase(line)
+		    || cin_iscase(line, TRUE)
 		    || (cin_islabel_skip(&line) && cin_nocode(line)))
 		return TRUE;
 	    return FALSE;
@@ -5067,6 +5317,9 @@ cin_isinit(void)
     if (STRNCMP(s, "typedef", 7) == 0 && !vim_isIDc(s[7]))
 	s = cin_skipcomment(s + 7);
 
+    if (STRNCMP(s, "static", 6) == 0 && !vim_isIDc(s[6]))
+	s = cin_skipcomment(s + 6);
+
     if (STRNCMP(s, "enum", 4) == 0 && !vim_isIDc(s[4]))
 	return TRUE;
 
@@ -5080,8 +5333,9 @@ cin_isinit(void)
  * Recognize a switch label: "case .*:" or "default:".
  */
      int
-cin_iscase(s)
+cin_iscase(s, strict)
     char_u *s;
+    int strict; /* Allow relaxed check of case statement for JS */
 {
     s = cin_skipcomment(s);
     if (STRNCMP(s, "case", 4) == 0 && !vim_isIDc(s[4]))
@@ -5097,11 +5351,17 @@ cin_iscase(s)
 		    return TRUE;
 	    }
 	    if (*s == '\'' && s[1] && s[2] == '\'')
-		s += 2;			/* skip over '.' */
+		s += 2;			/* skip over ':' */
 	    else if (*s == '/' && (s[1] == '*' || s[1] == '/'))
 		return FALSE;		/* stop at comment */
 	    else if (*s == '"')
-		return FALSE;		/* stop at string */
+	    {
+		/* JS etc. */
+		if (strict)
+		    return FALSE;		/* stop at string */
+		else
+		    return TRUE;
+	    }
 	}
 	return FALSE;
     }
@@ -5124,7 +5384,7 @@ cin_isdefault(s)
 }
 
 /*
- * Recognize a "public/private/proctected" scope declaration label.
+ * Recognize a "public/private/protected" scope declaration label.
  */
     int
 cin_isscopedecl(s)
@@ -5144,6 +5404,50 @@ cin_isscopedecl(s)
     return (*(s = cin_skipcomment(s + i)) == ':' && s[1] != ':');
 }
 
+/* Maximum number of lines to search back for a "namespace" line. */
+#define FIND_NAMESPACE_LIM 20
+
+/*
+ * Recognize a "namespace" scope declaration.
+ */
+    static int
+cin_is_cpp_namespace(s)
+    char_u	*s;
+{
+    char_u	*p;
+    int		has_name = FALSE;
+
+    s = cin_skipcomment(s);
+    if (STRNCMP(s, "namespace", 9) == 0 && (s[9] == NUL || !vim_iswordc(s[9])))
+    {
+	p = cin_skipcomment(skipwhite(s + 9));
+	while (*p != NUL)
+	{
+	    if (vim_iswhite(*p))
+	    {
+		has_name = TRUE; /* found end of a name */
+		p = cin_skipcomment(skipwhite(p));
+	    }
+	    else if (*p == '{')
+	    {
+		break;
+	    }
+	    else if (vim_iswordc(*p))
+	    {
+		if (has_name)
+		    return FALSE; /* word character after skipping past name */
+		++p;
+	    }
+	    else
+	    {
+		return FALSE;
+	    }
+	}
+	return TRUE;
+    }
+    return FALSE;
+}
+
 /*
  * Return a pointer to the first non-empty non-comment character after a ':'.
  * Return NULL if not found.
@@ -5160,7 +5464,7 @@ after_label(l)
 	{
 	    if (l[1] == ':')	    /* skip over "::" for C++ */
 		++l;
-	    else if (!cin_iscase(l + 1))
+	    else if (!cin_iscase(l + 1, FALSE))
 		break;
 	}
 	else if (*l == '\'' && l[1] && l[2] == '\'')
@@ -5218,7 +5522,8 @@ skip_label(lnum, pp, ind_maxcomment)
     curwin->w_cursor.lnum = lnum;
     l = ml_get_curline();
 				    /* XXX */
-    if (cin_iscase(l) || cin_isscopedecl(l) || cin_islabel(ind_maxcomment))
+    if (cin_iscase(l, FALSE) || cin_isscopedecl(l)
+					       || cin_islabel(ind_maxcomment))
     {
 	amount = get_indent_nolabel(lnum);
 	l = after_label(ml_get_curline());
@@ -5341,8 +5646,7 @@ cin_get_equal_amount(lnum)
 cin_ispreproc(s)
     char_u *s;
 {
-    s = skipwhite(s);
-    if (*s == '#')
+    if (*skipwhite(s) == '#')
 	return TRUE;
     return FALSE;
 }
@@ -5402,8 +5706,11 @@ cin_islinecomment(p)
 }
 
 /*
- * Recognize a line that starts with '{' or '}', or ends with ';', '{' or '}'.
+ * Recognize a line that starts with '{' or '}', or ends with ';', ',', '{' or
+ * '}'.
  * Don't consider "} else" a terminated line.
+ * If a line begins with an "else", only consider it terminated if no unmatched
+ * opening braces follow (handle "else { foo();" correctly).
  * Return the character terminating the line (ending char's have precedence if
  * both apply in order to determine initializations).
  */
@@ -5413,21 +5720,35 @@ cin_isterminated(s, incl_open, incl_comma)
     int		incl_open;	/* include '{' at the end as terminator */
     int		incl_comma;	/* recognize a trailing comma */
 {
-    char_u found_start = 0;
+    char_u	found_start = 0;
+    unsigned	n_open = 0;
+    int		is_else = FALSE;
 
     s = cin_skipcomment(s);
 
     if (*s == '{' || (*s == '}' && !cin_iselse(s)))
 	found_start = *s;
 
+    if (!found_start)
+	is_else = cin_iselse(s);
+
     while (*s)
     {
 	/* skip over comments, "" strings and 'c'haracters */
 	s = skip_string(cin_skipcomment(s));
-	if ((*s == ';' || (incl_open && *s == '{') || *s == '}'
-						 || (incl_comma && *s == ','))
+	if (*s == '}' && n_open > 0)
+	    --n_open;
+	if ((!is_else || n_open == 0)
+		&& (*s == ';' || *s == '}' || (incl_comma && *s == ','))
 		&& cin_nocode(s + 1))
 	    return *s;
+	else if (*s == '{')
+	{
+	    if (incl_open && cin_nocode(s + 1))
+		return *s;
+	    else
+		++n_open;
+	}
 
 	if (*s)
 	    s++;
@@ -5443,20 +5764,40 @@ cin_isterminated(s, incl_open, incl_comma)
  * "sp" points to a string with the line.  When looking at other lines it must
  * be restored to the line.  When it's NULL fetch lines here.
  * "lnum" is where we start looking.
+ * "min_lnum" is the line before which we will not be looking.
  */
     static int
-cin_isfuncdecl(sp, first_lnum)
+cin_isfuncdecl(sp, first_lnum, min_lnum, ind_maxparen, ind_maxcomment)
     char_u	**sp;
     linenr_T	first_lnum;
+    linenr_T	min_lnum;
+    int		ind_maxparen;
+    int		ind_maxcomment;
 {
     char_u	*s;
     linenr_T	lnum = first_lnum;
     int		retval = FALSE;
+    pos_T	*trypos;
+    int		just_started = TRUE;
 
     if (sp == NULL)
 	s = ml_get(lnum);
     else
 	s = *sp;
+
+    if (find_last_paren(s, '(', ')')
+	&& (trypos = find_match_paren(ind_maxparen, ind_maxcomment)) != NULL)
+    {
+	lnum = trypos->lnum;
+	if (lnum < min_lnum)
+	    return FALSE;
+
+	s = ml_get(lnum);
+    }
+
+    /* Ignore line starting with #. */
+    if (cin_ispreproc(s))
+	return FALSE;
 
     while (*s && *s != '(' && *s != ';' && *s != '\'' && *s != '"')
     {
@@ -5483,18 +5824,38 @@ cin_isfuncdecl(sp, first_lnum)
 		retval = TRUE;
 	    goto done;
 	}
-	if (*s == ',' && cin_nocode(s + 1))
+	if ((*s == ',' && cin_nocode(s + 1)) || s[1] == NUL || cin_nocode(s))
 	{
-	    /* ',' at the end: continue looking in the next line */
+	    int comma = (*s == ',');
+
+	    /* ',' at the end: continue looking in the next line.
+	     * At the end: check for ',' in the next line, for this style:
+	     * func(arg1
+	     *       , arg2) */
+	    for (;;)
+	    {
+		if (lnum >= curbuf->b_ml.ml_line_count)
+		    break;
+		s = ml_get(++lnum);
+		if (!cin_ispreproc(s))
+		    break;
+	    }
 	    if (lnum >= curbuf->b_ml.ml_line_count)
 		break;
-
-	    s = ml_get(++lnum);
+	    /* Require a comma at end of the line or a comma or ')' at the
+	     * start of next line. */
+	    s = skipwhite(s);
+	    if (!just_started && (!comma && *s != ',' && *s != ')'))
+		break;
+	    just_started = FALSE;
 	}
 	else if (cin_iscomment(s))	/* ignore comments */
 	    s = cin_skipcomment(s);
 	else
+	{
 	    ++s;
+	    just_started = FALSE;
+	}
     }
 
 done:
@@ -5562,6 +5923,52 @@ cin_iswhileofdo(p, lnum, ind_maxparen)	    /* XXX */
 	curwin->w_cursor = cursor_save;
     }
     return retval;
+}
+
+/*
+ * Check whether in "p" there is an "if", "for" or "while" before "*poffset".
+ * Return 0 if there is none.
+ * Otherwise return !0 and update "*poffset" to point to the place where the
+ * string was found.
+ */
+    static int
+cin_is_if_for_while_before_offset(line, poffset)
+    char_u *line;
+    int    *poffset;
+{
+    int offset = *poffset;
+
+    if (offset-- < 2)
+	return 0;
+    while (offset > 2 && vim_iswhite(line[offset]))
+	--offset;
+
+    offset -= 1;
+    if (!STRNCMP(line + offset, "if", 2))
+	goto probablyFound;
+
+    if (offset >= 1)
+    {
+	offset -= 1;
+	if (!STRNCMP(line + offset, "for", 3))
+	    goto probablyFound;
+
+	if (offset >= 2)
+	{
+	    offset -= 2;
+	    if (!STRNCMP(line + offset, "while", 5))
+		goto probablyFound;
+	}
+    }
+    return 0;
+
+probablyFound:
+    if (!offset || !vim_isIDc(line[offset - 1]))
+    {
+	*poffset = offset;
+	return 1;
+    }
+    return 0;
 }
 
 /*
@@ -5712,7 +6119,9 @@ cin_is_cpp_baseclass(col)
 		continue;
 	}
 
-	if (s[0] == ':')
+	if (s[0] == '"')
+	    s = skip_string(s) + 1;
+	else if (s[0] == ':')
 	{
 	    if (s[1] == ':')
 	    {
@@ -5916,7 +6325,7 @@ find_start_brace(ind_maxcomment)	    /* XXX */
 
 /*
  * Find the matching '(', failing if it is in a comment.
- * Return NULL of no match found.
+ * Return NULL if no match found.
  */
     static pos_T *
 find_match_paren(ind_maxparen, ind_maxcomment)	    /* XXX */
@@ -5966,7 +6375,7 @@ corr_ind_maxparen(ind_maxparen, startpos)
 
 /*
  * Set w_cursor.col to the column number of the last unmatched ')' or '{' in
- * line "l".
+ * line "l".  "l" must point to the start of the line.
  */
     static int
 find_last_paren(l, start, end)
@@ -5979,7 +6388,7 @@ find_last_paren(l, start, end)
 
     curwin->w_cursor.col = 0;		    /* default is start of line */
 
-    for (i = 0; l[i]; i++)
+    for (i = 0; l[i] != NUL; i++)
     {
 	i = (int)(cin_skipcomment(l + i) - l); /* ignore parens in comments */
 	i = (int)(skip_string(l + i) - l);    /* ignore parens in quotes */
@@ -6015,7 +6424,7 @@ get_c_indent()
     int ind_open_imag = 0;
 
     /*
-     * spaces from the prevailing indent for a line that is not precededof by
+     * spaces from the prevailing indent for a line that is not preceded by
      * an opening brace.
      */
     int ind_no_brace = 0;
@@ -6043,6 +6452,12 @@ get_c_indent()
      * column is imagined to be
      */
     int ind_open_left_imag = 0;
+
+    /*
+     * Spaces jump labels should be shifted to the left if N is non-negative,
+     * otherwise the jump label will be put to column 1.
+     */
+    int ind_jump_label = -1;
 
     /*
      * spaces from the switch() indent a "case xx" label should be located
@@ -6165,9 +6580,25 @@ get_c_indent()
     int	ind_java = 0;
 
     /*
+     * not to confuse JS object properties with labels
+     */
+    int ind_js = 0;
+
+    /*
      * handle blocked cases correctly
      */
     int ind_keep_case_label = 0;
+
+    /*
+     * handle C++ namespace
+     */
+    int ind_cpp_namespace = 0;
+
+    /*
+     * handle continuation lines containing conditions of if(), for() and
+     * while()
+     */
+    int ind_if_for_while = 0;
 
     pos_T	cur_curpos;
     int		amount;
@@ -6209,7 +6640,10 @@ get_c_indent()
     int		n;
     int		iscase;
     int		lookfor_break;
+    int		lookfor_cpp_namespace = FALSE;
     int		cont_amount = 0;    /* amount for continuation line */
+    int		original_line_islabel;
+    int		added_to_amount = 0;
 
     for (options = curbuf->b_p_cino; *options; )
     {
@@ -6255,6 +6689,7 @@ get_c_indent()
 	    case '{': ind_open_extra = n; break;
 	    case '}': ind_close_extra = n; break;
 	    case '^': ind_open_left_imag = n; break;
+	    case 'L': ind_jump_label = n; break;
 	    case ':': ind_case = n; break;
 	    case '=': ind_case_code = n; break;
 	    case 'b': ind_case_break = n; break;
@@ -6277,8 +6712,11 @@ get_c_indent()
 	    case 'g': ind_scopedecl = n; break;
 	    case 'h': ind_scopedecl_code = n; break;
 	    case 'j': ind_java = n; break;
+	    case 'J': ind_js = n; break;
 	    case 'l': ind_keep_case_label = n; break;
 	    case '#': ind_hash_comment = n; break;
+	    case 'N': ind_cpp_namespace = n; break;
+	    case 'k': ind_if_for_while = n; break;
 	}
 	if (*options == ',')
 	    ++options;
@@ -6286,6 +6724,10 @@ get_c_indent()
 
     /* remember where the cursor was when we started */
     cur_curpos = curwin->w_cursor;
+
+    /* if we are at line 1 0 is fine, right? */
+    if (cur_curpos.lnum == 1)
+	return 0;
 
     /* Get a copy of the current contents of the line.
      * This is required, because only the most recent line obtained with
@@ -6312,6 +6754,8 @@ get_c_indent()
 
     curwin->w_cursor.col = 0;
 
+    original_line_islabel = cin_islabel(ind_maxcomment);  /* XXX */
+
     /*
      * #defines and so on always go at the left when included in 'cinkeys'.
      */
@@ -6321,9 +6765,11 @@ get_c_indent()
     }
 
     /*
-     * Is it a non-case label?	Then that goes at the left margin too.
+     * Is it a non-case label?	Then that goes at the left margin too unless:
+     *  - JS flag is set.
+     *  - 'L' item has a positive value.
      */
-    else if (cin_islabel(ind_maxcomment))	    /* XXX */
+    else if (original_line_islabel && !ind_js && ind_jump_label < 0)
     {
 	amount = 0;
     }
@@ -6360,6 +6806,8 @@ get_c_indent()
 	/* find how indented the line beginning the comment is */
 	getvcol(curwin, trypos, &col, NULL, NULL);
 	amount = col;
+	*lead_start = NUL;
+	*lead_middle = NUL;
 
 	p = curbuf->b_p_com;
 	while (*p != NUL)
@@ -6572,6 +7020,33 @@ get_c_indent()
 	if (amount == -1)
 	{
 	    int	    ignore_paren_col = 0;
+	    int	    is_if_for_while = 0;
+
+	    if (ind_if_for_while)
+	    {
+		/* Look for the outermost opening parenthesis on this line
+		 * and check whether it belongs to an "if", "for" or "while". */
+
+		pos_T	    cursor_save = curwin->w_cursor;
+		pos_T	    outermost;
+		char_u	    *line;
+
+		trypos = &our_paren_pos;
+		do {
+		    outermost = *trypos;
+		    curwin->w_cursor.lnum = outermost.lnum;
+		    curwin->w_cursor.col = outermost.col;
+
+		    trypos = find_match_paren(ind_maxparen, ind_maxcomment);
+		} while (trypos && trypos->lnum == outermost.lnum);
+
+		curwin->w_cursor = cursor_save;
+
+		line = ml_get(outermost.lnum);
+
+		is_if_for_while =
+		    cin_is_if_for_while_before_offset(line, &outermost.col);
+	    }
 
 	    amount = skip_label(our_paren_pos.lnum, &look, ind_maxcomment);
 	    look = skipwhite(look);
@@ -6596,7 +7071,7 @@ get_c_indent()
 		curwin->w_cursor.lnum = save_lnum;
 		look = ml_get(our_paren_pos.lnum) + look_col;
 	    }
-	    if (theline[0] == ')' || ind_unclosed == 0
+	    if (theline[0] == ')' || (ind_unclosed == 0 && is_if_for_while == 0)
 		    || (!ind_unclosed_noignore && *look == '('
 						    && ignore_paren_col == 0))
 	    {
@@ -6667,7 +7142,8 @@ get_c_indent()
 	    {
 		/* Line up with the start of the matching paren line. */
 	    }
-	    else if (ind_unclosed == 0 || (!ind_unclosed_noignore
+	    else if ((ind_unclosed == 0 && is_if_for_while == 0)
+		     || (!ind_unclosed_noignore
 				    && *look == '(' && ignore_paren_col == 0))
 	    {
 		if (cur_amount != MAXCOL)
@@ -6700,11 +7176,15 @@ get_c_indent()
 		{
 		    curwin->w_cursor.lnum = our_paren_pos.lnum;
 		    curwin->w_cursor.col = col;
-		    if ((trypos = find_match_paren(ind_maxparen,
-						     ind_maxcomment)) != NULL)
+		    if (find_match_paren(ind_maxparen, ind_maxcomment) != NULL)
 			amount += ind_unclosed2;
 		    else
-			amount += ind_unclosed;
+		    {
+			if (is_if_for_while)
+			    amount += ind_if_for_while;
+			else
+			    amount += ind_unclosed;
+		    }
 		}
 		/*
 		 * For a line starting with ')' use the minimum of the two
@@ -6774,7 +7254,8 @@ get_c_indent()
 	     *			ldfd) {
 	     *		    }
 	     */
-	    if (ind_keep_case_label && cin_iscase(skipwhite(ml_get_curline())))
+	    if (ind_js || (ind_keep_case_label
+			   && cin_iscase(skipwhite(ml_get_curline()), FALSE)))
 		amount = get_indent();
 	    else
 		amount = skip_label(lnum, &l, ind_maxcomment);
@@ -6836,11 +7317,24 @@ get_c_indent()
 	    if (start_brace == BRACE_IN_COL0)	    /* '{' is in column 0 */
 	    {
 		amount = ind_open_left_imag;
+		lookfor_cpp_namespace = TRUE;
+	    }
+	    else if (start_brace == BRACE_AT_START &&
+		    lookfor_cpp_namespace)	  /* '{' is at start */
+	    {
+
+		lookfor_cpp_namespace = TRUE;
 	    }
 	    else
 	    {
 		if (start_brace == BRACE_AT_END)    /* '{' is at end of line */
+		{
 		    amount += ind_open_imag;
+
+		    l = skipwhite(ml_get_curline());
+		    if (cin_is_cpp_namespace(l))
+			amount += ind_cpp_namespace;
+		}
 		else
 		{
 		    /* Compensate for adding ind_open_extra later. */
@@ -6852,7 +7346,7 @@ get_c_indent()
 
 	    lookfor_break = FALSE;
 
-	    if (cin_iscase(theline))	/* it's a switch() label */
+	    if (cin_iscase(theline, FALSE))	/* it's a switch() label */
 	    {
 		lookfor = LOOKFOR_CASE;	/* find a previous switch() label */
 		amount += ind_case;
@@ -6913,7 +7407,7 @@ get_c_indent()
 			     * initialization) */
 			    if (cont_amount > 0)
 				amount = cont_amount;
-			    else
+			    else if (!ind_js)
 				amount += ind_continuation;
 			    break;
 			}
@@ -6949,7 +7443,8 @@ get_c_indent()
 			 * (it's a variable declaration).
 			 */
 			if (start_brace != BRACE_IN_COL0
-				|| !cin_isfuncdecl(&l, curwin->w_cursor.lnum))
+				|| !cin_isfuncdecl(&l, curwin->w_cursor.lnum,
+					     0, ind_maxparen, ind_maxcomment))
 			{
 			    /* if the line is terminated with another ','
 			     * it is a continued variable initialization.
@@ -7011,12 +7506,59 @@ get_c_indent()
 			else
 			    amount += ind_continuation;
 		    }
-		    else if (lookfor != LOOKFOR_TERM
-					  && lookfor != LOOKFOR_CPP_BASECLASS)
+		    else
 		    {
-			amount = scope_amount;
-			if (theline[0] == '{')
-			    amount += ind_open_extra;
+			if (lookfor != LOOKFOR_TERM
+					  && lookfor != LOOKFOR_CPP_BASECLASS)
+			{
+			    amount = scope_amount;
+			    if (theline[0] == '{')
+			    {
+				amount += ind_open_extra;
+				added_to_amount = ind_open_extra;
+			    }
+			}
+
+			if (lookfor_cpp_namespace)
+			{
+			    /*
+			     * Looking for C++ namespace, need to look further
+			     * back.
+			     */
+			    if (curwin->w_cursor.lnum == ourscope)
+				continue;
+
+			    if (curwin->w_cursor.lnum == 0
+				    || curwin->w_cursor.lnum
+					      < ourscope - FIND_NAMESPACE_LIM)
+				break;
+
+			    l = ml_get_curline();
+
+			    /* If we're in a comment now, skip to the start of
+			     * the comment. */
+			    trypos = find_start_comment(ind_maxcomment);
+			    if (trypos != NULL)
+			    {
+				curwin->w_cursor.lnum = trypos->lnum + 1;
+				curwin->w_cursor.col = 0;
+				continue;
+			    }
+
+			    /* Skip preprocessor directives and blank lines. */
+			    if (cin_ispreproc_cont(&l, &curwin->w_cursor.lnum))
+				continue;
+
+			    /* Finally the actual check for "namespace". */
+			    if (cin_is_cpp_namespace(l))
+			    {
+				amount += ind_cpp_namespace - added_to_amount;
+				break;
+			    }
+
+			    if (cin_nocode(l))
+				continue;
+			}
 		    }
 		    break;
 		}
@@ -7037,7 +7579,7 @@ get_c_indent()
 		 * If this is a switch() label, may line up relative to that.
 		 * If this is a C++ scope declaration, do the same.
 		 */
-		iscase = cin_iscase(l);
+		iscase = cin_iscase(l, FALSE);
 		if (iscase || cin_isscopedecl(l))
 		{
 		    /* we are only looking for cpp base class
@@ -7161,7 +7703,7 @@ get_c_indent()
 		/*
 		 * Ignore jump labels with nothing after them.
 		 */
-		if (cin_islabel(ind_maxcomment))
+		if (!ind_js && cin_islabel(ind_maxcomment))
 		{
 		    l = after_label(ml_get_curline());
 		    if (l == NULL || cin_nocode(l))
@@ -7272,7 +7814,7 @@ get_c_indent()
 			 */
 			curwin->w_cursor = *trypos;
 			l = ml_get_curline();
-			if (cin_iscase(l) || cin_isscopedecl(l))
+			if (cin_iscase(l, FALSE) || cin_isscopedecl(l))
 			{
 			    ++curwin->w_cursor.lnum;
 			    curwin->w_cursor.col = 0;
@@ -7303,9 +7845,11 @@ get_c_indent()
 		     * Get indent and pointer to text for current line,
 		     * ignoring any jump label.	    XXX
 		     */
-		    cur_amount = skip_label(curwin->w_cursor.lnum,
+		    if (!ind_js)
+			cur_amount = skip_label(curwin->w_cursor.lnum,
 							  &l, ind_maxcomment);
-
+		    else
+			cur_amount = get_indent();
 		    /*
 		     * If this is just above the line we are indenting, and it
 		     * starts with a '{', line it up with this line.
@@ -7399,17 +7943,25 @@ get_c_indent()
 
 			/*
 			 * When searching for a terminated line, don't use the
-			 * one between the "if" and the "else".
+			 * one between the "if" and the matching "else".
 			 * Need to use the scope of this "else".  XXX
 			 * If whilelevel != 0 continue looking for a "do {".
 			 */
-			if (cin_iselse(l)
-				&& whilelevel == 0
-				&& ((trypos = find_start_brace(ind_maxcomment))
-								    == NULL
+			if (cin_iselse(l) && whilelevel == 0)
+			{
+			    /* If we're looking at "} else", let's make sure we
+			     * find the opening brace of the enclosing scope,
+			     * not the one from "if () {". */
+			    if (*l == '}')
+				curwin->w_cursor.col =
+					  (colnr_T)(l - ml_get_curline()) + 1;
+
+			    if ((trypos = find_start_brace(ind_maxcomment))
+								       == NULL
 				    || find_match(LOOKFOR_IF, trypos->lnum,
-					ind_maxparen, ind_maxcomment) == FAIL))
-			    break;
+					ind_maxparen, ind_maxcomment) == FAIL)
+				break;
+			}
 		    }
 
 		    /*
@@ -7631,7 +8183,7 @@ term_again:
 			     */
 			    curwin->w_cursor = *trypos;
 			    l = ml_get_curline();
-			    if (cin_iscase(l) || cin_isscopedecl(l))
+			    if (cin_iscase(l, FALSE) || cin_isscopedecl(l))
 			    {
 				++curwin->w_cursor.lnum;
 				curwin->w_cursor.col = 0;
@@ -7648,7 +8200,7 @@ term_again:
 			 *	stat;
 			 * }
 			 */
-			iscase = (ind_keep_case_label && cin_iscase(l));
+			iscase = (ind_keep_case_label && cin_iscase(l, FALSE));
 
 			/*
 			 * Get indent and pointer to text for current line,
@@ -7690,8 +8242,8 @@ term_again:
 			 * If we're at the end of a block, skip to the start of
 			 * that block.
 			 */
-			curwin->w_cursor.col = 0;
-			if (*cin_skipcomment(l) == '}'
+			l = ml_get_curline();
+			if (find_last_paren(l, '{', '}')
 				&& (trypos = find_start_brace(ind_maxcomment))
 							    != NULL) /* XXX */
 			{
@@ -7713,6 +8265,10 @@ term_again:
       /* add extra indent for a comment */
       if (cin_iscomment(theline))
 	  amount += ind_comment;
+
+      /* subtract extra left-shift for jump labels */
+      if (ind_jump_label > 0 && original_line_islabel)
+	  amount -= ind_jump_label;
     }
 
     /*
@@ -7749,7 +8305,9 @@ term_again:
 		&& vim_strchr(theline, '}') == NULL
 		&& !cin_ends_in(theline, (char_u *)":", NULL)
 		&& !cin_ends_in(theline, (char_u *)",", NULL)
-		&& cin_isfuncdecl(NULL, cur_curpos.lnum + 1)
+		&& cin_isfuncdecl(NULL, cur_curpos.lnum + 1,
+				  cur_curpos.lnum + 1,
+				  ind_maxparen, ind_maxcomment)
 		&& !cin_isterminated(theline, FALSE, TRUE))
 	{
 	    amount = ind_func_type;
@@ -7855,7 +8413,8 @@ term_again:
 		 * If the line looks like a function declaration, and we're
 		 * not in a comment, put it the left margin.
 		 */
-		if (cin_isfuncdecl(NULL, cur_curpos.lnum))  /* XXX */
+		if (cin_isfuncdecl(NULL, cur_curpos.lnum, 0,
+				   ind_maxparen, ind_maxcomment))  /* XXX */
 		    break;
 		l = ml_get_curline();
 
@@ -7876,11 +8435,35 @@ term_again:
 		    break;
 
 		/*
+		 * Find a line only has a semicolon that belongs to a previous
+		 * line ending in '}', e.g. before an #endif.  Don't increase
+		 * indent then.
+		 */
+		if (*(look = skipwhite(l)) == ';' && cin_nocode(look + 1))
+		{
+		    pos_T curpos_save = curwin->w_cursor;
+
+		    while (curwin->w_cursor.lnum > 1)
+		    {
+			look = ml_get(--curwin->w_cursor.lnum);
+			if (!(cin_nocode(look) || cin_ispreproc_cont(
+					      &look, &curwin->w_cursor.lnum)))
+			    break;
+		    }
+		    if (curwin->w_cursor.lnum > 0
+				    && cin_ends_in(look, (char_u *)"}", NULL))
+			break;
+
+		    curwin->w_cursor = curpos_save;
+		}
+
+		/*
 		 * If the PREVIOUS line is a function declaration, the current
 		 * line (and the ones that follow) needs to be indented as
 		 * parameters.
 		 */
-		if (cin_isfuncdecl(&l, curwin->w_cursor.lnum))
+		if (cin_isfuncdecl(&l, curwin->w_cursor.lnum, 0,
+				   ind_maxparen, ind_maxcomment))
 		{
 		    amount = ind_param;
 		    break;
@@ -8504,7 +9087,7 @@ expand_wildcards_eval(pat, num_file, file, flags)
 /*
  * Expand wildcards.  Calls gen_expand_wildcards() and removes files matching
  * 'wildignore'.
- * Returns OK or FAIL.
+ * Returns OK or FAIL.  When FAIL then "num_file" won't be set.
  */
     int
 expand_wildcards(num_pat, pat, num_file, file, flags)
@@ -8522,7 +9105,7 @@ expand_wildcards(num_pat, pat, num_file, file, flags)
     retval = gen_expand_wildcards(num_pat, pat, num_file, file, flags);
 
     /* When keeping all matches, return here */
-    if (flags & EW_KEEPALL)
+    if ((flags & EW_KEEPALL) || retval == FAIL)
 	return retval;
 
 #ifdef FEAT_WILDIGN
@@ -8785,11 +9368,15 @@ dos_expandpath(
     }
 
     /* compile the regexp into a program */
+    if (flags & (EW_NOERROR | EW_NOTWILD))
+	++emsg_silent;
     regmatch.rm_ic = TRUE;		/* Always ignore case */
     regmatch.regprog = vim_regcomp(pat, RE_MAGIC);
+    if (flags & (EW_NOERROR | EW_NOTWILD))
+	--emsg_silent;
     vim_free(pat);
 
-    if (regmatch.regprog == NULL)
+    if (regmatch.regprog == NULL && (flags & EW_NOTWILD) == 0)
     {
 	vim_free(buf);
 	return 0;
@@ -8857,7 +9444,10 @@ dos_expandpath(
 	 * all entries found with "matchname". */
 	if ((p[0] != '.' || starts_with_dot)
 		&& (matchname == NULL
-		    || vim_regexec(&regmatch, p, (colnr_T)0)))
+		  || (regmatch.regprog != NULL
+				     && vim_regexec(&regmatch, p, (colnr_T)0))
+		  || ((flags & EW_NOTWILD)
+		     && fnamencmp(path + (s - buf), p, e - s) == 0)))
 	{
 #ifdef WIN3264
 	    STRCPY(s, p);
@@ -9025,6 +9615,7 @@ unix_expandpath(gap, path, wildoff, flags, didstar)
 
     /*
      * Find the first part in the path name that contains a wildcard.
+     * When EW_ICASE is set every letter is considered to be a wildcard.
      * Copy it into "buf", including the preceding characters.
      */
     p = buf;
@@ -9044,7 +9635,12 @@ unix_expandpath(gap, path, wildoff, flags, didstar)
 	    s = p + 1;
 	}
 	else if (path_end >= path + wildoff
-			 && vim_strchr((char_u *)"*?[{~$", *path_end) != NULL)
+			 && (vim_strchr((char_u *)"*?[{~$", *path_end) != NULL
+#ifndef CASE_INSENSITIVE_FILENAME
+			     || ((flags & EW_ICASE)
+					       && isalpha(PTR2CHAR(path_end)))
+#endif
+			     ))
 	    e = p;
 #ifdef FEAT_MBYTE
 	if (has_mbyte)
@@ -9061,7 +9657,7 @@ unix_expandpath(gap, path, wildoff, flags, didstar)
     e = p;
     *e = NUL;
 
-    /* now we have one wildcard component between "s" and "e" */
+    /* Now we have one wildcard component between "s" and "e". */
     /* Remove backslashes between "wildoff" and the start of the wildcard
      * component. */
     for (p = buf + wildoff; p < s; ++p)
@@ -9090,12 +9686,19 @@ unix_expandpath(gap, path, wildoff, flags, didstar)
 #ifdef CASE_INSENSITIVE_FILENAME
     regmatch.rm_ic = TRUE;		/* Behave like Terminal.app */
 #else
-    regmatch.rm_ic = FALSE;		/* Don't ever ignore case */
+    if (flags & EW_ICASE)
+	regmatch.rm_ic = TRUE;		/* 'wildignorecase' set */
+    else
+	regmatch.rm_ic = FALSE;		/* Don't ignore case */
 #endif
+    if (flags & (EW_NOERROR | EW_NOTWILD))
+	++emsg_silent;
     regmatch.regprog = vim_regcomp(pat, RE_MAGIC);
+    if (flags & (EW_NOERROR | EW_NOTWILD))
+	--emsg_silent;
     vim_free(pat);
 
-    if (regmatch.regprog == NULL)
+    if (regmatch.regprog == NULL && (flags & EW_NOTWILD) == 0)
     {
 	vim_free(buf);
 	return 0;
@@ -9125,7 +9728,10 @@ unix_expandpath(gap, path, wildoff, flags, didstar)
 	    if (dp == NULL)
 		break;
 	    if ((dp->d_name[0] != '.' || starts_with_dot)
-		    && vim_regexec(&regmatch, (char_u *)dp->d_name, (colnr_T)0))
+		 && ((regmatch.regprog != NULL && vim_regexec(&regmatch,
+					     (char_u *)dp->d_name, (colnr_T)0))
+		   || ((flags & EW_NOTWILD)
+		     && fnamencmp(path + (s - buf), dp->d_name, e - s) == 0)))
 	    {
 		STRCPY(s, dp->d_name);
 		len = STRLEN(buf);
@@ -9187,6 +9793,447 @@ unix_expandpath(gap, path, wildoff, flags, didstar)
 }
 #endif
 
+#if defined(FEAT_SEARCHPATH)
+static int find_previous_pathsep __ARGS((char_u *path, char_u **psep));
+static int is_unique __ARGS((char_u *maybe_unique, garray_T *gap, int i));
+static void expand_path_option __ARGS((char_u *curdir, garray_T	*gap));
+static char_u *get_path_cutoff __ARGS((char_u *fname, garray_T *gap));
+static void uniquefy_paths __ARGS((garray_T *gap, char_u *pattern));
+static int expand_in_path __ARGS((garray_T *gap, char_u	*pattern, int flags));
+
+/*
+ * Moves "*psep" back to the previous path separator in "path".
+ * Returns FAIL is "*psep" ends up at the beginning of "path".
+ */
+    static int
+find_previous_pathsep(path, psep)
+    char_u *path;
+    char_u **psep;
+{
+    /* skip the current separator */
+    if (*psep > path && vim_ispathsep(**psep))
+	--*psep;
+
+    /* find the previous separator */
+    while (*psep > path)
+    {
+	if (vim_ispathsep(**psep))
+	    return OK;
+	mb_ptr_back(path, *psep);
+    }
+
+    return FAIL;
+}
+
+/*
+ * Returns TRUE if "maybe_unique" is unique wrt other_paths in "gap".
+ * "maybe_unique" is the end portion of "((char_u **)gap->ga_data)[i]".
+ */
+    static int
+is_unique(maybe_unique, gap, i)
+    char_u	*maybe_unique;
+    garray_T	*gap;
+    int		i;
+{
+    int	    j;
+    int	    candidate_len;
+    int	    other_path_len;
+    char_u  **other_paths = (char_u **)gap->ga_data;
+    char_u  *rival;
+
+    for (j = 0; j < gap->ga_len; j++)
+    {
+	if (j == i)
+	    continue;  /* don't compare it with itself */
+
+	candidate_len = (int)STRLEN(maybe_unique);
+	other_path_len = (int)STRLEN(other_paths[j]);
+	if (other_path_len < candidate_len)
+	    continue;  /* it's different when it's shorter */
+
+	rival = other_paths[j] + other_path_len - candidate_len;
+	if (fnamecmp(maybe_unique, rival) == 0
+		&& (rival == other_paths[j] || vim_ispathsep(*(rival - 1))))
+	    return FALSE;  /* match */
+    }
+
+    return TRUE;  /* no match found */
+}
+
+/*
+ * Split the 'path' option into an array of strings in garray_T.  Relative
+ * paths are expanded to their equivalent fullpath.  This includes the "."
+ * (relative to current buffer directory) and empty path (relative to current
+ * directory) notations.
+ *
+ * TODO: handle upward search (;) and path limiter (**N) notations by
+ * expanding each into their equivalent path(s).
+ */
+    static void
+expand_path_option(curdir, gap)
+    char_u	*curdir;
+    garray_T	*gap;
+{
+    char_u	*path_option = *curbuf->b_p_path == NUL
+						  ? p_path : curbuf->b_p_path;
+    char_u	*buf;
+    char_u	*p;
+    int		len;
+
+    if ((buf = alloc((int)MAXPATHL)) == NULL)
+	return;
+
+    while (*path_option != NUL)
+    {
+	copy_option_part(&path_option, buf, MAXPATHL, " ,");
+
+	if (buf[0] == '.' && (buf[1] == NUL || vim_ispathsep(buf[1])))
+	{
+	    /* Relative to current buffer:
+	     * "/path/file" + "." -> "/path/"
+	     * "/path/file"  + "./subdir" -> "/path/subdir" */
+	    if (curbuf->b_ffname == NULL)
+		continue;
+	    p = gettail(curbuf->b_ffname);
+	    len = (int)(p - curbuf->b_ffname);
+	    if (len + (int)STRLEN(buf) >= MAXPATHL)
+		continue;
+	    if (buf[1] == NUL)
+		buf[len] = NUL;
+	    else
+		STRMOVE(buf + len, buf + 2);
+	    mch_memmove(buf, curbuf->b_ffname, len);
+	    simplify_filename(buf);
+	}
+	else if (buf[0] == NUL)
+	    /* relative to current directory */
+	    STRCPY(buf, curdir);
+	else if (path_with_url(buf))
+	    /* URL can't be used here */
+	    continue;
+	else if (!mch_isFullName(buf))
+	{
+	    /* Expand relative path to their full path equivalent */
+	    len = (int)STRLEN(curdir);
+	    if (len + (int)STRLEN(buf) + 3 > MAXPATHL)
+		continue;
+	    STRMOVE(buf + len + 1, buf);
+	    STRCPY(buf, curdir);
+	    buf[len] = PATHSEP;
+	    simplify_filename(buf);
+	}
+
+	if (ga_grow(gap, 1) == FAIL)
+	    break;
+	p = vim_strsave(buf);
+	if (p == NULL)
+	    break;
+	((char_u **)gap->ga_data)[gap->ga_len++] = p;
+    }
+
+    vim_free(buf);
+}
+
+/*
+ * Returns a pointer to the file or directory name in "fname" that matches the
+ * longest path in "ga"p, or NULL if there is no match. For example:
+ *
+ *    path: /foo/bar/baz
+ *   fname: /foo/bar/baz/quux.txt
+ * returns:		 ^this
+ */
+    static char_u *
+get_path_cutoff(fname, gap)
+    char_u *fname;
+    garray_T *gap;
+{
+    int	    i;
+    int	    maxlen = 0;
+    char_u  **path_part = (char_u **)gap->ga_data;
+    char_u  *cutoff = NULL;
+
+    for (i = 0; i < gap->ga_len; i++)
+    {
+	int j = 0;
+
+	while ((fname[j] == path_part[i][j]
+# if defined(MSWIN) || defined(MSDOS)
+		|| (vim_ispathsep(fname[j]) && vim_ispathsep(path_part[i][j]))
+#endif
+			     ) && fname[j] != NUL && path_part[i][j] != NUL)
+	    j++;
+	if (j > maxlen)
+	{
+	    maxlen = j;
+	    cutoff = &fname[j];
+	}
+    }
+
+    /* skip to the file or directory name */
+    if (cutoff != NULL)
+	while (vim_ispathsep(*cutoff))
+	    mb_ptr_adv(cutoff);
+
+    return cutoff;
+}
+
+/*
+ * Sorts, removes duplicates and modifies all the fullpath names in "gap" so
+ * that they are unique with respect to each other while conserving the part
+ * that matches the pattern. Beware, this is at least O(n^2) wrt "gap->ga_len".
+ */
+    static void
+uniquefy_paths(gap, pattern)
+    garray_T	*gap;
+    char_u	*pattern;
+{
+    int		i;
+    int		len;
+    char_u	**fnames = (char_u **)gap->ga_data;
+    int		sort_again = FALSE;
+    char_u	*pat;
+    char_u      *file_pattern;
+    char_u	*curdir;
+    regmatch_T	regmatch;
+    garray_T	path_ga;
+    char_u	**in_curdir = NULL;
+    char_u	*short_name;
+
+    remove_duplicates(gap);
+    ga_init2(&path_ga, (int)sizeof(char_u *), 1);
+
+    /*
+     * We need to prepend a '*' at the beginning of file_pattern so that the
+     * regex matches anywhere in the path. FIXME: is this valid for all
+     * possible patterns?
+     */
+    len = (int)STRLEN(pattern);
+    file_pattern = alloc(len + 2);
+    if (file_pattern == NULL)
+	return;
+    file_pattern[0] = '*';
+    file_pattern[1] = NUL;
+    STRCAT(file_pattern, pattern);
+    pat = file_pat_to_reg_pat(file_pattern, NULL, NULL, TRUE);
+    vim_free(file_pattern);
+    if (pat == NULL)
+	return;
+
+    regmatch.rm_ic = TRUE;		/* always ignore case */
+    regmatch.regprog = vim_regcomp(pat, RE_MAGIC + RE_STRING);
+    vim_free(pat);
+    if (regmatch.regprog == NULL)
+	return;
+
+    if ((curdir = alloc((int)(MAXPATHL))) == NULL)
+	goto theend;
+    mch_dirname(curdir, MAXPATHL);
+    expand_path_option(curdir, &path_ga);
+
+    in_curdir = (char_u **)alloc_clear(gap->ga_len * sizeof(char_u *));
+    if (in_curdir == NULL)
+	goto theend;
+
+    for (i = 0; i < gap->ga_len && !got_int; i++)
+    {
+	char_u	    *path = fnames[i];
+	int	    is_in_curdir;
+	char_u	    *dir_end = gettail_dir(path);
+	char_u	    *pathsep_p;
+	char_u	    *path_cutoff;
+
+	len = (int)STRLEN(path);
+	is_in_curdir = fnamencmp(curdir, path, dir_end - path) == 0
+					     && curdir[dir_end - path] == NUL;
+	if (is_in_curdir)
+	    in_curdir[i] = vim_strsave(path);
+
+	/* Shorten the filename while maintaining its uniqueness */
+	path_cutoff = get_path_cutoff(path, &path_ga);
+
+	/* we start at the end of the path */
+	pathsep_p = path + len - 1;
+
+	while (find_previous_pathsep(path, &pathsep_p))
+	    if (vim_regexec(&regmatch, pathsep_p + 1, (colnr_T)0)
+		    && is_unique(pathsep_p + 1, gap, i)
+		    && path_cutoff != NULL && pathsep_p + 1 >= path_cutoff)
+	    {
+		sort_again = TRUE;
+		mch_memmove(path, pathsep_p + 1, STRLEN(pathsep_p));
+		break;
+	    }
+
+	if (mch_isFullName(path))
+	{
+	    /*
+	     * Last resort: shorten relative to curdir if possible.
+	     * 'possible' means:
+	     * 1. It is under the current directory.
+	     * 2. The result is actually shorter than the original.
+	     *
+	     *	    Before		  curdir	After
+	     *	    /foo/bar/file.txt	  /foo/bar	./file.txt
+	     *	    c:\foo\bar\file.txt   c:\foo\bar	.\file.txt
+	     *	    /file.txt		  /		/file.txt
+	     *	    c:\file.txt		  c:\		.\file.txt
+	     */
+	    short_name = shorten_fname(path, curdir);
+	    if (short_name != NULL && short_name > path + 1
+#if defined(MSWIN) || defined(MSDOS)
+		    /* On windows,
+		     *	    shorten_fname("c:\a\a.txt", "c:\a\b")
+		     * returns "\a\a.txt", which is not really the short
+		     * name, hence: */
+		    && !vim_ispathsep(*short_name)
+#endif
+		)
+	    {
+		STRCPY(path, ".");
+		add_pathsep(path);
+		STRMOVE(path + STRLEN(path), short_name);
+	    }
+	}
+	ui_breakcheck();
+    }
+
+    /* Shorten filenames in /in/current/directory/{filename} */
+    for (i = 0; i < gap->ga_len && !got_int; i++)
+    {
+	char_u *rel_path;
+	char_u *path = in_curdir[i];
+
+	if (path == NULL)
+	    continue;
+
+	/* If the {filename} is not unique, change it to ./{filename}.
+	 * Else reduce it to {filename} */
+	short_name = shorten_fname(path, curdir);
+	if (short_name == NULL)
+	    short_name = path;
+	if (is_unique(short_name, gap, i))
+	{
+	    STRCPY(fnames[i], short_name);
+	    continue;
+	}
+
+	rel_path = alloc((int)(STRLEN(short_name) + STRLEN(PATHSEPSTR) + 2));
+	if (rel_path == NULL)
+	    goto theend;
+	STRCPY(rel_path, ".");
+	add_pathsep(rel_path);
+	STRCAT(rel_path, short_name);
+
+	vim_free(fnames[i]);
+	fnames[i] = rel_path;
+	sort_again = TRUE;
+	ui_breakcheck();
+    }
+
+theend:
+    vim_free(curdir);
+    if (in_curdir != NULL)
+    {
+	for (i = 0; i < gap->ga_len; i++)
+	    vim_free(in_curdir[i]);
+	vim_free(in_curdir);
+    }
+    ga_clear_strings(&path_ga);
+    vim_free(regmatch.regprog);
+
+    if (sort_again)
+	remove_duplicates(gap);
+}
+
+/*
+ * Calls globpath() with 'path' values for the given pattern and stores the
+ * result in "gap".
+ * Returns the total number of matches.
+ */
+    static int
+expand_in_path(gap, pattern, flags)
+    garray_T	*gap;
+    char_u	*pattern;
+    int		flags;		/* EW_* flags */
+{
+    char_u	*curdir;
+    garray_T	path_ga;
+    char_u	*files = NULL;
+    char_u	*s;	/* start */
+    char_u	*e;	/* end */
+    char_u	*paths = NULL;
+
+    if ((curdir = alloc((unsigned)MAXPATHL)) == NULL)
+	return 0;
+    mch_dirname(curdir, MAXPATHL);
+
+    ga_init2(&path_ga, (int)sizeof(char_u *), 1);
+    expand_path_option(curdir, &path_ga);
+    vim_free(curdir);
+    if (path_ga.ga_len == 0)
+	return 0;
+
+    paths = ga_concat_strings(&path_ga);
+    ga_clear_strings(&path_ga);
+    if (paths == NULL)
+	return 0;
+
+    files = globpath(paths, pattern, (flags & EW_ICASE) ? WILD_ICASE : 0);
+    vim_free(paths);
+    if (files == NULL)
+	return 0;
+
+    /* Copy each path in files into gap */
+    s = e = files;
+    while (*s != NUL)
+    {
+	while (*e != '\n' && *e != NUL)
+	    e++;
+	if (*e == NUL)
+	{
+	    addfile(gap, s, flags);
+	    break;
+	}
+	else
+	{
+	    /* *e is '\n' */
+	    *e = NUL;
+	    addfile(gap, s, flags);
+	    e++;
+	    s = e;
+	}
+    }
+    vim_free(files);
+
+    return gap->ga_len;
+}
+#endif
+
+#if defined(FEAT_SEARCHPATH) || defined(FEAT_CMDL_COMPL) || defined(PROTO)
+/*
+ * Sort "gap" and remove duplicate entries.  "gap" is expected to contain a
+ * list of file names in allocated memory.
+ */
+    void
+remove_duplicates(gap)
+    garray_T	*gap;
+{
+    int	    i;
+    int	    j;
+    char_u  **fnames = (char_u **)gap->ga_data;
+
+    sort_strings(fnames, gap->ga_len);
+    for (i = gap->ga_len - 1; i > 0; --i)
+	if (fnamecmp(fnames[i - 1], fnames[i]) == 0)
+	{
+	    vim_free(fnames[i]);
+	    for (j = i + 1; j < gap->ga_len; ++j)
+		fnames[j - 1] = fnames[j];
+	    --gap->ga_len;
+	}
+}
+#endif
+
 /*
  * Generic wildcard expansion code.
  *
@@ -9211,6 +10258,9 @@ gen_expand_wildcards(num_pat, pat, num_file, file, flags)
     char_u		*p;
     static int		recursive = FALSE;
     int			add_pat;
+#if defined(FEAT_SEARCHPATH)
+    int			did_expand_in_path = FALSE;
+#endif
 
     /*
      * expand_env() is called to expand things like "~user".  If this fails,
@@ -9264,7 +10314,7 @@ gen_expand_wildcards(num_pat, pat, num_file, file, flags)
 	    /*
 	     * First expand environment variables, "~/" and "~user/".
 	     */
-	    if (vim_strpbrk(p, (char_u *)"$~") != NULL)
+	    if (vim_strchr(p, '$') != NULL || *p == '~')
 	    {
 		p = expand_env_save_opt(p, TRUE);
 		if (p == NULL)
@@ -9275,7 +10325,7 @@ gen_expand_wildcards(num_pat, pat, num_file, file, flags)
 		 * variable, use the shell to do that.  Discard previously
 		 * found file names and start all over again.
 		 */
-		else if (vim_strpbrk(p, (char_u *)"$~") != NULL)
+		else if (vim_strchr(p, '$') != NULL || *p == '~')
 		{
 		    vim_free(p);
 		    ga_clear_strings(&ga);
@@ -9295,7 +10345,26 @@ gen_expand_wildcards(num_pat, pat, num_file, file, flags)
 	     * when EW_NOTFOUND is given.
 	     */
 	    if (mch_has_exp_wildcard(p))
-		add_pat = mch_expandpath(&ga, p, flags);
+	    {
+#if defined(FEAT_SEARCHPATH)
+		if ((flags & EW_PATH)
+			&& !mch_isFullName(p)
+			&& !(p[0] == '.'
+			    && (vim_ispathsep(p[1])
+				|| (p[1] == '.' && vim_ispathsep(p[2]))))
+		   )
+		{
+		    /* :find completion where 'path' is used.
+		     * Recursiveness is OK here. */
+		    recursive = FALSE;
+		    add_pat = expand_in_path(&ga, p, flags);
+		    recursive = TRUE;
+		    did_expand_in_path = TRUE;
+		}
+		else
+#endif
+		    add_pat = mch_expandpath(&ga, p, flags);
+	    }
 	}
 
 	if (add_pat == -1 || (add_pat == 0 && (flags & EW_NOTFOUND)))
@@ -9314,6 +10383,10 @@ gen_expand_wildcards(num_pat, pat, num_file, file, flags)
 	    vim_free(t);
 	}
 
+#if defined(FEAT_SEARCHPATH)
+	if (did_expand_in_path && ga.ga_len > 0 && (flags & EW_PATH))
+	    uniquefy_paths(&ga, p);
+#endif
 	if (p != pat[i])
 	    vim_free(p);
     }
@@ -9543,7 +10616,7 @@ get_cmd_output(cmd, infile, flags)
 	buffer = NULL;
     }
     else
-	buffer[len] = '\0';	/* make sure the buffer is terminated */
+	buffer[len] = NUL;	/* make sure the buffer is terminated */
 
 done:
     vim_free(tempname);
@@ -9576,7 +10649,7 @@ FreeWild(count, files)
 }
 
 /*
- * return TRUE when need to go to Insert mode because of 'insertmode'.
+ * Return TRUE when need to go to Insert mode because of 'insertmode'.
  * Don't do this when still processing a command or a mapping.
  * Don't do this when inside a ":normal" command.
  */

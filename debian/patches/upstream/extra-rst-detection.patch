@@ -10,7 +10,7 @@ Index: b/runtime/scripts.vim
 ===================================================================
 --- a/runtime/scripts.vim
 +++ b/runtime/scripts.vim
-@@ -317,6 +317,14 @@
+@@ -322,6 +322,14 @@
    elseif s:line1 =~ 'exec\s\+\S*scheme' || s:line2 =~ 'exec\s\+\S*scheme'
      set ft=scheme
  

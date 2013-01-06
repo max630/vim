@@ -33,7 +33,7 @@
 #     ifdef EBCDIC
 #define DFLT_EFM	"%*[^ ] %*[^ ] %f:%l%*[ ]%m,%*[^\"]\"%f\"%*\\D%l: %m,\"%f\"%*\\D%l: %m,%f:%l:%c:%m,%f(%l):%m,%f:%l:%m,\"%f\"\\, line %l%*\\D%c%*[^ ] %m,%D%*\\a[%*\\d]: Entering directory `%f',%X%*\\a[%*\\d]: Leaving directory `%f',%DMaking %*\\a in %f,%f|%l| %m"
 #     else
-#define DFLT_EFM	"%*[^\"]\"%f\"%*\\D%l: %m,\"%f\"%*\\D%l: %m,%-G%f:%l: (Each undeclared identifier is reported only once,%-G%f:%l: for each function it appears in.),%-GIn file included from %f:%l:%c,%-GIn file included from %f:%l,%-Gfrom %f:%l:%c,%-Gfrom %f:%l,%f:%l:%c:%m,%f(%l):%m,%f:%l:%m,\"%f\"\\, line %l%*\\D%c%*[^ ] %m,%D%*\\a[%*\\d]: Entering directory `%f',%X%*\\a[%*\\d]: Leaving directory `%f',%D%*\\a: Entering directory `%f',%X%*\\a: Leaving directory `%f',%DMaking %*\\a in %f,%f|%l| %m"
+#define DFLT_EFM	"%*[^\"]\"%f\"%*\\D%l: %m,\"%f\"%*\\D%l: %m,%-G%f:%l: (Each undeclared identifier is reported only once,%-G%f:%l: for each function it appears in.),%-GIn file included from %f:%l:%c:,%-GIn file included from %f:%l:%c\\,,%-GIn file included from %f:%l:%c,%-GIn file included from %f:%l,%-G%*[ ]from %f:%l:%c,%-G%*[ ]from %f:%l:,%-G%*[ ]from %f:%l\\,,%-G%*[ ]from %f:%l,%f:%l:%c:%m,%f(%l):%m,%f:%l:%m,\"%f\"\\, line %l%*\\D%c%*[^ ] %m,%D%*\\a[%*\\d]: Entering directory `%f',%X%*\\a[%*\\d]: Leaving directory `%f',%D%*\\a: Entering directory `%f',%X%*\\a: Leaving directory `%f',%DMaking %*\\a in %f,%f|%l| %m"
 #     endif
 #    endif
 #   endif
@@ -104,10 +104,11 @@
 #define FO_ONE_LETTER	'1'
 #define FO_WHITE_PAR	'w'	/* trailing white space continues paragr. */
 #define FO_AUTO		'a'	/* automatic formatting */
+#define FO_REMOVE_COMS	'j'	/* remove comment leaders when joining lines */
 
 #define DFLT_FO_VI	"vt"
 #define DFLT_FO_VIM	"tcq"
-#define FO_ALL		"tcroq2vlb1mMBn,aw"	/* for do_set() */
+#define FO_ALL		"tcroq2vlb1mMBn,awj"	/* for do_set() */
 
 /* characters for the p_cpo option: */
 #define CPO_ALTREAD	'a'	/* ":read" sets alternate file name */
@@ -169,10 +170,12 @@
 #define CPO_SUBPERCENT	'/'	/* % in :s string uses previous one */
 #define CPO_BACKSL	'\\'	/* \ is not special in [] */
 #define CPO_CHDIR	'.'	/* don't chdir if buffer is modified */
+#define CPO_SCOLON	';'	/* using "," and ";" will skip over char if
+				 * cursor would not move */
 /* default values for Vim, Vi and POSIX */
 #define CPO_VIM		"aABceFs"
-#define CPO_VI		"aAbBcCdDeEfFgHiIjJkKlLmMnoOpPqrRsStuvwWxXyZ$!%*-+<>"
-#define CPO_ALL		"aAbBcCdDeEfFgHiIjJkKlLmMnoOpPqrRsStuvwWxXyZ$!%*-+<>#{|&/\\."
+#define CPO_VI		"aAbBcCdDeEfFgHiIjJkKlLmMnoOpPqrRsStuvwWxXyZ$!%*-+<>;"
+#define CPO_ALL		"aAbBcCdDeEfFgHiIjJkKlLmMnoOpPqrRsStuvwWxXyZ$!%*-+<>#{|&/\\.;"
 
 /* characters for p_ww option: */
 #define WW_ALL		"bshl<>[],~"
@@ -188,6 +191,8 @@
 #define MOUSE_ALL	"anvichr"	/* all possible characters */
 #define MOUSE_NONE	' '		/* don't use Visual selection */
 #define MOUSE_NONEF	'x'		/* forced modeless selection */
+
+#define COCU_ALL	"nvic"		/* flags for 'concealcursor' */
 
 /* characters for p_shm option: */
 #define SHM_RO		'r'		/* readonly */
@@ -271,6 +276,7 @@
 #define STL_PREVIEWFLAG_ALT 'W'		/* - other display */
 #define STL_MODIFIED	'm'		/* modified flag */
 #define STL_MODIFIED_ALT 'M'		/* - other display */
+#define STL_QUICKFIX	'q'		/* quickfix window description */
 #define STL_PERCENTAGE	'p'		/* percentage through file */
 #define STL_ALTPERCENT	'P'		/* percentage as TOP BOT ALL or NN% */
 #define STL_ARGLISTSTAT	'a'		/* argument list status as (x of y) */
@@ -282,7 +288,7 @@
 #define STL_HIGHLIGHT	'#'		/* highlight name */
 #define STL_TABPAGENR	'T'		/* tab page label nr */
 #define STL_TABCLOSENR	'X'		/* tab page close nr */
-#define STL_ALL		((char_u *) "fFtcvVlLknoObBrRhHmYyWwMpPaN{#")
+#define STL_ALL		((char_u *) "fFtcvVlLknoObBrRhHmYyWwMqpPaN{#")
 
 /* flags used for parsed 'wildmode' */
 #define WIM_FULL	1
@@ -332,6 +338,9 @@ EXTERN char_u	*p_bdir;	/* 'backupdir' */
 EXTERN char_u	*p_bex;		/* 'backupext' */
 #ifdef FEAT_WILDIGN
 EXTERN char_u	*p_bsk;		/* 'backupskip' */
+#endif
+#ifdef FEAT_CRYPT
+EXTERN char_u	*p_cm;		/* 'cryptmethod' */
 #endif
 #ifdef FEAT_BEVAL
 EXTERN long	p_bdlay;	/* 'balloondelay' */
@@ -385,6 +394,7 @@ EXTERN long	p_ph;		/* 'pumheight' */
 EXTERN char_u	*p_cpo;		/* 'cpoptions' */
 #ifdef FEAT_CSCOPE
 EXTERN char_u	*p_csprg;	/* 'cscopeprg' */
+EXTERN int	p_csre;		/* 'cscoperelative' */
 # ifdef FEAT_QUICKFIX
 EXTERN char_u	*p_csqf;	/* 'cscopequickfix' */
 #  define	CSQF_CMDS   "sgdctefi"
@@ -544,7 +554,7 @@ EXTERN int	p_icon;		/* 'icon' */
 EXTERN char_u	*p_iconstring;	/* 'iconstring' */
 #endif
 EXTERN int	p_ic;		/* 'ignorecase' */
-#if defined(FEAT_XIM) && (defined(FEAT_GUI_GTK))
+#if defined(FEAT_XIM) && defined(FEAT_GUI_GTK)
 EXTERN char_u	*p_imak;	/* 'imactivatekey' */
 #endif
 #ifdef USE_IM_CONTROL
@@ -588,6 +598,10 @@ EXTERN int	p_magic;	/* 'magic' */
 #ifdef FEAT_QUICKFIX
 EXTERN char_u	*p_mef;		/* 'makeef' */
 EXTERN char_u	*p_mp;		/* 'makeprg' */
+#endif
+#ifdef FEAT_SYN_HL
+EXTERN char_u   *p_cc;		/* 'colorcolumn' */
+EXTERN int      p_cc_cols[256]; /* array for 'colorcolumn' columns */
 #endif
 EXTERN long	p_mat;		/* 'matchtime' */
 #ifdef FEAT_MBYTE
@@ -699,6 +713,7 @@ EXTERN char_u	*p_sp;		/* 'shellpipe' */
 #endif
 EXTERN char_u	*p_shq;		/* 'shellquote' */
 EXTERN char_u	*p_sxq;		/* 'shellxquote' */
+EXTERN char_u	*p_sxe;		/* 'shellxescape' */
 EXTERN char_u	*p_srr;		/* 'shellredir' */
 #ifdef AMIGA
 EXTERN long	p_st;		/* 'shelltype' */
@@ -790,7 +805,7 @@ static char *(p_toolbar_values[]) = {"text", "icons", "tooltips", "horiz", NULL}
 # define TOOLBAR_TOOLTIPS	0x04
 # define TOOLBAR_HORIZ		0x08
 #endif
-#if defined(FEAT_TOOLBAR) && defined(FEAT_GUI_GTK) && defined(HAVE_GTK2)
+#if defined(FEAT_TOOLBAR) && defined(FEAT_GUI_GTK)
 EXTERN char_u	*p_tbis;	/* 'toolbariconsize' */
 EXTERN unsigned tbis_flags;
 # ifdef IN_OPTION_C
@@ -806,7 +821,7 @@ EXTERN long	p_ttyscroll;	/* 'ttyscroll' */
 EXTERN char_u	*p_ttym;	/* 'ttymouse' */
 EXTERN unsigned ttym_flags;
 # ifdef IN_OPTION_C
-static char *(p_ttym_values[]) = {"xterm", "xterm2", "dec", "netterm", "jsbterm", "pterm", NULL};
+static char *(p_ttym_values[]) = {"xterm", "xterm2", "dec", "netterm", "jsbterm", "pterm", "urxvt", NULL};
 # endif
 # define TTYM_XTERM		0x01
 # define TTYM_XTERM2		0x02
@@ -814,8 +829,11 @@ static char *(p_ttym_values[]) = {"xterm", "xterm2", "dec", "netterm", "jsbterm"
 # define TTYM_NETTERM		0x08
 # define TTYM_JSBTERM		0x10
 # define TTYM_PTERM		0x20
+# define TTYM_URXVT		0x40
 #endif
+EXTERN char_u	*p_udir;	/* 'undodir' */
 EXTERN long	p_ul;		/* 'undolevels' */
+EXTERN long	p_ur;		/* 'undoreload' */
 EXTERN long	p_uc;		/* 'updatecount' */
 EXTERN long	p_ut;		/* 'updatetime' */
 #if defined(FEAT_WINDOWS) || defined(FEAT_FOLDING)
@@ -842,7 +860,11 @@ static char *(p_ve_values[]) = {"block", "insert", "all", "onemore", NULL};
 # define VE_ONEMORE	8
 #endif
 EXTERN long	p_verbose;	/* 'verbose' */
-EXTERN char_u	*p_vfile;	/* 'verbosefile' */
+#ifdef IN_OPTION_C
+char_u	*p_vfile = (char_u *)""; /* used before options are initialized */
+#else
+extern char_u	*p_vfile;	/* 'verbosefile' */
+#endif
 EXTERN int	p_warn;		/* 'warn' */
 #ifdef FEAT_CMDL_COMPL
 EXTERN char_u	*p_wop;		/* 'wildoptions' */
@@ -860,6 +882,7 @@ EXTERN int	p_wiv;		/* 'weirdinvert' */
 EXTERN char_u	*p_ww;		/* 'whichwrap' */
 EXTERN long	p_wc;		/* 'wildchar' */
 EXTERN long	p_wcm;		/* 'wildcharm' */
+EXTERN long	p_wic;		/* 'wildignorecase' */
 EXTERN char_u	*p_wim;		/* 'wildmode' */
 #ifdef FEAT_WILDMENU
 EXTERN int	p_wmnu;		/* 'wildmenu' */
@@ -908,6 +931,7 @@ enum
 #if defined(FEAT_SMARTINDENT) || defined(FEAT_CINDENT)
     , BV_CINW
 #endif
+    , BV_CM
 #ifdef FEAT_FOLDING
     , BV_CMS
 #endif
@@ -966,9 +990,6 @@ enum
     , BV_MOD
     , BV_MPS
     , BV_NF
-#ifdef FEAT_OSFILETYPE
-    , BV_OFT
-#endif
 #ifdef FEAT_COMPL_FUNC
     , BV_OFU
 #endif
@@ -1003,6 +1024,7 @@ enum
     , BV_TS
     , BV_TW
     , BV_TX
+    , BV_UDF
     , BV_WM
     , BV_COUNT	    /* must be the last one */
 };
@@ -1017,6 +1039,13 @@ enum
     WV_LIST = 0
 #ifdef FEAT_ARABIC
     , WV_ARAB
+#endif
+#ifdef FEAT_CONCEAL
+    , WV_COCU
+    , WV_COLE
+#endif
+#ifdef FEAT_CURSORBIND
+    , WV_CRBIND
 #endif
 #ifdef FEAT_DIFF
     , WV_DIFF
@@ -1039,6 +1068,7 @@ enum
     , WV_LBR
 #endif
     , WV_NU
+    , WV_RNU
 #ifdef FEAT_LINEBREAK
     , WV_NUW
 #endif
@@ -1059,6 +1089,7 @@ enum
 #ifdef FEAT_SYN_HL
     , WV_CUC
     , WV_CUL
+    , WV_CC
 #endif
 #ifdef FEAT_STL_OPT
     , WV_STL

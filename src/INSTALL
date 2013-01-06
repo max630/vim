@@ -6,16 +6,15 @@ executable version of Vim, you don't need this.
 Contents:
 1. Generic
 2. Unix
-3. RISC OS
-4. OS/2 (with EMX 0.9b)
-5. Atari MiNT
+3. OS/2 (with EMX 0.9b)
+4. Atari MiNT
 
 See INSTALLami.txt              for Amiga
 See INSTALLmac.txt              for Macintosh
 See INSTALLpc.txt               for PC (MS-DOS, Windows 95/98/NT/XP)
 See INSTALLvms.txt              for VMS
 See INSTALLx.txt		for cross-compiling on Unix
-See ../runtime/doc/os_390.txt   for OS/390 Unix
+See ../README_390.txt           for OS/390 Unix
 See ../runtime/doc/os_beos.txt  for BeBox
 
 
@@ -55,7 +54,7 @@ arguments.
 
 GNU Autoconf and a few other tools have been used to make Vim work on many
 different Unix systems.  The advantage of this is that Vim should compile
-on most sytems without any adjustments.  The disadvantage is that when
+on most systems without any adjustments.  The disadvantage is that when
 adjustments are required, it takes some time to understand what is happening.
 
 If configure finds all library files and then complains when linking that some
@@ -138,7 +137,7 @@ work very well and there was no maintainer it was dropped.
 Unix: COMPILING WITH MULTI-BYTE
 
 When you want to compile with the multi-byte features enabled, make sure you
-compile on a machine where the locale settings actually work.  otherwise the
+compile on a machine where the locale settings actually work, otherwise the
 configure tests may fail.  You need to compile with "big" features:
 
     ./configure --with-features=big
@@ -174,25 +173,7 @@ And to not search for locally installed headers and libraries at all, use:
 	./configure --without-local-dir
 
 
-3. RISC OS
-=============
-
-Much file renaming is needed before you can compile anything.
-You'll need UnixLib to link against, GCC and GNU make.
-
-I suggest you get the RISC OS binary distribution, which includes the
-Templates file and the loader.
-
-Try here: http://www.ecs.soton.ac.uk/~tal197
-
-Do
-    :help riscos
-
-within the editor for more information, or read the
-../runtime/doc/os_risc.txt help file.
-
-
-4. OS/2
+3. OS/2
 =======
 
 Summary:
@@ -237,7 +218,7 @@ Prerequisites:
 Check ../runtime/doc/os_os2.txt for additional info on running Vim.
 
 
-5. Atari MiNT
+4. Atari MiNT
 =============
 
 [NOTE: this is quite old, it might not work anymore]
