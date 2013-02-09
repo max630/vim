@@ -170,7 +170,7 @@ Architecture: any
 Depends: vim-common (= ${binary:Version}), vim-runtime (= ${source:Version}), ${misc:Depends}, ${shlibs:Depends}
 Suggests: cscope, vim-doc
 Provides: vim, editor, vim-perl, vim-python, vim-ruby, vim-tcl, vim-lua
-Description: Vi IMproved - enhanced vi editor
+Description: Vi IMproved - enhanced vi editor - with scripting languages support
  Vim is an almost compatible version of the UNIX editor Vi.
  .
  Many new features have been added: multi level undo, syntax
