@@ -1,3 +1,10 @@
+vim (2:7.3.547-7) UNRELEASED; urgency=low
+
+  * Add vim-lesstif.preinst to handle transitioning /usr/share/doc/vim-lesstif
+    from a symlink to a directory.  (Closes: #700069)
+
+ -- James McCoy <jamessan@debian.org>  Sat, 09 Feb 2013 17:18:35 -0500
+
 vim (2:7.3.547-6) unstable; urgency=low
 
   * Always enable ACL support.  (Closes: #693462)
