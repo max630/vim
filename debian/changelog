@@ -1,10 +1,10 @@
-vim (2:7.3.547-7) UNRELEASED; urgency=low
+vim (2:7.3.547-7) unstable; urgency=low
 
   * Add vim-lesstif.preinst to handle transitioning /usr/share/doc/vim-lesstif
     from a symlink to a directory.  (Closes: #700069)
   * Add clarification to short description of vim-nox.  (Closes: #699780)
 
- -- James McCoy <jamessan@debian.org>  Sat, 09 Feb 2013 17:18:35 -0500
+ -- James McCoy <jamessan@debian.org>  Sat, 09 Feb 2013 18:43:57 -0500
 
 vim (2:7.3.547-6) unstable; urgency=low
 
