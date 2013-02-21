@@ -1,3 +1,9 @@
+vim (2:7.3.547-7~bpo60+1) squeeze-backports; urgency=low
+
+  * Rebuild for squeeze-backports.
+
+ -- James McCoy <jamessan@debian.org>  Thu, 21 Feb 2013 07:26:21 -0500
+
 vim (2:7.3.547-7) unstable; urgency=low
 
   * Add vim-lesstif.preinst to handle transitioning /usr/share/doc/vim-lesstif
