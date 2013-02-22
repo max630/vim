@@ -2292,7 +2292,9 @@ op_function(oap)
 {
 #ifdef FEAT_EVAL
     char_u	*(argv[1]);
+# ifdef FEAT_VIRTUALEDIT
     int		save_virtual_op = virtual_op;
+# endif
 
     if (*p_opfunc == NUL)
 	EMSG(_("E774: 'operatorfunc' is empty"));
@@ -2312,13 +2314,17 @@ op_function(oap)
 	else
 	    argv[0] = (char_u *)"char";
 
+# ifdef FEAT_VIRTUALEDIT
 	/* Reset virtual_op so that 'virtualedit' can be changed in the
 	 * function. */
 	virtual_op = MAYBE;
+# endif
 
 	(void)call_func_retnr(p_opfunc, 1, argv, FALSE);
 
+# ifdef FEAT_VIRTUALEDIT
 	virtual_op = save_virtual_op;
+# endif
     }
 #else
     EMSG(_("E775: Eval feature not available"));
@@ -7523,7 +7529,7 @@ nv_gomark(cap)
     pos_T	*pos;
     int		c;
 #ifdef FEAT_FOLDING
-    linenr_T	lnum = curwin->w_cursor.lnum;
+    pos_T	old_cursor = curwin->w_cursor;
     int		old_KeyTyped = KeyTyped;    /* getting file may reset it */
 #endif
 
@@ -7552,7 +7558,8 @@ nv_gomark(cap)
 #endif
 #ifdef FEAT_FOLDING
     if (cap->oap->op_type == OP_NOP
-	    && (pos == (pos_T *)-1 || lnum != curwin->w_cursor.lnum)
+	    && pos != NULL
+	    && (pos == (pos_T *)-1 || !equalpos(old_cursor, *pos))
 	    && (fdo_flags & FDO_MARK)
 	    && old_KeyTyped)
 	foldOpenCursor();

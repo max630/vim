@@ -372,6 +372,8 @@ edit(cmdchar, startln, count)
      */
     if (cmdchar != 'r' && cmdchar != 'v')
     {
+	pos_T   save_cursor = curwin->w_cursor;
+
 # ifdef FEAT_EVAL
 	if (cmdchar == 'R')
 	    ptr = (char_u *)"r";
@@ -382,6 +384,19 @@ edit(cmdchar, startln, count)
 	set_vim_var_string(VV_INSERTMODE, ptr, 1);
 # endif
 	apply_autocmds(EVENT_INSERTENTER, NULL, NULL, FALSE, curbuf);
+
+	/* Since Insert mode was not started yet a call to check_cursor_col()
+	 * may have moved the cursor, especially with the "A" command. */
+	if (curwin->w_cursor.col != save_cursor.col
+		&& curwin->w_cursor.lnum == save_cursor.lnum)
+	{
+	    int save_state = State;
+
+	    curwin->w_cursor = save_cursor;
+	    State = INSERT;
+	    check_cursor_col();
+	    State = save_state;
+	}
     }
 #endif
 
@@ -3831,6 +3846,12 @@ ins_compl_prep(c)
 #endif
 	}
     }
+#ifdef FEAT_AUTOCMD
+    else if (ctrl_x_mode == CTRL_X_LOCAL_MSG)
+	/* Trigger the CompleteDone event to give scripts a chance to act
+	 * upon the (possibly failed) completion. */
+	apply_autocmds(EVENT_COMPLETEDONE, NULL, NULL, FALSE, curbuf);
+#endif
 
     /* reset continue_* if we left expansion-mode, if we stay they'll be
      * (re)set properly in ins_complete() */

@@ -1,6 +1,6 @@
-vim (2:7.3.762-1) UNRELEASED; urgency=low
+vim (2:7.3.831-1) UNRELEASED; urgency=low
 
-  * Merge upstream tag v7-3-762
+  * Merge upstream tag v7-3-831
     + Merged patches:
       - upstream/debian-runtime-spell.patch, upstream/if_py-crash.patch,
         upstream/netrw-syntax-fix.patch, upstream/remove-py_config.patch
