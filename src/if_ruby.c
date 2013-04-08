@@ -39,6 +39,9 @@
  */
 # define rb_cFalseClass		(*dll_rb_cFalseClass)
 # define rb_cFixnum		(*dll_rb_cFixnum)
+# if defined(DYNAMIC_RUBY_VER) && DYNAMIC_RUBY_VER >= 20
+#  define rb_cFloat		(*dll_rb_cFloat)
+# endif
 # define rb_cNilClass		(*dll_rb_cNilClass)
 # define rb_cSymbol		(*dll_rb_cSymbol)
 # define rb_cTrueClass		(*dll_rb_cTrueClass)
@@ -189,7 +192,9 @@ static void ruby_vim_init(void);
 #ifndef RUBY19_OR_LATER
 #define rb_num2long			dll_rb_num2long
 #endif
+#if defined(DYNAMIC_RUBY_VER) && DYNAMIC_RUBY_VER <= 19
 #define rb_num2ulong			dll_rb_num2ulong
+#endif
 #define rb_obj_alloc			dll_rb_obj_alloc
 #define rb_obj_as_string		dll_rb_obj_as_string
 #define rb_obj_id			dll_rb_obj_id
@@ -247,6 +252,9 @@ static void ruby_vim_init(void);
 static VALUE (*dll_rb_assoc_new) (VALUE, VALUE);
 VALUE *dll_rb_cFalseClass;
 VALUE *dll_rb_cFixnum;
+#if defined(DYNAMIC_RUBY_VER) && DYNAMIC_RUBY_VER >= 20
+VALUE *dll_rb_cFloat;
+#endif
 VALUE *dll_rb_cNilClass;
 static VALUE *dll_rb_cObject;
 VALUE *dll_rb_cSymbol;
@@ -344,6 +352,17 @@ VALUE rb_int2big_stub(SIGNED_VALUE x)
 {
     return dll_rb_int2big(x);
 }
+#if defined(DYNAMIC_RUBY_VER) && DYNAMIC_RUBY_VER >= 20
+VALUE
+rb_float_new_in_heap(double d)
+{
+    return dll_rb_float_new(d);
+}
+VALUE rb_num2ulong(VALUE x)
+{
+    return (long)RSHIFT((SIGNED_VALUE)(x),1);
+}
+#endif
 #endif
 
 static HINSTANCE hinstRuby = NULL; /* Instance of ruby.dll */
@@ -360,6 +379,9 @@ static struct
     {"rb_assoc_new", (RUBY_PROC*)&dll_rb_assoc_new},
     {"rb_cFalseClass", (RUBY_PROC*)&dll_rb_cFalseClass},
     {"rb_cFixnum", (RUBY_PROC*)&dll_rb_cFixnum},
+#if defined(DYNAMIC_RUBY_VER) && DYNAMIC_RUBY_VER >= 20
+    {"rb_cFloat", (RUBY_PROC*)&dll_rb_cFloat},
+#endif
     {"rb_cNilClass", (RUBY_PROC*)&dll_rb_cNilClass},
     {"rb_cObject", (RUBY_PROC*)&dll_rb_cObject},
     {"rb_cSymbol", (RUBY_PROC*)&dll_rb_cSymbol},
@@ -434,7 +456,11 @@ static struct
 #endif
 #if defined(DYNAMIC_RUBY_VER) && DYNAMIC_RUBY_VER >= 18
     {"rb_string_value_ptr", (RUBY_PROC*)&dll_rb_string_value_ptr},
+# if DYNAMIC_RUBY_VER <= 19
     {"rb_float_new", (RUBY_PROC*)&dll_rb_float_new},
+# else
+    {"rb_float_new_in_heap", (RUBY_PROC*)&dll_rb_float_new},
+# endif
     {"rb_ary_new", (RUBY_PROC*)&dll_rb_ary_new},
     {"rb_ary_push", (RUBY_PROC*)&dll_rb_ary_push},
 #endif

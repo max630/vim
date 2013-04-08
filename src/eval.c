@@ -5164,6 +5164,16 @@ eval7(arg, rettv, evaluate, want_string)
 		ret = get_func_tv(s, len, rettv, arg,
 			  curwin->w_cursor.lnum, curwin->w_cursor.lnum,
 			  &len, evaluate, NULL);
+
+		/* If evaluate is FALSE rettv->v_type was not set in
+		 * get_func_tv, but it's needed in handle_subscript() to parse
+		 * what follows. So set it here. */
+		if (rettv->v_type == VAR_UNKNOWN && !evaluate && **arg == '(')
+		{
+		    rettv->vval.v_string = vim_strsave((char_u *)"");
+		    rettv->v_type = VAR_FUNC;
+		}
+
 		/* Stop the expression evaluation when immediately
 		 * aborting on error, or when an interrupt occurred or
 		 * an exception was thrown but not caught. */
@@ -9009,14 +9019,15 @@ f_bufloaded(argvars, rettv)
     rettv->vval.v_number = (buf != NULL && buf->b_ml.ml_mfp != NULL);
 }
 
-static buf_T *get_buf_tv __ARGS((typval_T *tv));
+static buf_T *get_buf_tv __ARGS((typval_T *tv, int curtab_only));
 
 /*
  * Get buffer by number or pattern.
  */
     static buf_T *
-get_buf_tv(tv)
+get_buf_tv(tv, curtab_only)
     typval_T	*tv;
+    int		curtab_only;
 {
     char_u	*name = tv->vval.v_string;
     int		save_magic;
@@ -9039,7 +9050,7 @@ get_buf_tv(tv)
     p_cpo = (char_u *)"";
 
     buf = buflist_findnr(buflist_findpat(name, name + STRLEN(name),
-								TRUE, FALSE));
+						    TRUE, FALSE, curtab_only));
 
     p_magic = save_magic;
     p_cpo = save_cpo;
@@ -9063,7 +9074,7 @@ f_bufname(argvars, rettv)
 
     (void)get_tv_number(&argvars[0]);	    /* issue errmsg if type error */
     ++emsg_off;
-    buf = get_buf_tv(&argvars[0]);
+    buf = get_buf_tv(&argvars[0], FALSE);
     rettv->v_type = VAR_STRING;
     if (buf != NULL && buf->b_fname != NULL)
 	rettv->vval.v_string = vim_strsave(buf->b_fname);
@@ -9086,7 +9097,7 @@ f_bufnr(argvars, rettv)
 
     (void)get_tv_number(&argvars[0]);	    /* issue errmsg if type error */
     ++emsg_off;
-    buf = get_buf_tv(&argvars[0]);
+    buf = get_buf_tv(&argvars[0], FALSE);
     --emsg_off;
 
     /* If the buffer isn't found and the second argument is not zero create a
@@ -9121,7 +9132,7 @@ f_bufwinnr(argvars, rettv)
 
     (void)get_tv_number(&argvars[0]);	    /* issue errmsg if type error */
     ++emsg_off;
-    buf = get_buf_tv(&argvars[0]);
+    buf = get_buf_tv(&argvars[0], TRUE);
 #ifdef FEAT_WINDOWS
     for (wp = firstwin; wp; wp = wp->w_next)
     {
@@ -11085,7 +11096,7 @@ f_getbufline(argvars, rettv)
 
     (void)get_tv_number(&argvars[0]);	    /* issue errmsg if type error */
     ++emsg_off;
-    buf = get_buf_tv(&argvars[0]);
+    buf = get_buf_tv(&argvars[0], FALSE);
     --emsg_off;
 
     lnum = get_tv_lnum_buf(&argvars[1], buf);
@@ -11113,7 +11124,7 @@ f_getbufvar(argvars, rettv)
     (void)get_tv_number(&argvars[0]);	    /* issue errmsg if type error */
     varname = get_tv_string_chk(&argvars[1]);
     ++emsg_off;
-    buf = get_buf_tv(&argvars[0]);
+    buf = get_buf_tv(&argvars[0], FALSE);
 
     if (argvars[2].v_type != VAR_UNKNOWN)
 	/* set the default value */
@@ -11228,27 +11239,7 @@ f_getchar(argvars, rettv)
 	rettv->vval.v_string = vim_strsave(temp);
 
 #ifdef FEAT_MOUSE
-	if (n == K_LEFTMOUSE
-		|| n == K_LEFTMOUSE_NM
-		|| n == K_LEFTDRAG
-		|| n == K_LEFTRELEASE
-		|| n == K_LEFTRELEASE_NM
-		|| n == K_MIDDLEMOUSE
-		|| n == K_MIDDLEDRAG
-		|| n == K_MIDDLERELEASE
-		|| n == K_RIGHTMOUSE
-		|| n == K_RIGHTDRAG
-		|| n == K_RIGHTRELEASE
-		|| n == K_X1MOUSE
-		|| n == K_X1DRAG
-		|| n == K_X1RELEASE
-		|| n == K_X2MOUSE
-		|| n == K_X2DRAG
-		|| n == K_X2RELEASE
-		|| n == K_MOUSELEFT
-		|| n == K_MOUSERIGHT
-		|| n == K_MOUSEDOWN
-		|| n == K_MOUSEUP)
+	if (is_mouse_key(n))
 	{
 	    int		row = mouse_row;
 	    int		col = mouse_col;
@@ -16226,7 +16217,7 @@ f_setbufvar(argvars, rettv)
 	return;
     (void)get_tv_number(&argvars[0]);	    /* issue errmsg if type error */
     varname = get_tv_string_chk(&argvars[1]);
-    buf = get_buf_tv(&argvars[0]);
+    buf = get_buf_tv(&argvars[0], FALSE);
     varp = &argvars[2];
 
     if (buf != NULL && varname != NULL && varp != NULL)

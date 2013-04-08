@@ -1,3 +1,10 @@
+vim (2:7.3.884-1) UNRELEASED; urgency=low
+
+  * Merge upstream tag v7-3-884
+    + Updated documentation for Python syntax file.  (Closes: #613038)
+
+ -- James McCoy <jamessan@debian.org>  Sun, 07 Apr 2013 21:44:43 -0400
+
 vim (2:7.3.831-1) experimental; urgency=low
 
   * Merge upstream tag v7-3-831

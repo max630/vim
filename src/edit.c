@@ -1593,6 +1593,21 @@ ins_redraw(ready)
 	    last_cursormoved = curwin->w_cursor;
 	}
 #endif
+#ifdef FEAT_AUTOCMD
+	/* Trigger TextChangedI if b_changedtick differs. */
+	if (!ready && has_textchangedI()
+		&& last_changedtick != curbuf->b_changedtick
+# ifdef FEAT_INS_EXPAND
+		&& !pum_visible()
+# endif
+		)
+	{
+	    if (last_changedtick_buf == curbuf)
+		apply_autocmds(EVENT_TEXTCHANGEDI, NULL, NULL, FALSE, curbuf);
+	    last_changedtick_buf = curbuf;
+	    last_changedtick = curbuf->b_changedtick;
+	}
+#endif
 	if (must_redraw)
 	    update_screen(0);
 	else if (clear_cmdline || redraw_cmdline)
@@ -3380,6 +3395,9 @@ ins_compl_bs()
     if (compl_leader != NULL)
     {
 	ins_compl_new_leader();
+	if (compl_shown_match != NULL)
+	    /* Make sure current match is not a hidden item. */
+	    compl_curr_match = compl_shown_match;
 	return NUL;
     }
     return K_BS;
@@ -4318,13 +4336,7 @@ ins_compl_get_exp(ini)
 
 		/* May change home directory back to "~". */
 		tilde_replace(compl_pattern, num_matches, matches);
-		ins_compl_add_matches(num_matches, matches,
-#ifdef CASE_INSENSITIVE_FILENAME
-			TRUE
-#else
-			FALSE
-#endif
-			);
+		ins_compl_add_matches(num_matches, matches, p_fic || p_wic);
 	    }
 	    break;
 
@@ -9139,9 +9151,8 @@ ins_mousescroll(dir)
 
     tpos = curwin->w_cursor;
 
-# if defined(FEAT_GUI) && defined(FEAT_WINDOWS)
-    /* Currently the mouse coordinates are only known in the GUI. */
-    if (gui.in_use && mouse_row >= 0 && mouse_col >= 0)
+# ifdef FEAT_WINDOWS
+    if (mouse_row >= 0 && mouse_col >= 0)
     {
 	int row, col;
 
@@ -9191,7 +9202,7 @@ ins_mousescroll(dir)
 # endif
     }
 
-# if defined(FEAT_GUI) && defined(FEAT_WINDOWS)
+# ifdef FEAT_WINDOWS
     curwin->w_redr_status = TRUE;
 
     curwin = old_curwin;

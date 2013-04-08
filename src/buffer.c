@@ -928,7 +928,8 @@ do_bufdel(command, arg, addr_count, start_bnr, end_bnr, forceit)
 		if (!VIM_ISDIGIT(*arg))
 		{
 		    p = skiptowhite_esc(arg);
-		    bnr = buflist_findpat(arg, p, command == DOBUF_WIPE, FALSE);
+		    bnr = buflist_findpat(arg, p, command == DOBUF_WIPE,
+								FALSE, FALSE);
 		    if (bnr < 0)	    /* failed */
 			break;
 		    arg = p;
@@ -2129,18 +2130,20 @@ buflist_findname_stat(ffname, stp)
     return NULL;
 }
 
-#if defined(FEAT_LISTCMDS) || defined(FEAT_EVAL) || defined(FEAT_PERL) || defined(PROTO)
+#if defined(FEAT_LISTCMDS) || defined(FEAT_EVAL) || defined(FEAT_PERL) \
+	|| defined(PROTO)
 /*
  * Find file in buffer list by a regexp pattern.
  * Return fnum of the found buffer.
  * Return < 0 for error.
  */
     int
-buflist_findpat(pattern, pattern_end, unlisted, diffmode)
+buflist_findpat(pattern, pattern_end, unlisted, diffmode, curtab_only)
     char_u	*pattern;
     char_u	*pattern_end;	/* pointer to first char after pattern */
     int		unlisted;	/* find unlisted buffers */
     int		diffmode UNUSED; /* find diff-mode buffers only */
+    int		curtab_only;	/* find buffers in current tab only */
 {
     buf_T	*buf;
     regprog_T	*prog;
@@ -2208,6 +2211,23 @@ buflist_findpat(pattern, pattern_end, unlisted, diffmode)
 #endif
 			    && buflist_match(prog, buf) != NULL)
 		    {
+			if (curtab_only)
+			{
+			    /* Ignore the match if the buffer is not open in
+			     * the current tab. */
+#ifdef FEAT_WINDOWS
+			    win_T	*wp;
+
+			    for (wp = firstwin; wp != NULL; wp = wp->w_next)
+				if (wp->w_buffer == buf)
+				    break;
+			    if (wp == NULL)
+				continue;
+#else
+			    if (curwin->w_buffer != buf)
+				continue;
+#endif
+			}
 			if (match >= 0)		/* already found a match */
 			{
 			    match = -2;
@@ -2381,12 +2401,7 @@ fname_match(prog, name)
     if (name != NULL)
     {
 	regmatch.regprog = prog;
-#ifdef CASE_INSENSITIVE_FILENAME
-	regmatch.rm_ic = TRUE;		/* Always ignore case */
-#else
-	regmatch.rm_ic = FALSE;		/* Never ignore case */
-#endif
-
+	regmatch.rm_ic = p_fic;	/* ignore case when 'fileignorecase' is set */
 	if (vim_regexec(&regmatch, name, (colnr_T)0))
 	    match = name;
 	else

@@ -1,4 +1,4 @@
-*options.txt*	For Vim version 7.3.  Last change: 2013 Feb 13
+*options.txt*	For Vim version 7.3.  Last change: 2013 Apr 05
 
 
 		  VIM REFERENCE MANUAL	  by Bram Moolenaar
@@ -699,6 +699,10 @@ A jump table for the options with a short description can be found at |Q_op|.
 	when the system locale is set to one of CJK locales.  See Unicode
 	Standard Annex #11 (http://www.unicode.org/reports/tr11).
 
+	Vim may set this option automatically at startup time when Vim is
+	compiled with the |+termresponse| feature and if |t_u7| is set to the
+	escape sequence to request cursor position report.
+
 			*'antialias'* *'anti'* *'noantialias'* *'noanti'*
 'antialias' 'anti'	boolean (default: off)
 			global
@@ -986,7 +990,7 @@ A jump table for the options with a short description can be found at |Q_op|.
 	- The backup file will be created in the first directory in the list
 	  where this is possible.  The directory must exist, Vim will not
 	  create it for you.
-	- Empty means that no backup file will be created ('patchmode' is
+	- Empty means that no backup file will be created ( 'patchmode' is
 	  impossible!).  Writing may fail because of this.
 	- A directory "." means to put the backup file in the same directory
 	  as the edited file.
@@ -1703,7 +1707,7 @@ A jump table for the options with a short description can be found at |Q_op|.
 	when CTRL-P or CTRL-N are used.  It is also used for whole-line
 	completion |i_CTRL-X_CTRL-L|.  It indicates the type of completion
 	and the places to scan.  It is a comma separated list of flags:
-	.	scan the current buffer ('wrapscan' is ignored)
+	.	scan the current buffer ( 'wrapscan' is ignored)
 	w	scan buffers from other windows
 	b	scan other loaded buffers that are in the buffer list
 	u	scan the unloaded buffers that are in the buffer list
@@ -2868,7 +2872,7 @@ A jump table for the options with a short description can be found at |Q_op|.
 	See |file-formats| and |file-read|.
 	For the character encoding of the file see 'fileencoding'.
 	When 'binary' is set, the value of 'fileformat' is ignored, file I/O
-	works like it was set to "unix'.
+	works like it was set to "unix".
 	This option is set automatically when starting to edit a file and
 	'fileformats' is not empty and 'binary' is off.
 	When this option is set, after starting to edit a file, the 'modified'
@@ -2936,6 +2940,14 @@ A jump table for the options with a short description can be found at |Q_op|.
 	otherwise 'textauto' is set.
 	NOTE: This option is set to the Vi default value when 'compatible' is
 	set and to the Vim default value when 'compatible' is reset.
+
+		*'fileignorecase'* *'fic'* *'nofileignorecase'* *'nofic'*
+'fileignorecase' 'fic'	boolean	(default on for systems where case in file
+				 names is normally ignored)
+			global
+			{not in Vi}
+	When set case is ignored when using file names and directories.
+	See 'wildignorecase' for only ignoring case when doing completion.
 
 					*'filetype'* *'ft'*
 'filetype' 'ft'		string (default: "")
@@ -7085,7 +7097,7 @@ A jump table for the options with a short description can be found at |Q_op|.
 			{not in Vi}
 	Encoding used for the terminal.  This specifies what character
 	encoding the keyboard produces and the display will understand.  For
-	the GUI it only applies to the keyboard ('encoding' is used for the
+	the GUI it only applies to the keyboard ( 'encoding' is used for the
 	display).  Except for the Mac when 'macatsui' is off, then
 	'termencoding' should be "macroman".
 	In the Win32 console version the default value is the console codepage
@@ -7899,7 +7911,7 @@ A jump table for the options with a short description can be found at |Q_op|.
 			global
 			{not in Vi}
 	When set case is ignored when completing file names and directories.
-	Has no effect on systems where file name case is generally ignored.
+	Has no effect when 'fileignorecase' is set.
 	Does not apply when the shell is used to expand wildcards, which
 	happens when there are special characters.
 
@@ -7918,6 +7930,7 @@ A jump table for the options with a short description can be found at |Q_op|.
 	CTRL-P/CTRL-N, cause the highlight to move to the appropriate match.
 	When 'wildmode' is used, "wildmenu" mode is used where "full" is
 	specified.  "longest" and "list" do not start "wildmenu" mode.
+	You can check the current mode with |wildmenumode()|.
 	If there are more matches than can fit in the line, a ">" is shown on
 	the right and/or a "<" is shown on the left.  The status line scrolls
 	as needed.

@@ -729,6 +729,112 @@ static char *(features[]) =
 static int included_patches[] =
 {   /* Add new patch number below this line */
 /**/
+    884,
+/**/
+    883,
+/**/
+    882,
+/**/
+    881,
+/**/
+    880,
+/**/
+    879,
+/**/
+    878,
+/**/
+    877,
+/**/
+    876,
+/**/
+    875,
+/**/
+    874,
+/**/
+    873,
+/**/
+    872,
+/**/
+    871,
+/**/
+    870,
+/**/
+    869,
+/**/
+    868,
+/**/
+    867,
+/**/
+    866,
+/**/
+    865,
+/**/
+    864,
+/**/
+    863,
+/**/
+    862,
+/**/
+    861,
+/**/
+    860,
+/**/
+    859,
+/**/
+    858,
+/**/
+    857,
+/**/
+    856,
+/**/
+    855,
+/**/
+    854,
+/**/
+    853,
+/**/
+    852,
+/**/
+    851,
+/**/
+    850,
+/**/
+    849,
+/**/
+    848,
+/**/
+    847,
+/**/
+    846,
+/**/
+    845,
+/**/
+    844,
+/**/
+    843,
+/**/
+    842,
+/**/
+    841,
+/**/
+    840,
+/**/
+    839,
+/**/
+    838,
+/**/
+    837,
+/**/
+    836,
+/**/
+    835,
+/**/
+    834,
+/**/
+    833,
+/**/
+    832,
+/**/
     831,
 /**/
     830,
@@ -2466,7 +2572,7 @@ list_features()
      * width */
     for (i = 0; features[i] != NULL; ++i)
     {
-	int l = STRLEN(features[i]);
+	int l = (int)STRLEN(features[i]);
 
 	if (l > width)
 	    width = l;
@@ -2486,14 +2592,12 @@ list_features()
 	return;
     }
 
-    ncol = (int) Columns / width;
     /* The rightmost column doesn't need a separator.
      * Sacrifice it to fit in one more column if possible. */
-    if (Columns % width == width - 1)
-	ncol++;
-
+    ncol = (int) (Columns + 1) / width;
     nrow = nfeat / ncol + (nfeat % ncol ? 1 : 0);
 
+    /* i counts columns then rows.  idx counts rows then columns. */
     for (i = 0; !got_int && i < nrow * ncol; ++i)
     {
 	int idx = (i / ncol) + (i % ncol) * nrow;
@@ -2515,9 +2619,13 @@ list_features()
 	    }
 	}
 	else
-	    msg_putchar('\n');
+	{
+	    if (msg_col > 0)
+		msg_putchar('\n');
+	}
     }
 }
+
     void
 list_version()
 {

@@ -1,7 +1,7 @@
 " Vim support file to detect file types
 "
 " Maintainer:	Bram Moolenaar <Bram@vim.org>
-" Last Change:	2013 Feb 12
+" Last Change:	2013 Apr 05
 
 " Listen very carefully, I will say this only once
 if exists("did_load_filetypes")
@@ -138,6 +138,9 @@ au BufNewFile,BufRead .arch-inventory,=tagging-method	setf arch
 
 " ART*Enterprise (formerly ART-IM)
 au BufNewFile,BufRead *.art			setf art
+
+" AsciiDoc
+au BufNewFile,BufRead *.asciidoc		setf asciidoc
 
 " ASN.1
 au BufNewFile,BufRead *.asn,*.asn1		setf asn
@@ -324,6 +327,9 @@ au BufNewFile,BufRead calendar			setf calendar
 
 " C#
 au BufNewFile,BufRead *.cs			setf cs
+
+" CSDL
+au BufNewFile,BufRead *.csdl			setf csdl
 
 " Cabal
 au BufNewFile,BufRead *.cabal			setf cabal
@@ -746,12 +752,12 @@ au BufNewFile,BufRead *.mo,*.gdmo		setf gdmo
 au BufNewFile,BufRead *.ged,lltxxxxx.txt	setf gedcom
 
 " Git
-au BufNewFile,BufRead *.git/COMMIT_EDITMSG 	setf gitcommit
-au BufNewFile,BufRead *.git/MERGE_MSG 		setf gitcommit
+au BufNewFile,BufRead *.git/COMMIT_EDITMSG	setf gitcommit
+au BufNewFile,BufRead *.git/MERGE_MSG		setf gitcommit
 au BufNewFile,BufRead *.git/config,.gitconfig,.gitmodules setf gitconfig
 au BufNewFile,BufRead *.git/modules/**/COMMIT_EDITMSG setf gitcommit
-au BufNewFile,BufRead *.git/modules/**/config 	setf gitconfig
-au BufNewFile,BufRead git-rebase-todo      	setf gitrebase
+au BufNewFile,BufRead *.git/modules/**/config	setf gitconfig
+au BufNewFile,BufRead git-rebase-todo		setf gitrebase
 au BufNewFile,BufRead .msg.[0-9]*
       \ if getline(1) =~ '^From.*# This line is ignored.$' |
       \   setf gitsendemail |
@@ -778,7 +784,7 @@ au BufNewFile,BufRead gnashrc,.gnashrc,gnashpluginrc,.gnashpluginrc setf gnash
 " Gitolite
 au BufNewFile,BufRead gitolite.conf		setf gitolite
 au BufNewFile,BufRead */gitolite-admin/conf/*	call s:StarSetf('gitolite')
-au BufNewFile,BufRead {,.}gitolite.rc,example.gitolite.rc 	setf perl
+au BufNewFile,BufRead {,.}gitolite.rc,example.gitolite.rc	setf perl
 
 " Gnuplot scripts
 au BufNewFile,BufRead *.gpi			setf gnuplot
@@ -1632,6 +1638,9 @@ func! s:FTr()
   endif
 endfunc
 
+" ReDIF
+au BufRead,BufNewFile *.rdf			setf redif
+
 " Remind
 au BufNewFile,BufRead .reminders,*.remind,*.rem		setf remind
 
@@ -1640,6 +1649,9 @@ au BufNewFile,BufRead resolv.conf		setf resolv
 
 " Relax NG Compact
 au BufNewFile,BufRead *.rnc			setf rnc
+
+" Relax NG XML
+au BufNewFile,BufRead *.rng			setf rng
 
 " RPL/2
 au BufNewFile,BufRead *.rpl			setf rpl
@@ -2191,8 +2203,12 @@ au BufNewFile,BufRead *.uc			setf uc
 au BufNewFile,BufRead */etc/updatedb.conf	setf updatedb
 
 " Upstart (init(8)) config files
-au BufNewFile,BufRead */etc/init/*.conf,*/.init/*.conf          setf upstart
-au BufNewFile,BufRead */etc/init/*.override,*/.init/*.override  setf upstart
+au BufNewFile,BufRead */usr/share/upstart/*.conf               setf upstart
+au BufNewFile,BufRead */usr/share/upstart/*.override           setf upstart
+au BufNewFile,BufRead */etc/init/*.conf,*/etc/init/*.override  setf upstart
+au BufNewFile,BufRead */.init/*.conf,*/.init/*.override        setf upstart
+au BufNewFile,BufRead */.config/upstart/*.conf                 setf upstart
+au BufNewFile,BufRead */.config/upstart/*.override             setf upstart
 
 " Vera
 au BufNewFile,BufRead *.vr,*.vri,*.vrh		setf vera
@@ -2402,10 +2418,10 @@ endfunc
 au BufNewFile,BufRead *.yaml,*.yml		setf yaml
 
 " yum conf (close enough to dosini)
-au BufNewFile,BufRead */etc/yum.conf 		setf dosini
+au BufNewFile,BufRead */etc/yum.conf		setf dosini
 
 " Zimbu
-au BufNewFile,BufRead *.zu 			setf zimbu
+au BufNewFile,BufRead *.zu			setf zimbu
 
 " Zope
 "   dtml (zope dynamic template markup language), pt (zope page template),
@@ -2578,7 +2594,7 @@ au BufNewFile,BufRead *xmodmap*			call s:StarSetf('xmodmap')
 au BufNewFile,BufRead */etc/xinetd.d/*		call s:StarSetf('xinetd')
 
 " yum conf (close enough to dosini)
-au BufNewFile,BufRead */etc/yum.repos.d/* 	call s:StarSetf('dosini')
+au BufNewFile,BufRead */etc/yum.repos.d/*	call s:StarSetf('dosini')
 
 " Z-Shell script
 au BufNewFile,BufRead zsh*,zlog*		call s:StarSetf('zsh')

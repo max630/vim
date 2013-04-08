@@ -5352,6 +5352,8 @@ ff_wc_equal(s1, s2)
     char_u	*s2;
 {
     int		i;
+    int		prev1 = NUL;
+    int		prev2 = NUL;
 
     if (s1 == s2)
 	return TRUE;
@@ -5362,22 +5364,16 @@ ff_wc_equal(s1, s2)
     if (STRLEN(s1) != STRLEN(s2))
 	return FAIL;
 
-    for (i = 0; s1[i] != NUL && s2[i] != NUL; i++)
+    for (i = 0; s1[i] != NUL && s2[i] != NUL; i += MB_PTR2LEN(s1 + i))
     {
-	if (s1[i] != s2[i]
-#ifdef CASE_INSENSITIVE_FILENAME
-		&& TOUPPER_LOC(s1[i]) != TOUPPER_LOC(s2[i])
-#endif
-		)
-	{
-	    if (i >= 2)
-		if (s1[i-1] == '*' && s1[i-2] == '*')
-		    continue;
-		else
-		    return FAIL;
-	    else
-		return FAIL;
-	}
+	int c1 = PTR2CHAR(s1 + i);
+	int c2 = PTR2CHAR(s2 + i);
+
+	if ((p_fic ? MB_TOLOWER(c1) != MB_TOLOWER(c2) : c1 != c2)
+		&& (prev1 != '*' || prev2 != '*'))
+	    return FAIL;
+	prev2 = prev1;
+	prev1 = c1;
     }
     return TRUE;
 }
@@ -6123,12 +6119,7 @@ pathcmp(p, q, maxlen)
 	    break;
 	}
 
-	if (
-#ifdef CASE_INSENSITIVE_FILENAME
-		TOUPPER_LOC(p[i]) != TOUPPER_LOC(q[i])
-#else
-		p[i] != q[i]
-#endif
+	if ((p_fic ? TOUPPER_LOC(p[i]) != TOUPPER_LOC(q[i]) : p[i] != q[i])
 #ifdef BACKSLASH_IN_FILENAME
 		/* consider '/' and '\\' to be equal */
 		&& !((p[i] == '/' && q[i] == '\\')

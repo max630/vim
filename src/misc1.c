@@ -3288,6 +3288,38 @@ ask_yesno(str, direct)
     return r;
 }
 
+#if defined(FEAT_MOUSE) || defined(PROTO)
+/*
+ * Return TRUE if "c" is a mouse key.
+ */
+    int
+is_mouse_key(c)
+    int c;
+{
+    return c == K_LEFTMOUSE
+	|| c == K_LEFTMOUSE_NM
+	|| c == K_LEFTDRAG
+	|| c == K_LEFTRELEASE
+	|| c == K_LEFTRELEASE_NM
+	|| c == K_MIDDLEMOUSE
+	|| c == K_MIDDLEDRAG
+	|| c == K_MIDDLERELEASE
+	|| c == K_RIGHTMOUSE
+	|| c == K_RIGHTDRAG
+	|| c == K_RIGHTRELEASE
+	|| c == K_MOUSEDOWN
+	|| c == K_MOUSEUP
+	|| c == K_MOUSELEFT
+	|| c == K_MOUSERIGHT
+	|| c == K_X1MOUSE
+	|| c == K_X1DRAG
+	|| c == K_X1RELEASE
+	|| c == K_X2MOUSE
+	|| c == K_X2DRAG
+	|| c == K_X2RELEASE;
+}
+#endif
+
 /*
  * Get a key stroke directly from the user.
  * Ignores mouse clicks and scrollbar events, except a click for the left
@@ -3374,30 +3406,11 @@ get_keystroke()
 	    if (buf[1] == KS_MODIFIER
 		    || n == K_IGNORE
 #ifdef FEAT_MOUSE
-		    || n == K_LEFTMOUSE_NM
-		    || n == K_LEFTDRAG
-		    || n == K_LEFTRELEASE
-		    || n == K_LEFTRELEASE_NM
-		    || n == K_MIDDLEMOUSE
-		    || n == K_MIDDLEDRAG
-		    || n == K_MIDDLERELEASE
-		    || n == K_RIGHTMOUSE
-		    || n == K_RIGHTDRAG
-		    || n == K_RIGHTRELEASE
-		    || n == K_MOUSEDOWN
-		    || n == K_MOUSEUP
-		    || n == K_MOUSELEFT
-		    || n == K_MOUSERIGHT
-		    || n == K_X1MOUSE
-		    || n == K_X1DRAG
-		    || n == K_X1RELEASE
-		    || n == K_X2MOUSE
-		    || n == K_X2DRAG
-		    || n == K_X2RELEASE
-# ifdef FEAT_GUI
+		    || (is_mouse_key(n) && n != K_LEFTMOUSE)
+#endif
+#ifdef FEAT_GUI
 		    || n == K_VER_SCROLLBAR
 		    || n == K_HOR_SCROLLBAR
-# endif
 #endif
 	       )
 	    {
@@ -5013,16 +5026,21 @@ dir_of_file_exists(fname)
     return retval;
 }
 
-#if (defined(CASE_INSENSITIVE_FILENAME) && defined(BACKSLASH_IN_FILENAME)) \
-	|| defined(PROTO)
 /*
- * Versions of fnamecmp() and fnamencmp() that handle '/' and '\' equally.
+ * Versions of fnamecmp() and fnamencmp() that handle '/' and '\' equally
+ * and deal with 'fileignorecase'.
  */
     int
 vim_fnamecmp(x, y)
     char_u	*x, *y;
 {
+#ifdef BACKSLASH_IN_FILENAME
     return vim_fnamencmp(x, y, MAXPATHL);
+#else
+    if (p_fic)
+	return MB_STRICMP(x, y);
+    return STRCMP(x, y);
+#endif
 }
 
     int
@@ -5030,21 +5048,35 @@ vim_fnamencmp(x, y, len)
     char_u	*x, *y;
     size_t	len;
 {
-    while (len > 0 && *x && *y)
+#ifdef BACKSLASH_IN_FILENAME
+    char_u	*px = x;
+    char_u	*py = y;
+    int		cx = NUL;
+    int		cy = NUL;
+
+    /* TODO: multi-byte characters. */
+    while (len > 0)
     {
-	if (TOLOWER_LOC(*x) != TOLOWER_LOC(*y)
-		&& !(*x == '/' && *y == '\\')
-		&& !(*x == '\\' && *y == '/'))
+	cx = PTR2CHAR(px);
+	cy = PTR2CHAR(py);
+	if (cx == NUL || cy == NUL
+	    || ((p_fic ? MB_TOLOWER(cx) != MB_TOLOWER(cy) : cx != cy)
+		&& !(cx == '/' && cy == '\\')
+		&& !(cx == '\\' && cy == '/')))
 	    break;
-	++x;
-	++y;
-	--len;
+	len -= MB_PTR2LEN(px);
+	px += MB_PTR2LEN(px);
+	py += MB_PTR2LEN(py);
     }
     if (len == 0)
 	return 0;
-    return (*x - *y);
-}
+    return (cx - cy);
+#else
+    if (p_fic)
+	return MB_STRNICMP(x, y, len);
+    return STRNCMP(x, y, len);
 #endif
+}
 
 /*
  * Concatenate file names fname1 and fname2 into allocated memory.
@@ -5275,6 +5307,7 @@ static int	cin_isbreak __ARGS((char_u *));
 static int	cin_is_cpp_baseclass __ARGS((colnr_T *col));
 static int	get_baseclass_amount __ARGS((int col, int ind_maxparen, int ind_maxcomment, int ind_cpp_baseclass));
 static int	cin_ends_in __ARGS((char_u *, char_u *, char_u *));
+static int	cin_starts_with __ARGS((char_u *s, char *word));
 static int	cin_skip2pos __ARGS((pos_T *trypos));
 static pos_T	*find_start_brace __ARGS((int));
 static pos_T	*find_match_paren __ARGS((int, int));
@@ -5446,24 +5479,40 @@ cin_islabel(ind_maxcomment)		/* XXX */
 }
 
 /*
- * Recognize structure initialization and enumerations.
- * Q&D-Implementation:
- * check for "=" at end or "[typedef] enum" at beginning of line.
+ * Recognize structure initialization and enumerations:
+ * "[typedef] [static|public|protected|private] enum"
+ * "[typedef] [static|public|protected|private] = {"
  */
     static int
 cin_isinit(void)
 {
     char_u	*s;
+    static char *skip[] = {"static", "public", "protected", "private"};
 
     s = cin_skipcomment(ml_get_curline());
 
-    if (STRNCMP(s, "typedef", 7) == 0 && !vim_isIDc(s[7]))
+    if (cin_starts_with(s, "typedef"))
 	s = cin_skipcomment(s + 7);
 
-    if (STRNCMP(s, "static", 6) == 0 && !vim_isIDc(s[6]))
-	s = cin_skipcomment(s + 6);
+    for (;;)
+    {
+	int i, l;
 
-    if (STRNCMP(s, "enum", 4) == 0 && !vim_isIDc(s[4]))
+	for (i = 0; i < (int)(sizeof(skip) / sizeof(char *)); ++i)
+	{
+	    l = (int)strlen(skip[i]);
+	    if (cin_starts_with(s, skip[i]))
+	    {
+		s = cin_skipcomment(s + l);
+		l = 0;
+		break;
+	    }
+	}
+	if (l != 0)
+	    break;
+    }
+
+    if (cin_starts_with(s, "enum"))
 	return TRUE;
 
     if (cin_ends_in(s, (char_u *)"=", (char_u *)"{"))
@@ -5481,7 +5530,7 @@ cin_iscase(s, strict)
     int strict; /* Allow relaxed check of case statement for JS */
 {
     s = cin_skipcomment(s);
-    if (STRNCMP(s, "case", 4) == 0 && !vim_isIDc(s[4]))
+    if (cin_starts_with(s, "case"))
     {
 	for (s += 4; *s; ++s)
 	{
@@ -6049,7 +6098,7 @@ cin_iswhileofdo(p, lnum, ind_maxparen)	    /* XXX */
     p = cin_skipcomment(p);
     if (*p == '}')		/* accept "} while (cond);" */
 	p = cin_skipcomment(p + 1);
-    if (STRNCMP(p, "while", 5) == 0 && !vim_isIDc(p[5]))
+    if (cin_starts_with(p, "while"))
     {
 	cursor_save = curwin->w_cursor;
 	curwin->w_cursor.lnum = lnum;
@@ -6156,7 +6205,7 @@ cin_iswhileofdo_end(terminated, ind_maxparen, ind_maxcomment)
 		    s = cin_skipcomment(ml_get(trypos->lnum));
 		    if (*s == '}')		/* accept "} while (cond);" */
 			s = cin_skipcomment(s + 1);
-		    if (STRNCMP(s, "while", 5) == 0 && !vim_isIDc(s[5]))
+		    if (cin_starts_with(s, "while"))
 		    {
 			curwin->w_cursor.lnum = trypos->lnum;
 			return TRUE;
@@ -6403,6 +6452,19 @@ cin_ends_in(s, find, ignore)
 	    ++p;
     }
     return FALSE;
+}
+
+/*
+ * Return TRUE when "s" starts with "word" and then a non-ID character.
+ */
+    static int
+cin_starts_with(s, word)
+    char_u *s;
+    char *word;
+{
+    int l = (int)STRLEN(word);
+
+    return (STRNCMP(s, word, l) == 0 && !vim_isIDc(s[l]));
 }
 
 /*
@@ -9792,11 +9854,8 @@ unix_expandpath(gap, path, wildoff, flags, didstar)
 	}
 	else if (path_end >= path + wildoff
 			 && (vim_strchr((char_u *)"*?[{~$", *path_end) != NULL
-#ifndef CASE_INSENSITIVE_FILENAME
-			     || ((flags & EW_ICASE)
-					       && isalpha(PTR2CHAR(path_end)))
-#endif
-			     ))
+			     || (!p_fic && (flags & EW_ICASE)
+					     && isalpha(PTR2CHAR(path_end)))))
 	    e = p;
 #ifdef FEAT_MBYTE
 	if (has_mbyte)
@@ -9839,14 +9898,10 @@ unix_expandpath(gap, path, wildoff, flags, didstar)
     }
 
     /* compile the regexp into a program */
-#ifdef CASE_INSENSITIVE_FILENAME
-    regmatch.rm_ic = TRUE;		/* Behave like Terminal.app */
-#else
     if (flags & EW_ICASE)
 	regmatch.rm_ic = TRUE;		/* 'wildignorecase' set */
     else
-	regmatch.rm_ic = FALSE;		/* Don't ignore case */
-#endif
+	regmatch.rm_ic = p_fic;	/* ignore case when 'fileignorecase' is set */
     if (flags & (EW_NOERROR | EW_NOTWILD))
 	++emsg_silent;
     regmatch.regprog = vim_regcomp(pat, RE_MAGIC);
