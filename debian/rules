@@ -119,11 +119,11 @@ ALLINTERPFLAGS+=--enable-tclinterp
 # "vim-common", "vim-gui-common". "vim-tiny" is the only variant package not
 # depending on vim-runtime.
 
-VARIANTS+=vim-tiny
-VARIANTS+=vim-gtk
-VARIANTS+=vim-gnome
+#VARIANTS+=vim-tiny
+#VARIANTS+=vim-gtk
+#VARIANTS+=vim-gnome
 VARIANTS+=vim-athena
-VARIANTS+=vim-nox
+#VARIANTS+=vim-nox
 VARIANTS+=vim-basic
 
 ifeq ($(origin VARIANT), command line)
@@ -235,7 +235,7 @@ build-stamp-indep:
 	dh_testdir
 	dh_prep
 	$(MAKE) -C runtime/doc html
-	$(MAKE) -C debian/policy text html
+	#$(MAKE) -C debian/policy text html
 	$(MAKE) -C src/po vim.pot
 	touch $@
 
