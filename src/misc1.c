@@ -5054,7 +5054,6 @@ vim_fnamencmp(x, y, len)
     int		cx = NUL;
     int		cy = NUL;
 
-    /* TODO: multi-byte characters. */
     while (len > 0)
     {
 	cx = PTR2CHAR(px);
@@ -10136,6 +10135,15 @@ expand_path_option(curdir, gap)
 
 	if (ga_grow(gap, 1) == FAIL)
 	    break;
+
+# if defined(MSWIN) || defined(MSDOS)
+	/* Avoid the path ending in a backslash, it fails when a comma is
+	 * appended. */
+	len = (int)STRLEN(buf);
+	if (buf[len - 1] == '\\')
+	    buf[len - 1] = '/';
+# endif
+
 	p = vim_strsave(buf);
 	if (p == NULL)
 	    break;

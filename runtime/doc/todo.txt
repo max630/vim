@@ -1,4 +1,4 @@
-*todo.txt*      For Vim version 7.3.  Last change: 2013 Apr 05
+*todo.txt*      For Vim version 7.3.  Last change: 2013 Apr 24
 
 
 		  VIM REFERENCE MANUAL	  by Bram Moolenaar
@@ -39,10 +39,6 @@ highlight group.  Add a "\zs" after it?
 
 Go through more coverity reports.
 
-Valgrind errors in test 16.
-
-Memory leaks in Lua, uncovered by test 85.
-
 Discussion about canonicalization of Hebrew. (Ron Aaron, 2011 April 10)
 
 Checking runtime scripts: Thilo Six, 2012 Jun 6.
@@ -56,27 +52,19 @@ The CompleteDone autocommand needs some info passed to it:
 - The word that was selected (empty if abandoned complete)
 - Type of completion: tag, omnifunc, user func.
 
-Patch to fix sorting order when 'fileignorecase' is set. (Hirohito Higashi,
-2013 Mar 20)  Update Mar 24.
-
 Using ":call foo#d.f()" doesn't autoload the "foo.vim" file.
 That is, calling a dictionary function on an autoloaded dict.
 Works OK for echo, just not for  ":call" and ":call call()". (Ted, 2011 Mar
 17)
 Patch by Christian Brabandt, 2013 Mar 23.
-
-Patch to make building with Ruby 2.0 on 64 bit system work. (eagletmt (Kohei
-Suzuki), 2013 Mar 25)
+Not 100% sure this is the right solution.
 
 Win32: When a directory name contains an exclamation mark, completion doesn't
 complete the contents of the directory.  No escaping for the "!"? (Jan
 Stocker, 2012 Jan 5)
 
-Patch to avoid that visul motion breaks repeat with ".". (Sung Pae, 2013 Mar
-25)
-
-Patch to fix problem introduced by 7.3.859, reusing "p". (Christian Brabandt,
-2013 Mar 20)
+Patch to load ~/.vim/vimrc when ~/.vimrc isn't found. (Lech Lorens, 2013 Apr
+13)
 
 Problem caused by patch 7.3.638: window->open does not update window
 correctly. Issue 91.
@@ -95,21 +83,30 @@ Patch to support 'u' in interactive substitute. (Christian Brabandt, 2012 Sep
 
 Patch to make fold updates much faster. (Christian Brabandt, 2012 Dec)
 
-Patch to add more testing for Visual operators. (glts, 2013 Mar 28)
-
 Patch for IME handling, adds 'imactivatefunc' and 'imstatusfunc' option.
 (Yukihiro Nakadaira, 2012 Aug 16)
 Patch to improve IME handling. (Yasuhiro Matsumoto, 2012 Jul 18)
+
+Undo problem: line not removed as expected when using setline() from Insert
+mode. (Israel Chauca, 2010 May 13, more in second msg)
+Break undo when CTRL-R = changes the text?  Or save more lines?
+Patch by Christian Brabandt, 2012 Nov 16.
 
 Issue 54: document behavior of -complete, also expands arg.
 
 Matches might be highlighted correctly. Inefficient patch by Christian
 Brabandt, 2013 Feb 26.
 
-New syntax files for apt. (quidame, 2012 Sep 21)
+-   Add regex for 'paragraphs' and 'sections': 'parare' and 'sectre'.  Combine
+    the two into a regex for searching. (Ned Konz)
+Patch by Christian Brabandt, 2013 Apr 20, unfinished.
 
 Patch to use bold/italic fonts when 'guifontewide' is set. (Ken Takata, 2013
 Mar 31)
+
+Patch to fix finding toolbar bitmaps.  Issue 129.
+
+Patch to handle Python SystemExit. (Yasuhiro Matsumoto, 2013 Apr 15)
 
 v:register is not directly reset to " after a delete command that specifies a
 register.  It is reset after the next command. (Steve Vermeulen, 2013 Mar 16)
@@ -124,14 +121,7 @@ Patch to check if 'foldexpr' sets did_emsg. (Christian Brabandt, 2013 Mar 20)
 Patch to set antialiasing style on Windows. (Ondrej Balaz, 2013 Mar 14)
 Needs a different check for CLEARTYPE_QUALITY.
 
-Patch for repeating change that uses ":normal". (glts, 2013 March 23)
-
 Issue 72: 'autochdir' causes problems for :vimgrep.
-
-Undo problem: line not removed as expected when using setline() from Insert
-mode. (Israel Chauca, 2010 May 13, more in second msg)
-Break undo when CTRL-R = changes the text?  Or save more lines?
-Patch by Christian Brabandt, 2012 Nov 16.
 
 In the ATTENTION message about an existing swap file, mention the name of the
 process that is running.  It might actually be some other program, e.g. after
@@ -143,7 +133,14 @@ MS-Windows: Crash opening very long file name starting with "\\".
 It's probably a good idea to make a negative value for 'sts' use the value of
 'sw'.  Patch by So8res, Oct 3 2012
 
+Test 79 fails on Windows only. (Michael Soyka, 2013 Apr 11).
+What makes the test script mapping continue after an error?
+
 patch to add "combine" flag to  syntax commands. (so8res, 2012 Dec 6)
+
+Combining characters are not used when executing a register with :@w.
+(William Fugh, 2013 Apr 5, more info from Ben Fritz)
+Patch by Christian Brabandt, 2013 Apr 6.  Second one.
 
 Bug in completion menu. (Olivier Teuliere, 2013 Feb 15)
 Patch by Christian Brabandt, Feb 16.
@@ -177,6 +174,9 @@ Patch to improve equivalence classes in regexp patterns.
 
 Patch with suggestions for starting.txt. (Tony Mechelynck, 2012 Oct 24)
 But use Gnome instead of GTK?
+
+Patch to make FocusGained and FocusLost work in modern terminals. (Hayaki
+Saito, 2013 Apr 24)
 
 Should be possible to enable/disable matchparen per window or buffer.
 Add a check for b:no_match_paren in Highlight_matching_Pair() (Marcin
@@ -228,9 +228,6 @@ URXVT:
 
 MS-Windows: test 17 fails.  Analysis by Michael Soyka, 2012 Nov 5.
 
-Combining characters are not used when executing a register with :@w.
-(William Fugh, 2013 Apr 5, more info from Ben Fritz)
-
 Patch to add tests for if_xcmdsrv.c., Jul 8, need some more work. (Brian Burns)
 New tests Jul 13.   Update Jul 17.  Discussion Jul 18.
 
@@ -249,6 +246,9 @@ Patch for input method status. (Hirohito Higashi, 2012 Apr 18)
 
 Patch to print the result of a :python command. (Maxim Philippov
 <philippovmi@gmail.com>, 2012 Aug 16)  Update Aug 17.
+
+Patch to use .png icons for the toolbar on MS-Windows. (Martin Gieseking, 2013
+Apr 18)
 
 Problem with winfixheight and resizing. (Yukihiro Nakadaira, 2011 Sep 17)
 Patch Sep 18.
@@ -938,6 +938,7 @@ ATTENTION message?  (Tony Mechelynck, 2008 Dec 1)
 Also: swap files are in ~/tmp/  One has relative file name ".mozilla/...".
 
 Add v:motion_force. (Kana Natsuno, 2008 Dec 6)
+Maybe call it v:motiontype.
 
 Runtime files for Clojure. (Toralf Wittner, 2008 Jun 25)
 
@@ -5090,8 +5091,6 @@ Various improvements:
 -   Add a variant of CTRL-V that stops interpretation of more than one
     character.	For entering mappings on the command line where a key contains
     several special characters, e.g. a trailing newline.
--   Add regex for 'paragraphs' and 'sections': 'parare' and 'sectre'.  Combine
-    the two into a regex for searching. (Ned Konz)
 -   Make '2' option in 'formatoptions' also work inside comments.
 -   Add 's' flag to 'formatoptions': Do not break when inside a string. (Dodt)
 -   When window size changed (with the mouse) and made too small, set it back

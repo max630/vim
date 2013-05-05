@@ -1,7 +1,9 @@
-vim (2:7.3.884-1) UNRELEASED; urgency=low
+vim (2:7.3.923-1) UNRELEASED; urgency=low
 
-  * Merge upstream tag v7-3-884
+  * Merge upstream tag v7-3-923
     + Updated documentation for Python syntax file.  (Closes: #613038)
+    + NetRW no longer creates files in ~/.vim (or ~/.vim itself) if
+      g:netrw_dirhistmax <= 0.  (Closes: #635984)
   * Remove EOLed Oneiric and Hardy releases from Debian runtime files.  Add
     Saucy and wheezy-backports.
 

@@ -113,12 +113,7 @@ static char *e_letwrong = N_("E734: Wrong variable type for %s=");
 static char *e_nofunc = N_("E130: Unknown function: %s");
 static char *e_illvar = N_("E461: Illegal variable name: %s");
 
-/*
- * All user-defined global variables are stored in dictionary "globvardict".
- * "globvars_var" is the variable that is used for "g:".
- */
-static dict_T		globvardict;
-static dictitem_T	globvars_var;
+static dictitem_T	globvars_var;		/* variable used for g: */
 #define globvarht globvardict.dv_hashtab
 
 /*
@@ -370,12 +365,7 @@ static struct vimvar
 #define vv_list		vv_di.di_tv.vval.v_list
 #define vv_tv		vv_di.di_tv
 
-/*
- * The v: variables are stored in dictionary "vimvardict".
- * "vimvars_var" is the variable that is used for the "l:" scope.
- */
-static dict_T		vimvardict;
-static dictitem_T	vimvars_var;
+static dictitem_T	vimvars_var;		/* variable used for v: */
 #define vimvarht  vimvardict.dv_hashtab
 
 static void prepare_vimvar __ARGS((int idx, typval_T *save_tv));
@@ -788,7 +778,7 @@ static char_u *get_tv_string __ARGS((typval_T *varp));
 static char_u *get_tv_string_buf __ARGS((typval_T *varp, char_u *buf));
 static char_u *get_tv_string_buf_chk __ARGS((typval_T *varp, char_u *buf));
 static dictitem_T *find_var __ARGS((char_u *name, hashtab_T **htp));
-static dictitem_T *find_var_in_ht __ARGS((hashtab_T *ht, char_u *varname, int writing));
+static dictitem_T *find_var_in_ht __ARGS((hashtab_T *ht, int htname, char_u *varname, int writing));
 static hashtab_T *find_var_ht __ARGS((char_u *name, char_u **varname));
 static void vars_clear_ext __ARGS((hashtab_T *ht, int free_val));
 static void delete_var __ARGS((hashtab_T *ht, hashitem_T *hi));
@@ -2131,7 +2121,7 @@ list_buf_vars(first)
 {
     char_u	numbuf[NUMBUFLEN];
 
-    list_hashtable_vars(&curbuf->b_vars.dv_hashtab, (char_u *)"b:",
+    list_hashtable_vars(&curbuf->b_vars->dv_hashtab, (char_u *)"b:",
 								 TRUE, first);
 
     sprintf((char *)numbuf, "%ld", (long)curbuf->b_changedtick);
@@ -2146,7 +2136,7 @@ list_buf_vars(first)
 list_win_vars(first)
     int *first;
 {
-    list_hashtable_vars(&curwin->w_vars.dv_hashtab,
+    list_hashtable_vars(&curwin->w_vars->dv_hashtab,
 						 (char_u *)"w:", TRUE, first);
 }
 
@@ -2158,7 +2148,7 @@ list_win_vars(first)
 list_tab_vars(first)
     int *first;
 {
-    list_hashtable_vars(&curtab->tp_vars.dv_hashtab,
+    list_hashtable_vars(&curtab->tp_vars->dv_hashtab,
 						 (char_u *)"t:", TRUE, first);
 }
 #endif
@@ -3948,7 +3938,7 @@ get_user_var_name(xp, idx)
     }
 
     /* b: variables */
-    ht = &curbuf->b_vars.dv_hashtab;
+    ht = &curbuf->b_vars->dv_hashtab;
     if (bdone < ht->ht_used)
     {
 	if (bdone++ == 0)
@@ -3966,7 +3956,7 @@ get_user_var_name(xp, idx)
     }
 
     /* w: variables */
-    ht = &curwin->w_vars.dv_hashtab;
+    ht = &curwin->w_vars->dv_hashtab;
     if (wdone < ht->ht_used)
     {
 	if (wdone++ == 0)
@@ -3980,7 +3970,7 @@ get_user_var_name(xp, idx)
 
 #ifdef FEAT_WINDOWS
     /* t: variables */
-    ht = &curtab->tp_vars.dv_hashtab;
+    ht = &curtab->tp_vars->dv_hashtab;
     if (tdone < ht->ht_used)
     {
 	if (tdone++ == 0)
@@ -6787,16 +6777,20 @@ garbage_collect()
 
     /* buffer-local variables */
     for (buf = firstbuf; buf != NULL; buf = buf->b_next)
-	set_ref_in_ht(&buf->b_vars.dv_hashtab, copyID);
+	set_ref_in_item(&buf->b_bufvar.di_tv, copyID);
 
     /* window-local variables */
     FOR_ALL_TAB_WINDOWS(tp, wp)
-	set_ref_in_ht(&wp->w_vars.dv_hashtab, copyID);
+	set_ref_in_item(&wp->w_winvar.di_tv, copyID);
+#ifdef FEAT_AUTOCMD
+    if (aucmd_win != NULL)
+	set_ref_in_item(&aucmd_win->w_winvar.di_tv, copyID);
+#endif
 
 #ifdef FEAT_WINDOWS
     /* tabpage-local variables */
     for (tp = first_tabpage; tp != NULL; tp = tp->tp_next)
-	set_ref_in_ht(&tp->tp_vars.dv_hashtab, copyID);
+	set_ref_in_item(&tp->tp_winvar.di_tv, copyID);
 #endif
 
     /* global variables */
@@ -11120,20 +11114,15 @@ f_getbufvar(argvars, rettv)
     buf_T	*save_curbuf;
     char_u	*varname;
     dictitem_T	*v;
+    int		done = FALSE;
 
     (void)get_tv_number(&argvars[0]);	    /* issue errmsg if type error */
     varname = get_tv_string_chk(&argvars[1]);
     ++emsg_off;
     buf = get_buf_tv(&argvars[0], FALSE);
 
-    if (argvars[2].v_type != VAR_UNKNOWN)
-	/* set the default value */
-	copy_tv(&argvars[2], rettv);
-    else
-    {
-	rettv->v_type = VAR_STRING;
-	rettv->vval.v_string = NULL;
-    }
+    rettv->v_type = VAR_STRING;
+    rettv->vval.v_string = NULL;
 
     if (buf != NULL && varname != NULL)
     {
@@ -11142,28 +11131,36 @@ f_getbufvar(argvars, rettv)
 	curbuf = buf;
 
 	if (*varname == '&')	/* buffer-local-option */
-	    get_option_tv(&varname, rettv, TRUE);
+	{
+	    if (get_option_tv(&varname, rettv, TRUE) == OK)
+		done = TRUE;
+	}
 	else if (STRCMP(varname, "changedtick") == 0)
 	{
 	    rettv->v_type = VAR_NUMBER;
 	    rettv->vval.v_number = curbuf->b_changedtick;
+	    done = TRUE;
 	}
 	else
 	{
-	    if (*varname == NUL)
-		/* let getbufvar({nr}, "") return the "b:" dictionary.  The
-		 * scope prefix before the NUL byte is required by
-		 * find_var_in_ht(). */
-		varname = (char_u *)"b:" + 2;
-	    /* look up the variable */
-	    v = find_var_in_ht(&curbuf->b_vars.dv_hashtab, varname, FALSE);
+	    /* Look up the variable. */
+	    /* Let getbufvar({nr}, "") return the "b:" dictionary. */
+	    v = find_var_in_ht(&curbuf->b_vars->dv_hashtab,
+							 'b', varname, FALSE);
 	    if (v != NULL)
+	    {
 		copy_tv(&v->di_tv, rettv);
+		done = TRUE;
+	    }
 	}
 
 	/* restore previous notion of curbuf */
 	curbuf = save_curbuf;
     }
+
+    if (!done && argvars[2].v_type != VAR_UNKNOWN)
+	/* use the default value */
+	copy_tv(&argvars[2], rettv);
 
     --emsg_off;
 }
@@ -11770,6 +11767,7 @@ f_gettabvar(argvars, rettv)
     tabpage_T	*tp;
     dictitem_T	*v;
     char_u	*varname;
+    int		done = FALSE;
 
     rettv->v_type = VAR_STRING;
     rettv->vval.v_string = NULL;
@@ -11779,13 +11777,15 @@ f_gettabvar(argvars, rettv)
     if (tp != NULL && varname != NULL)
     {
 	/* look up the variable */
-	v = find_var_in_ht(&tp->tp_vars.dv_hashtab, varname, FALSE);
+	v = find_var_in_ht(&tp->tp_vars->dv_hashtab, 0, varname, FALSE);
 	if (v != NULL)
+	{
 	    copy_tv(&v->di_tv, rettv);
-	else if (argvars[2].v_type != VAR_UNKNOWN)
-	    copy_tv(&argvars[2], rettv);
+	    done = TRUE;
+	}
     }
-    else if (argvars[2].v_type != VAR_UNKNOWN)
+
+    if (!done && argvars[2].v_type != VAR_UNKNOWN)
 	copy_tv(&argvars[2], rettv);
 }
 
@@ -11897,6 +11897,7 @@ getwinvar(argvars, rettv, off)
     char_u	*varname;
     dictitem_T	*v;
     tabpage_T	*tp;
+    int		done = FALSE;
 
 #ifdef FEAT_WINDOWS
     if (off == 1)
@@ -11908,14 +11909,8 @@ getwinvar(argvars, rettv, off)
     varname = get_tv_string_chk(&argvars[off + 1]);
     ++emsg_off;
 
-    if (argvars[off + 2].v_type != VAR_UNKNOWN)
-	/* set the default return value */
-	copy_tv(&argvars[off + 2], rettv);
-    else
-    {
-	rettv->v_type = VAR_STRING;
-	rettv->vval.v_string = NULL;
-    }
+    rettv->v_type = VAR_STRING;
+    rettv->vval.v_string = NULL;
 
     if (win != NULL && varname != NULL)
     {
@@ -11926,24 +11921,30 @@ getwinvar(argvars, rettv, off)
 	curbuf = win->w_buffer;
 
 	if (*varname == '&')	/* window-local-option */
-	    get_option_tv(&varname, rettv, 1);
+	{
+	    if (get_option_tv(&varname, rettv, 1) == OK)
+		done = TRUE;
+	}
 	else
 	{
-	    if (*varname == NUL)
-		/* let getwinvar({nr}, "") return the "w:" dictionary.  The
-		 * scope prefix before the NUL byte is required by
-		 * find_var_in_ht(). */
-		varname = (char_u *)"w:" + 2;
-	    /* look up the variable */
-	    v = find_var_in_ht(&win->w_vars.dv_hashtab, varname, FALSE);
+	    /* Look up the variable. */
+	    /* Let getwinvar({nr}, "") return the "w:" dictionary. */
+	    v = find_var_in_ht(&win->w_vars->dv_hashtab, 'w', varname, FALSE);
 	    if (v != NULL)
+	    {
 		copy_tv(&v->di_tv, rettv);
+		done = TRUE;
+	    }
 	}
 
 	/* restore previous notion of curwin */
 	curwin = oldcurwin;
 	curbuf = curwin->w_buffer;
     }
+
+    if (!done && argvars[off + 2].v_type != VAR_UNKNOWN)
+	/* use the default return value */
+	copy_tv(&argvars[off + 2], rettv);
 
     --emsg_off;
 }
@@ -14333,7 +14334,7 @@ f_mode(argvars, rettv)
     rettv->v_type = VAR_STRING;
 }
 
-#ifdef FEAT_MZSCHEME
+#if defined(FEAT_MZSCHEME) || defined(PROTO)
 /*
  * "mzeval()" function
  */
@@ -20041,16 +20042,17 @@ find_var(name, htp)
 	*htp = ht;
     if (ht == NULL)
 	return NULL;
-    return find_var_in_ht(ht, varname, htp != NULL);
+    return find_var_in_ht(ht, *name, varname, htp != NULL);
 }
 
 /*
- * Find variable "varname" in hashtab "ht".
+ * Find variable "varname" in hashtab "ht" with name "htname".
  * Returns NULL if not found.
  */
     static dictitem_T *
-find_var_in_ht(ht, varname, writing)
+find_var_in_ht(ht, htname, varname, writing)
     hashtab_T	*ht;
+    int		htname;
     char_u	*varname;
     int		writing;
 {
@@ -20059,7 +20061,7 @@ find_var_in_ht(ht, varname, writing)
     if (*varname == NUL)
     {
 	/* Must be something like "s:", otherwise "ht" would be NULL. */
-	switch (varname[-2])
+	switch (htname)
 	{
 	    case 's': return &SCRIPT_SV(current_SID)->sv_var;
 	    case 'g': return &globvars_var;
@@ -20134,12 +20136,12 @@ find_var_ht(name, varname)
 			       || vim_strchr(name + 2, AUTOLOAD_CHAR) != NULL)
 	return NULL;
     if (*name == 'b')				/* buffer variable */
-	return &curbuf->b_vars.dv_hashtab;
+	return &curbuf->b_vars->dv_hashtab;
     if (*name == 'w')				/* window variable */
-	return &curwin->w_vars.dv_hashtab;
+	return &curwin->w_vars->dv_hashtab;
 #ifdef FEAT_WINDOWS
     if (*name == 't')				/* tab page variable */
-	return &curtab->tp_vars.dv_hashtab;
+	return &curtab->tp_vars->dv_hashtab;
 #endif
     if (*name == 'v')				/* v: variable */
 	return &vimvarht;
@@ -20226,6 +20228,19 @@ init_var_dict(dict, dict_var, scope)
     dict_var->di_tv.v_lock = VAR_FIXED;
     dict_var->di_flags = DI_FLAGS_RO | DI_FLAGS_FIX;
     dict_var->di_key[0] = NUL;
+}
+
+/*
+ * Unreference a dictionary initialized by init_var_dict().
+ */
+    void
+unref_var_dict(dict)
+    dict_T	*dict;
+{
+    /* Now the dict needs to be freed if no one else is using it, go back to
+     * normal reference counting. */
+    dict->dv_refcount -= DO_NOT_FREE_CNT - 1;
+    dict_unref(dict);
 }
 
 /*
@@ -20376,7 +20391,7 @@ set_var(name, tv, copy)
 	EMSG2(_(e_illvar), name);
 	return;
     }
-    v = find_var_in_ht(ht, varname, TRUE);
+    v = find_var_in_ht(ht, 0, varname, TRUE);
 
     if (tv->v_type == VAR_FUNC && var_check_func_name(name, v == NULL))
 	return;

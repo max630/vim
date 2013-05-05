@@ -648,6 +648,9 @@ free_buffer(buf)
     buf_T	*buf;
 {
     free_buffer_stuff(buf, TRUE);
+#ifdef FEAT_EVAL
+    unref_var_dict(buf->b_vars);
+#endif
 #ifdef FEAT_LUA
     lua_buffer_free(buf);
 #endif
@@ -689,8 +692,8 @@ free_buffer_stuff(buf, free_options)
 #endif
     }
 #ifdef FEAT_EVAL
-    vars_clear(&buf->b_vars.dv_hashtab); /* free all internal variables */
-    hash_init(&buf->b_vars.dv_hashtab);
+    vars_clear(&buf->b_vars->dv_hashtab); /* free all internal variables */
+    hash_init(&buf->b_vars->dv_hashtab);
 #endif
 #ifdef FEAT_USR_CMDS
     uc_clear(&buf->b_ucmds);		/* clear local user commands */
@@ -1694,6 +1697,17 @@ buflist_new(ffname, sfname, lnum, flags)
 	    vim_free(ffname);
 	    return NULL;
 	}
+#ifdef FEAT_EVAL
+	/* init b: variables */
+	buf->b_vars = dict_alloc();
+	if (buf->b_vars == NULL)
+	{
+	    vim_free(ffname);
+	    vim_free(buf);
+	    return NULL;
+	}
+	init_var_dict(buf->b_vars, &buf->b_bufvar, VAR_SCOPE);
+#endif
     }
 
     if (ffname != NULL)
@@ -1778,10 +1792,6 @@ buflist_new(ffname, sfname, lnum, flags)
     buf->b_wininfo->wi_fpos.lnum = lnum;
     buf->b_wininfo->wi_win = curwin;
 
-#ifdef FEAT_EVAL
-    /* init b: variables */
-    init_var_dict(&buf->b_vars, &buf->b_bufvar, VAR_SCOPE);
-#endif
 #ifdef FEAT_SYN_HL
     hash_init(&buf->b_s.b_keywtab);
     hash_init(&buf->b_s.b_keywtab_ic);
@@ -3496,7 +3506,7 @@ build_stl_str_hl(wp, out, outlen, fmt, use_sandbox, fillchar,
     char_u	*p;
     char_u	*s;
     char_u	*t;
-    char_u	*linecont;
+    int		byteval;
 #ifdef FEAT_EVAL
     win_T	*o_curwin;
     buf_T	*o_curbuf;
@@ -3563,12 +3573,21 @@ build_stl_str_hl(wp, out, outlen, fmt, use_sandbox, fillchar,
 	fillchar = '-';
 #endif
 
-    /*
-     * Get line & check if empty (cursorpos will show "0-1").
-     * If inversion is possible we use it. Else '=' characters are used.
-     */
-    linecont = ml_get_buf(wp->w_buffer, wp->w_cursor.lnum, FALSE);
-    empty_line = (*linecont == NUL);
+    /* Get line & check if empty (cursorpos will show "0-1").  Note that
+     * p will become invalid when getting another buffer line. */
+    p = ml_get_buf(wp->w_buffer, wp->w_cursor.lnum, FALSE);
+    empty_line = (*p == NUL);
+
+    /* Get the byte value now, in case we need it below. This is more
+     * efficient than making a copy of the line. */
+    if (wp->w_cursor.col > (colnr_T)STRLEN(p))
+	byteval = 0;
+    else
+#ifdef FEAT_MBYTE
+	byteval = (*mb_ptr2char)(p + wp->w_cursor.col);
+#else
+	byteval = p[wp->w_cursor.col];
+#endif
 
     groupdepth = 0;
     p = out;
@@ -3946,16 +3965,7 @@ build_stl_str_hl(wp, out, outlen, fmt, use_sandbox, fillchar,
 	case STL_BYTEVAL_X:
 	    base = 'X';
 	case STL_BYTEVAL:
-	    if (wp->w_cursor.col > (colnr_T)STRLEN(linecont))
-		num = 0;
-	    else
-	    {
-#ifdef FEAT_MBYTE
-		num = (*mb_ptr2char)(linecont + wp->w_cursor.col);
-#else
-		num = linecont[wp->w_cursor.col];
-#endif
-	    }
+	    num = byteval;
 	    if (num == NL)
 		num = 0;
 	    else if (num == CAR && get_fileformat(wp->w_buffer) == EOL_MAC)
