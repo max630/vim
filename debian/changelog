@@ -6,6 +6,7 @@ vim (2:7.3.923-1) UNRELEASED; urgency=low
       g:netrw_dirhistmax <= 0.  (Closes: #635984)
   * Remove EOLed Oneiric and Hardy releases from Debian runtime files.  Add
     Saucy and wheezy-backports.
+  * Bump Standards-Version to 3.9.4, no changes needed.
 
  -- James McCoy <jamessan@debian.org>  Sun, 07 Apr 2013 21:44:43 -0400
 
