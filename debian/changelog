@@ -7,6 +7,7 @@ vim (2:7.3.923-1) UNRELEASED; urgency=low
   * Remove EOLed Oneiric and Hardy releases from Debian runtime files.  Add
     Saucy and wheezy-backports.
   * Bump Standards-Version to 3.9.4, no changes needed.
+  * Recognize “-b $branch” as part of a Vcs-Git field.  (Closes: #702751)
 
  -- James McCoy <jamessan@debian.org>  Sun, 07 Apr 2013 21:44:43 -0400
 
