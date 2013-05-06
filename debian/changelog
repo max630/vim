@@ -1,4 +1,4 @@
-vim (2:7.3.923-1) UNRELEASED; urgency=low
+vim (2:7.3.923-1) unstable; urgency=low
 
   * Merge upstream tag v7-3-923
     + Updated documentation for Python syntax file.  (Closes: #613038)
@@ -9,7 +9,7 @@ vim (2:7.3.923-1) UNRELEASED; urgency=low
   * Bump Standards-Version to 3.9.4, no changes needed.
   * Recognize “-b $branch” as part of a Vcs-Git field.  (Closes: #702751)
 
- -- James McCoy <jamessan@debian.org>  Sun, 07 Apr 2013 21:44:43 -0400
+ -- James McCoy <jamessan@debian.org>  Sun, 05 May 2013 23:07:27 -0400
 
 vim (2:7.3.831-1) experimental; urgency=low
 
