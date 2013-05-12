@@ -1,0 +1,26 @@
+aaaa
+
+STARTTEST
+:e Xfile2
+:a
+line5
+line6
+.
+:w
+:split Xfile1
+:a
+line1
+line2
+l
+line3
+line4
+.
+:w
+:3
+:" Interactively double ^N is needed here, I guess repeat
+:" required because of asyncronous loading. Hope it's stable.
+0c$l$a:.w test.out
+:qa!
+ENDTEST
+
+aaa

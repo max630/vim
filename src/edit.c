@@ -4145,6 +4145,20 @@ ins_compl_add_tv(tv, dir)
 }
 #endif
 
+static int compare_pos(const pos_T *pos1, const pos_T *pos2)
+{
+    if (pos1->lnum < pos2->lnum)
+        return -1;
+    else if (pos1->lnum > pos2->lnum)
+        return 1;
+    if (pos1->col < pos2->col)
+        return -1;
+    else if (pos1->col > pos2->col)
+        return 1;
+    else
+        return 0;
+}
+
 /*
  * Get the next expansion(s), using "compl_pattern".
  * The search starts at position "ini" in curbuf and in the direction
@@ -4179,6 +4193,7 @@ ins_compl_get_exp(ini)
     char_u	*dict = NULL;
     int		dict_f = 0;
     compl_T	*old_match;
+    compl_T *current_buffer_wrapped_here = NULL;
 
     if (!compl_started)
     {
@@ -4279,6 +4294,9 @@ ins_compl_get_exp(ini)
 		else
 		    type = -1;
 
+                if (*e_cpt == '.' && current_buffer_wrapped_here != NULL)
+                    compl_curr_match = current_buffer_wrapped_here;
+                current_buffer_wrapped_here = NULL;
 		/* in any case e_cpt is advanced to the next entry */
 		(void)copy_option_part(&e_cpt, IObuff, IOSIZE, ",");
 
@@ -4392,6 +4410,7 @@ ins_compl_get_exp(ini)
 	    for (;;)
 	    {
 		int	flags = 0;
+		pos_T  old_pos = *pos;
 
 		++msg_silent;  /* Don't want messages for wrapscan. */
 
@@ -4406,6 +4425,12 @@ ins_compl_get_exp(ini)
 							      compl_direction,
 				 compl_pattern, 1L, SEARCH_KEEP + SEARCH_NFMSG,
 						  RE_LAST, (linenr_T)0, NULL);
+                if (*e_cpt == '.' && found_new_match != FAIL
+                    && ((compl_direction == FORWARD && compare_pos(&old_pos, pos) >= 0)
+                        || (compl_direction == BACKWARD && compare_pos(&old_pos, pos) <= 0))) {
+                    current_buffer_wrapped_here = compl_curr_match;
+                }
+                // DUMP("pos=%d", pos->lnum);
 		--msg_silent;
 		if (!compl_started)
 		{
