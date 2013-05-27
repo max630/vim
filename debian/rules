@@ -96,7 +96,7 @@ NOINTERPFLAGS:=--disable-luainterp
 NOINTERPFLAGS+=--disable-mzschemeinterp
 NOINTERPFLAGS+=--disable-perlinterp
 ifeq ($(DEB_VENDOR),Ubuntu)
-	NOINTERPFLAGS+=--enable-pythoninterp
+	NOINTERPFLAGS+=--enable-pythoninterp --with-python-config-dir=$(shell python-config --configdir)
 else
 	NOINTERPFLAGS+=--disable-pythoninterp
 endif
@@ -107,7 +107,7 @@ NOINTERPFLAGS+=--disable-tclinterp
 ALLINTERPFLAGS:=--enable-luainterp
 ALLINTERPFLAGS+=--disable-mzschemeinterp
 ALLINTERPFLAGS+=--enable-perlinterp
-ALLINTERPFLAGS+=--enable-pythoninterp
+ALLINTERPFLAGS+=--enable-pythoninterp --with-python-config-dir=$(shell python-config --configdir)
 ALLINTERPFLAGS+=--disable-python3interp
 ALLINTERPFLAGS+=--enable-rubyinterp
 ALLINTERPFLAGS+=--enable-tclinterp
