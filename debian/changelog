@@ -1,8 +1,8 @@
-vim (2:7.3.923-2) UNRELEASED; urgency=low
+vim (2:7.3.923-2) unstable; urgency=low
 
   * Fix FTBFS with M-A Python.  (Closes: #701513)
 
- -- James McCoy <jamessan@debian.org>  Sun, 26 May 2013 22:17:49 -0400
+ -- James McCoy <jamessan@debian.org>  Sun, 26 May 2013 22:18:36 -0400
 
 vim (2:7.3.923-1) unstable; urgency=low
 
