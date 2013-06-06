@@ -2482,7 +2482,7 @@ ex_listdo(eap)
 		/* go to window "tp" */
 		if (!valid_tabpage(tp))
 		    break;
-		goto_tabpage_tp(tp, TRUE);
+		goto_tabpage_tp(tp, TRUE, TRUE);
 		tp = tp->tp_next;
 	    }
 #endif
@@ -2851,7 +2851,7 @@ cmd_source(fname, eap)
 	EMSG(_(e_argreq));
 
     else if (eap != NULL && eap->forceit)
-	/* ":source!": read Normal mdoe commands
+	/* ":source!": read Normal mode commands
 	 * Need to execute the commands directly.  This is required at least
 	 * for:
 	 * - ":g" command busy

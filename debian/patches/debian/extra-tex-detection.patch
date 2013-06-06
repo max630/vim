@@ -8,7 +8,7 @@ Forwarded: 2006-08-26
 
 --- a/runtime/filetype.vim
 +++ b/runtime/filetype.vim
-@@ -2113,7 +2113,7 @@
+@@ -2114,7 +2114,7 @@
      call cursor(1,1)
      let firstNC = search('^\s*[^[:space:]%]', 'c', 1000)
      if firstNC " Check the next thousand lines for a LaTeX or ConTeXt keyword.

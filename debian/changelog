@@ -1,3 +1,17 @@
+vim (2:7.3.1128-1) UNRELEASED; urgency=low
+
+  * Merge upstream tag v7-3-1128
+    + New NFA regex engine.  Vim automatically determines whether to use the
+      new or old engine based on the pattern.  A specific engine can be
+      forced with the 'regexengine' option or within a pattern using the \%#=
+      atom.
+    + Updated Perl syntax files adds support for Perl 5.10 syntax.  (Closes:
+      #681606)
+    + Fix display of an empty entry in NetRW directory listing.  (Closes:
+      #709101)
+
+ -- James McCoy <jamessan@debian.org>  Wed, 05 Jun 2013 21:56:06 -0400
+
 vim (2:7.3.923-2) unstable; urgency=low
 
   * Fix FTBFS with M-A Python.  (Closes: #701513)

@@ -2085,7 +2085,7 @@ qf_age(eap)
 	    if (qi->qf_curlist == 0)
 	    {
 		EMSG(_("E380: At bottom of quickfix stack"));
-		return;
+		break;
 	    }
 	    --qi->qf_curlist;
 	}
@@ -2094,13 +2094,12 @@ qf_age(eap)
 	    if (qi->qf_curlist >= qi->qf_listcount - 1)
 	    {
 		EMSG(_("E381: At top of quickfix stack"));
-		return;
+		break;
 	    }
 	    ++qi->qf_curlist;
 	}
     }
     qf_msg(qi);
-
 }
 
     static void
@@ -3235,7 +3234,7 @@ ex_vimgrep(eap)
     mch_dirname(dirname_start, MAXPATHL);
 
 #ifdef FEAT_AUTOCMD
-     /* Remeber the value of qf_start, so that we can check for autocommands
+     /* Remember the value of qf_start, so that we can check for autocommands
       * changing the current quickfix list. */
     cur_qf_start = qi->qf_lists[qi->qf_curlist].qf_start;
 #endif

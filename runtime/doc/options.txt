@@ -1,4 +1,4 @@
-*options.txt*	For Vim version 7.3.  Last change: 2013 Apr 05
+*options.txt*	For Vim version 7.3.  Last change: 2013 May 23
 
 
 		  VIM REFERENCE MANUAL	  by Bram Moolenaar
@@ -277,8 +277,10 @@ Now the 'list' option is not set, because ":set nolist" resets the global
 value, ":setlocal list" only changes the local value and ":e two" gets the
 global value.  Note that if you do this next: >
 	:e one
-You will not get back the 'list' value as it was the last time you edited
-"one".  The options local to a window are not remembered for each buffer.
+You will get back the 'list' value as it was the last time you edited "one".
+The options local to a window are remembered for each buffer.  This also
+happens when the buffer is not loaded, but they are lost when the buffer is
+wiped out |:bwipe|.
 
 							*:setl* *:setlocal*
 :setl[ocal] ...		Like ":set" but set only the value local to the
@@ -5514,6 +5516,19 @@ A jump table for the options with a short description can be found at |Q_op|.
 	matches will be highlighted.  This is used to avoid that Vim hangs
 	when using a very complicated pattern.
 
+						*'regexpengine'* *'re'*
+'regexpengine' 're'	number	(default 0)
+			global
+			{not in Vi}
+	This selects the default regexp engine. |two-engines|
+	The possible values are:
+		0	automatic selection
+		1	old engine
+		2	NFA engine
+	Note that when using the NFA engine and the pattern contains something
+	that is not supported the pattern will not match.  This is only useful
+	for debugging the regexp engine.
+
 		*'relativenumber'* *'rnu'* *'norelativenumber'* *'nornu'*
 'relativenumber' 'rnu'	boolean	(default off)
 			local to window
@@ -7506,7 +7521,7 @@ A jump table for the options with a short description can be found at |Q_op|.
 	given, no further entry is used.
 	See |undo-persistence|.
 
-						*'undofile'* *'udf'*
+				*'undofile'* *'noundofile'* *'udf'* *'noudf'*
 'undofile' 'udf'	boolean	(default off)
 			local to buffer
 			{not in Vi}

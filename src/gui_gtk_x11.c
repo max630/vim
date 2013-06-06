@@ -1257,7 +1257,7 @@ selection_received_cb(GtkWidget		*widget UNUSED,
 	}
     }
 
-    /* Chop off any traiing NUL bytes.  OpenOffice sends these. */
+    /* Chop off any trailing NUL bytes.  OpenOffice sends these. */
     while (len > 0 && text[len - 1] == NUL)
 	--len;
 
@@ -1446,6 +1446,11 @@ gui_mch_init_check(void)
     if (gtk_socket_id == 0)
 	using_gnome = 1;
 #endif
+
+    /* This defaults to argv[0], but we want it to match the name of the
+     * shipped gvim.desktop so that Vim's windows can be associated with this
+     * file. */
+    g_set_prgname("gvim");
 
     /* Don't use gtk_init() or gnome_init(), it exits on failure. */
     if (!gtk_init_check(&gui_argc, &gui_argv))

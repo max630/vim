@@ -268,10 +268,12 @@ static void	ex_popup __ARGS((exarg_T *eap));
 #endif
 #ifndef FEAT_PYTHON
 # define ex_python		ex_script_ni
+# define ex_pydo		ex_ni
 # define ex_pyfile		ex_ni
 #endif
 #ifndef FEAT_PYTHON3
 # define ex_py3			ex_script_ni
+# define ex_py3do		ex_ni
 # define ex_py3file		ex_ni
 #endif
 #ifndef FEAT_TCL
@@ -1093,7 +1095,7 @@ do_cmdline(cmdline, fgetline, cookie, flags)
 		msg_didany = FALSE; /* no output yet */
 		msg_start();
 		msg_scroll = TRUE;  /* put messages below each other */
-		++no_wait_return;   /* dont wait for return until finished */
+		++no_wait_return;   /* don't wait for return until finished */
 		++RedrawingDisabled;
 		did_inc = TRUE;
 	    }
@@ -1298,7 +1300,7 @@ do_cmdline(cmdline, fgetline, cookie, flags)
 	    && !(did_emsg
 #ifdef FEAT_EVAL
 		/* Keep going when inside try/catch, so that the error can be
-		 * dealth with, except when it is a syntax error, it may cause
+		 * deal with, except when it is a syntax error, it may cause
 		 * the :endtry to be missed. */
 		&& (cstack.cs_trylevel == 0 || did_emsg_syntax)
 #endif
@@ -3247,6 +3249,9 @@ set_one_cmd_context(xp, buff)
 	/* check for non-alpha command */
 	if (p == cmd && vim_strchr((char_u *)"@*!=><&~#", *p) != NULL)
 	    ++p;
+	/* for python 3.x: ":py3*" commands completion */
+	if (cmd[0] == 'p' && cmd[1] == 'y' && p == cmd + 2 && *p == '3')
+	    ++p;
 	len = (int)(p - cmd);
 
 	if (len == 0)
@@ -3889,6 +3894,8 @@ set_one_cmd_context(xp, buff)
 	case CMD_imap:	    case CMD_inoremap:
 	case CMD_cmap:	    case CMD_cnoremap:
 	case CMD_lmap:	    case CMD_lnoremap:
+	case CMD_smap:	    case CMD_snoremap:
+	case CMD_xmap:	    case CMD_xnoremap:
 	    return set_context_in_map_cmd(xp, cmd, arg, forceit,
 						     FALSE, FALSE, ea.cmdidx);
 	case CMD_unmap:
@@ -3898,6 +3905,8 @@ set_one_cmd_context(xp, buff)
 	case CMD_iunmap:
 	case CMD_cunmap:
 	case CMD_lunmap:
+	case CMD_sunmap:
+	case CMD_xunmap:
 	    return set_context_in_map_cmd(xp, cmd, arg, forceit,
 						      FALSE, TRUE, ea.cmdidx);
 	case CMD_abbreviate:	case CMD_noreabbrev:
@@ -8176,6 +8185,37 @@ free_cd_dir()
 }
 #endif
 
+/*
+ * Deal with the side effects of changing the current directory.
+ * When "local" is TRUE then this was after an ":lcd" command.
+ */
+    void
+post_chdir(local)
+    int		local;
+{
+    vim_free(curwin->w_localdir);
+    if (local)
+    {
+	/* If still in global directory, need to remember current
+	 * directory as global directory. */
+	if (globaldir == NULL && prev_dir != NULL)
+	    globaldir = vim_strsave(prev_dir);
+	/* Remember this local directory for the window. */
+	if (mch_dirname(NameBuff, MAXPATHL) == OK)
+	    curwin->w_localdir = vim_strsave(NameBuff);
+    }
+    else
+    {
+	/* We are now in the global directory, no need to remember its
+	 * name. */
+	vim_free(globaldir);
+	globaldir = NULL;
+	curwin->w_localdir = NULL;
+    }
+
+    shorten_fnames(TRUE);
+}
+
 
 /*
  * ":cd", ":lcd", ":chdir" and ":lchdir".
@@ -8247,27 +8287,7 @@ ex_cd(eap)
 	    EMSG(_(e_failed));
 	else
 	{
-	    vim_free(curwin->w_localdir);
-	    if (eap->cmdidx == CMD_lcd || eap->cmdidx == CMD_lchdir)
-	    {
-		/* If still in global directory, need to remember current
-		 * directory as global directory. */
-		if (globaldir == NULL && prev_dir != NULL)
-		    globaldir = vim_strsave(prev_dir);
-		/* Remember this local directory for the window. */
-		if (mch_dirname(NameBuff, MAXPATHL) == OK)
-		    curwin->w_localdir = vim_strsave(NameBuff);
-	    }
-	    else
-	    {
-		/* We are now in the global directory, no need to remember its
-		 * name. */
-		vim_free(globaldir);
-		globaldir = NULL;
-		curwin->w_localdir = NULL;
-	    }
-
-	    shorten_fnames(TRUE);
+	    post_chdir(eap->cmdidx == CMD_lcd || eap->cmdidx == CMD_lchdir);
 
 	    /* Echo the new current directory if the command was typed. */
 	    if (KeyTyped || p_verbose >= 5)
@@ -10982,7 +11002,7 @@ ses_put_fname(fd, name, flagp)
 		*p = '/';
     }
 
-    /* escapse special characters */
+    /* escape special characters */
     p = vim_strsave_fnameescape(sname, FALSE);
     vim_free(sname);
     if (p == NULL)

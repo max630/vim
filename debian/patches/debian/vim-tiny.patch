@@ -20,7 +20,7 @@ Bug-Debian: http://bugs.debian.org/222138
  } mparm_T;
  
  /* Values for edit_type. */
-@@ -1637,6 +1640,10 @@
+@@ -1644,6 +1647,10 @@
      }
      else if (STRNICMP(initstr, "vim", 3) == 0)
  	initstr += 3;
@@ -31,7 +31,7 @@ Bug-Debian: http://bugs.debian.org/222138
  
      /* Catch "[r][g]vimdiff" and "[r][g]viewdiff". */
      if (STRICMP(initstr, "diff") == 0)
-@@ -2947,7 +2954,12 @@
+@@ -2954,7 +2961,12 @@
  	 * Get system wide defaults, if the file name is defined.
  	 */
  #ifdef SYS_VIMRC_FILE

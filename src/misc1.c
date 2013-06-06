@@ -1654,7 +1654,7 @@ get_leader_len(line, flags, backward, include_space)
 	    if (vim_iswhite(string[0]))
 	    {
 		if (i == 0 || !vim_iswhite(line[i - 1]))
-		    continue;  /* missing shite space */
+		    continue;  /* missing white space */
 		while (vim_iswhite(string[0]))
 		    ++string;
 	    }
@@ -4607,7 +4607,7 @@ home_replace(buf, src, dst, dstlen, one)
     if (homedir_env != NULL && *homedir_env == NUL)
 	homedir_env = NULL;
 
-#if defined(FEAT_MODIFY_FNAME) || defined(WIN3264)
+#if defined(FEAT_MODIFY_FNAME) || defined(FEAT_EVAL)
     if (homedir_env != NULL && vim_strchr(homedir_env, '~') != NULL)
     {
 	int	usedlen = 0;
