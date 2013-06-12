@@ -1,3 +1,10 @@
+vim (2:7.3.923-3) UNRELEASED; urgency=low
+
+  * Build-Conflict against ruby1.8{,-dev} to work around incorrect ruby{,-dev}
+    Provides (c.f., #710022).
+
+ -- James McCoy <jamessan@debian.org>  Sun, 23 Jun 2013 22:11:50 -0400
+
 vim (2:7.3.923-2) unstable; urgency=low
 
   * Fix FTBFS with M-A Python.  (Closes: #701513)
