@@ -9,6 +9,8 @@ vim (2:7.3.1169-1) UNRELEASED; urgency=low
       #681606)
     + Fix display of an empty entry in NetRW directory listing.  (Closes:
       #709101)
+  * Build-Conflict against ruby1.8{,-dev} to work around incorrect ruby{,-dev}
+    Provides (c.f., #710022).
 
  -- James McCoy <jamessan@debian.org>  Wed, 05 Jun 2013 21:56:06 -0400
 
