@@ -8,7 +8,7 @@ Forwarded: 2006-08-12
 
 --- a/runtime/scripts.vim
 +++ b/runtime/scripts.vim
-@@ -323,6 +323,14 @@
+@@ -327,6 +327,14 @@
    elseif s:line1 =~ 'exec\s\+\S*scheme' || s:line2 =~ 'exec\s\+\S*scheme'
      set ft=scheme
  

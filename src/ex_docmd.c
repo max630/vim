@@ -242,6 +242,9 @@ static void	ex_popup __ARGS((exarg_T *eap));
 # define ex_syntax		ex_ni
 # define ex_ownsyntax		ex_ni
 #endif
+#if !defined(FEAT_SYN_HL) || !defined(FEAT_PROFILE)
+# define ex_syntime		ex_ni
+#endif
 #ifndef FEAT_SPELL
 # define ex_spell		ex_ni
 # define ex_mkspell		ex_ni
@@ -3991,6 +3994,12 @@ set_one_cmd_context(xp, buff)
 	    xp->xp_pattern = arg;
 	    break;
 #endif
+#if defined(FEAT_PROFILE)
+	case CMD_syntime:
+	    xp->xp_context = EXPAND_SYNTIME;
+	    xp->xp_pattern = arg;
+	    break;
+#endif
 
 #endif /* FEAT_CMDL_COMPL */
 
@@ -5433,6 +5442,9 @@ static struct
     {EXPAND_MAPPINGS, "mapping"},
     {EXPAND_MENUS, "menu"},
     {EXPAND_OWNSYNTAX, "syntax"},
+#if defined(FEAT_PROFILE)
+    {EXPAND_SYNTIME, "syntime"},
+#endif
     {EXPAND_SETTINGS, "option"},
     {EXPAND_SHELLCMD, "shellcmd"},
 #if defined(FEAT_SIGNS)
@@ -7767,7 +7779,7 @@ ex_open(eap)
 		curwin->w_cursor.col = (colnr_T)(regmatch.startp[0] - p);
 	    else
 		EMSG(_(e_nomatch));
-	    vim_free(regmatch.regprog);
+	    vim_regfree(regmatch.regprog);
 	}
 	/* Move to the NUL, ignore any other arguments. */
 	eap->arg += STRLEN(eap->arg);

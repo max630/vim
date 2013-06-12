@@ -4674,6 +4674,9 @@ ExpandFromContext(xp, pat, num_file, file, options)
 #ifdef FEAT_SYN_HL
 	    {EXPAND_SYNTAX, get_syntax_name, TRUE, TRUE},
 #endif
+#ifdef FEAT_PROFILE
+	    {EXPAND_SYNTIME, get_syntime_arg, TRUE, TRUE},
+#endif
 	    {EXPAND_HIGHLIGHT, get_highlight_name, TRUE, TRUE},
 #ifdef FEAT_AUTOCMD
 	    {EXPAND_EVENTS, get_event_name, TRUE, TRUE},
@@ -4714,7 +4717,7 @@ ExpandFromContext(xp, pat, num_file, file, options)
 	    }
     }
 
-    vim_free(regmatch.regprog);
+    vim_regfree(regmatch.regprog);
 
     return ret;
 #endif /* FEAT_CMDL_COMPL */
@@ -5782,7 +5785,7 @@ del_history_entry(histype, str)
 	if (history[histype][idx].hisstr == NULL)
 	    hisidx[histype] = -1;
     }
-    vim_free(regmatch.regprog);
+    vim_regfree(regmatch.regprog);
     return found;
 }
 

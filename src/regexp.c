@@ -1297,7 +1297,8 @@ skip_regexp(startp, dirc, magic, newp)
     return p;
 }
 
-static regprog_T    *bt_regcomp __ARGS((char_u *expr, int re_flags));
+static regprog_T  *bt_regcomp __ARGS((char_u *expr, int re_flags));
+static void bt_regfree __ARGS((regprog_T *prog));
 
 /*
  * bt_regcomp() - compile a regular expression into internal code for the
@@ -1452,6 +1453,16 @@ bt_regcomp(expr, re_flags)
 #endif
     r->engine = &bt_regengine;
     return (regprog_T *)r;
+}
+
+/*
+ * Free a compiled regexp program, returned by bt_regcomp().
+ */
+    static void
+bt_regfree(prog)
+    regprog_T   *prog;
+{
+    vim_free(prog);
 }
 
 /*
@@ -6548,6 +6559,12 @@ regdump(pattern, r)
 	    fprintf(f, " count %ld", OPERAND_MIN(s));
 	    s += 4;
 	}
+	else if (op == RE_LNUM || op == RE_COL || op == RE_VCOL)
+	{
+	    /* one int plus comperator */
+	    fprintf(f, " count %ld", OPERAND_MIN(s));
+	    s += 5;
+	}
 	s += 3;
 	if (op == ANYOF || op == ANYOF + ADD_NL
 		|| op == ANYBUT || op == ANYBUT + ADD_NL
@@ -7870,6 +7887,7 @@ reg_submatch(no)
 static regengine_T bt_regengine =
 {
     bt_regcomp,
+    bt_regfree,
     bt_regexec,
 #if defined(FEAT_MODIFY_FNAME) || defined(FEAT_EVAL) \
 	|| defined(FIND_REPLACE_DIALOG) || defined(PROTO)
@@ -7887,6 +7905,7 @@ static regengine_T bt_regengine =
 static regengine_T nfa_regengine =
 {
     nfa_regcomp,
+    nfa_regfree,
     nfa_regexec,
 #if defined(FEAT_MODIFY_FNAME) || defined(FEAT_EVAL) \
 	|| defined(FIND_REPLACE_DIALOG) || defined(PROTO)
@@ -7914,7 +7933,9 @@ static char_u regname[][30] = {
 
 /*
  * Compile a regular expression into internal code.
- * Returns the program in allocated memory.  Returns NULL for an error.
+ * Returns the program in allocated memory.
+ * Use vim_regfree() to free the memory.
+ * Returns NULL for an error.
  */
     regprog_T *
 vim_regcomp(expr_arg, re_flags)
@@ -7988,6 +8009,17 @@ vim_regcomp(expr_arg, re_flags)
     }
 
     return prog;
+}
+
+/*
+ * Free a compiled regexp program, returned by vim_regcomp().
+ */
+    void
+vim_regfree(prog)
+    regprog_T   *prog;
+{
+    if (prog != NULL)
+	prog->engine->regfree(prog);
 }
 
 /*

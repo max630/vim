@@ -73,7 +73,6 @@ struct nfa_state
     nfa_state_T		*out1;
     int			id;
     int			lastlist[2]; /* 0: normal, 1: recursive */
-    int			negated;
     int			val;
 };
 
@@ -87,6 +86,11 @@ typedef struct
     unsigned		regflags;
 
     nfa_state_T		*start;		/* points into state[] */
+
+    int			reganch;	/* pattern starts with ^ */
+    int			regstart;	/* char at start of pattern */
+    char_u		*match_text;	/* plain text to match with */
+
     int			has_zend;	/* pattern contains \ze */
     int			has_backref;	/* pattern contains \1 .. \9 */
 #ifdef FEAT_SYN_HL
@@ -97,7 +101,7 @@ typedef struct
 #endif
     int			nsubexp;	/* number of () */
     int			nstate;
-    nfa_state_T		state[0];	/* actually longer.. */
+    nfa_state_T		state[1];	/* actually longer.. */
 } nfa_regprog_T;
 
 /*
@@ -144,6 +148,7 @@ typedef struct
 struct regengine
 {
     regprog_T	*(*regcomp)(char_u*, int);
+    void	(*regfree)(regprog_T *);
     int		(*regexec)(regmatch_T*, char_u*, colnr_T);
 #if defined(FEAT_MODIFY_FNAME) || defined(FEAT_EVAL) \
 	|| defined(FIND_REPLACE_DIALOG) || defined(PROTO)

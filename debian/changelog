@@ -1,6 +1,6 @@
-vim (2:7.3.1128-1) UNRELEASED; urgency=low
+vim (2:7.3.1169-1) UNRELEASED; urgency=low
 
-  * Merge upstream tag v7-3-1128
+  * Merge upstream tag v7-3-1169
     + New NFA regex engine.  Vim automatically determines whether to use the
       new or old engine based on the pattern.  A specific engine can be
       forced with the 'regexengine' option or within a pattern using the \%#=
