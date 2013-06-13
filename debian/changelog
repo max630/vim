@@ -1,6 +1,6 @@
-vim (2:7.3.1169-1) UNRELEASED; urgency=low
+vim (2:7.3.1182-1) UNRELEASED; urgency=low
 
-  * Merge upstream tag v7-3-1169
+  * Merge upstream tag v7-3-1182
     + New NFA regex engine.  Vim automatically determines whether to use the
       new or old engine based on the pattern.  A specific engine can be
       forced with the 'regexengine' option or within a pattern using the \%#=
@@ -14,6 +14,7 @@ vim (2:7.3.1169-1) UNRELEASED; urgency=low
     + Recognize Ikiwiki's *.mdwn as markdown filetype.  (Closes: #672597)
     + 7.3.985: Call g_set_prgname() on startup to set a proper WM_CLASS.
       (Closes: #639925)
+    + Source ~/.vim/vimrc or ~/.vim/gvimrc in favor of ~/.vimrc or ~/.gvimrc.
   * Build-Conflict against ruby1.8{,-dev} to work around incorrect ruby{,-dev}
     Provides (c.f., #710022).
 
