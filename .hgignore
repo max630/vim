@@ -55,6 +55,7 @@ src/testdir/lua.vim
 src/testdir/small.vim 
 src/testdir/tiny.vim 
 src/testdir/test*.out
+src/testdir/test.log
 
 # Quilt
 .pc/

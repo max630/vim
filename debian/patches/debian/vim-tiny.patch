@@ -31,7 +31,7 @@ Bug-Debian: http://bugs.debian.org/222138
  
      /* Catch "[r][g]vimdiff" and "[r][g]viewdiff". */
      if (STRICMP(initstr, "diff") == 0)
-@@ -2954,7 +2961,12 @@
+@@ -2972,7 +2979,12 @@
  	 * Get system wide defaults, if the file name is defined.
  	 */
  #ifdef SYS_VIMRC_FILE

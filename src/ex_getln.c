@@ -1700,13 +1700,13 @@ getcmdline(firstc, count, indent)
 	 * We come here if we have a normal character.
 	 */
 
-	if (do_abbr && (IS_SPECIAL(c) || !vim_iswordc(c)) && ccheck_abbr(
+	if (do_abbr && (IS_SPECIAL(c) || !vim_iswordc(c)) && (ccheck_abbr(
 #ifdef FEAT_MBYTE
 			/* Add ABBR_OFF for characters above 0x100, this is
 			 * what check_abbr() expects. */
 			(has_mbyte && c >= 0x100) ? (c + ABBR_OFF) :
 #endif
-									c))
+							 c) || c == Ctrl_RSB))
 	    goto cmdline_changed;
 
 	/*
@@ -6003,6 +6003,9 @@ ex_history(eap)
 #endif
 
 #if (defined(FEAT_VIMINFO) && defined(FEAT_CMDHIST)) || defined(PROTO)
+/*
+ * Buffers for history read from a viminfo file.  Only valid while reading.
+ */
 static char_u **viminfo_history[HIST_COUNT] = {NULL, NULL, NULL, NULL};
 static int	viminfo_hisidx[HIST_COUNT] = {0, 0, 0, 0};
 static int	viminfo_hislen[HIST_COUNT] = {0, 0, 0, 0};
@@ -6184,9 +6187,16 @@ finish_viminfo_history()
     }
 }
 
+/*
+ * Write history to viminfo file in "fp".
+ * When "merge" is TRUE merge history lines with a previously read viminfo
+ * file, data is in viminfo_history[].
+ * When "merge" is FALSE just write all history lines.  Used for ":wviminfo!".
+ */
     void
-write_viminfo_history(fp)
+write_viminfo_history(fp, merge)
     FILE    *fp;
+    int	    merge;
 {
     int	    i;
     int	    type;
@@ -6236,7 +6246,9 @@ write_viminfo_history(fp)
 		    p = round == 1 ? history[type][i].hisstr
 				   : viminfo_history[type] == NULL ? NULL
 						   : viminfo_history[type][i];
-		    if (p != NULL && (round == 2 || !history[type][i].viminfo))
+		    if (p != NULL && (round == 2
+				       || !merge
+				       || !history[type][i].viminfo))
 		    {
 			--num_saved;
 			fputc(hist_type2char(type, TRUE), fp);
