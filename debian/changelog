@@ -1,9 +1,9 @@
-vim (2:7.3.923-3) UNRELEASED; urgency=low
+vim (2:7.3.923-3) unstable; urgency=low
 
   * Build-Conflict against ruby1.8{,-dev} to work around incorrect ruby{,-dev}
     Provides (c.f., #710022).
 
- -- James McCoy <jamessan@debian.org>  Sun, 23 Jun 2013 22:11:50 -0400
+ -- James McCoy <jamessan@debian.org>  Sun, 23 Jun 2013 22:12:29 -0400
 
 vim (2:7.3.923-2) unstable; urgency=low
 
