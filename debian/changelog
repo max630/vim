@@ -15,10 +15,15 @@ vim (2:7.3.1237-1) UNRELEASED; urgency=low
     + 7.3.985: Call g_set_prgname() on startup to set a proper WM_CLASS.
       (Closes: #639925)
     + Source ~/.vim/vimrc or ~/.vim/gvimrc in favor of ~/.vimrc or ~/.gvimrc.
+
+ -- James McCoy <jamessan@debian.org>  Wed, 05 Jun 2013 21:56:06 -0400
+
+vim (2:7.3.923-3) unstable; urgency=low
+
   * Build-Conflict against ruby1.8{,-dev} to work around incorrect ruby{,-dev}
     Provides (c.f., #710022).
 
- -- James McCoy <jamessan@debian.org>  Wed, 05 Jun 2013 21:56:06 -0400
+ -- James McCoy <jamessan@debian.org>  Sun, 23 Jun 2013 22:12:29 -0400
 
 vim (2:7.3.923-2) unstable; urgency=low
 
