@@ -149,9 +149,9 @@ CFLAGS_vim-nox:=$(CFLAGS)
 CFGFLAGS_vim-nox:=$(CFGFLAGS) $(OPTFLAGS) $(NOXFLAGS) $(ALLINTERPFLAGS)
 
 NAME:=vim
-VERSION:=7.3
-SNAPSHOT:=
-VIMCUR:=$(NAME)$(subst .,,$(VERSION))$(SNAPSHOT)
+# Convert x.y.z to x.y
+VERSION:=$(basename $(DEB_VERSION_UPSTREAM))
+VIMCUR:=$(NAME)$(subst .,,$(VERSION))
 EXPORT_DIR ?= ..
 ORIG_SOURCE := $(EXPORT_DIR)/$(NAME)_$(DEB_VERSION_UPSTREAM).orig.tar.gz
 PER_VARIANT_FILES := install postinst prerm links
@@ -357,7 +357,7 @@ install-stamp-vim-basic: build-stamp-vim-basic $(DOT_IN_DEPS)
 	done
 	
 	# helpztags manpage
-	pod2man -c "User Commands" -s 1 -q none -r "vim $(VERSION)$(SNAPSHOT)" \
+	pod2man -c "User Commands" -s 1 -q none -r "vim $(VERSION)" \
 		-d "August 2010" debian/helpztags debian/helpztags.1
 	
 	# variant-related installations for package "vim"

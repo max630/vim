@@ -19,6 +19,7 @@ vim (2:7.4a.010-1) UNRELEASED; urgency=low
       - Recognize when sh is dash and change the default behavior highlighting
         to be POSIX instead of Bourne.  (Closes: #712657, #699172)
       - Correctly highlight text after a "--".  (Closes: #713922)
+  * debian/rules: Simplify version handling and bump for the pre-release.
 
  -- James McCoy <jamessan@debian.org>  Wed, 05 Jun 2013 21:56:06 -0400
 
