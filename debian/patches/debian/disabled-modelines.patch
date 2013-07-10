@@ -11,7 +11,7 @@ Bug-Ubuntu: https://launchpad.net/bugs/130531
 
 --- a/runtime/doc/options.txt
 +++ b/runtime/doc/options.txt
-@@ -4920,7 +4920,7 @@
+@@ -4923,7 +4923,7 @@
  
  				   *'modeline'* *'ml'* *'nomodeline'* *'noml'*
  'modeline' 'ml'		boolean	(Vim default: on (off for root),

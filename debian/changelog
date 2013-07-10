@@ -1,6 +1,6 @@
-vim (2:7.3.1251-1) UNRELEASED; urgency=low
+vim (2:7.4a.010-1) UNRELEASED; urgency=low
 
-  * Merge upstream tag v7-3-1251
+  * Merge upstream tag v7-4a-010
     + New NFA regex engine.  Vim automatically determines whether to use the
       new or old engine based on the pattern.  A specific engine can be
       forced with the 'regexengine' option or within a pattern using the \%#=
@@ -15,6 +15,10 @@ vim (2:7.3.1251-1) UNRELEASED; urgency=low
     + 7.3.985: Call g_set_prgname() on startup to set a proper WM_CLASS.
       (Closes: #639925)
     + Source ~/.vim/vimrc or ~/.vim/gvimrc in favor of ~/.vimrc or ~/.gvimrc.
+    + Update sh syntax file
+      - Recognize when sh is dash and change the default behavior highlighting
+        to be POSIX instead of Bourne.  (Closes: #712657, #699172)
+      - Correctly highlight text after a "--".  (Closes: #713922)
 
  -- James McCoy <jamessan@debian.org>  Wed, 05 Jun 2013 21:56:06 -0400
 
