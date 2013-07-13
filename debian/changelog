@@ -1,4 +1,4 @@
-vim (2:7.4a.012-1) UNRELEASED; urgency=low
+vim (2:7.4a.012-1) experimental; urgency=low
 
   * Merge upstream tag v7-4a-012
     + New NFA regex engine.  Vim automatically determines whether to use the
@@ -23,7 +23,7 @@ vim (2:7.4a.012-1) UNRELEASED; urgency=low
   * Add shadowdir-fixes.patch, to fix test failures when building in a
     shadow directory.
 
- -- James McCoy <jamessan@debian.org>  Wed, 05 Jun 2013 21:56:06 -0400
+ -- James McCoy <jamessan@debian.org>  Fri, 12 Jul 2013 22:30:28 -0400
 
 vim (2:7.3.923-3) unstable; urgency=low
 
