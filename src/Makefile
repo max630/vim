@@ -2366,6 +2366,7 @@ shadow:	runtime pixmaps
 				 ../../testdir/vimrc.unix \
 				 ../../testdir/*.in \
 				 ../../testdir/*.vim \
+				 ../../testdir/python* \
 				 ../../testdir/test83-tags? \
 				 ../../testdir/*.ok .
 

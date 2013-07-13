@@ -1,0 +1,48 @@
+--- a/src/testdir/test89.in
++++ b/src/testdir/test89.in
+@@ -51,7 +51,10 @@
+ :$put h
+ :"
+ :let cwd=getcwd()
+-:cd ../..
++:cd ..
++:" Tests may be run from a shadow directory, so an extra cd needs to be done to
++:" get above src/
++:if fnamemodify(getcwd(), ':t') != 'src' | cd ../.. | else | cd .. | endif
+ :$put =''
+ :$put ='Testing findfile'
+ :$put =''
+--- a/src/testdir/test86.in
++++ b/src/testdir/test86.in
+@@ -857,8 +857,19 @@
+ cb.append(fnamemodify('.', ':p:h:t'))
+ cb.append(vim.eval('@%'))
+ os.chdir('..')
+-cb.append(fnamemodify('.', ':p:h:t'))
+-cb.append(vim.eval('@%').replace(os.path.sep, '/'))
++path = fnamemodify('.', ':p:h:t')
++if path != 'src':
++  # Running tests from a shadow directory, so move up another level
++  # This will result in @% looking like shadow/testdir/test86.in, hence the
++  # extra fnamemodify
++  os.chdir('..')
++  cb.append(fnamemodify('.', ':p:h:t'))
++  cb.append(fnamemodify(vim.eval('@%'), ':s?^%s.??' % path).replace(os.path.sep, '/'))
++  os.chdir(path)
++  del path
++else:
++  cb.append(fnamemodify('.', ':p:h:t'))
++  cb.append(vim.eval('@%').replace(os.path.sep, '/'))
+ os.chdir('testdir')
+ cb.append(fnamemodify('.', ':p:h:t'))
+ cb.append(vim.eval('@%'))
+--- a/src/Makefile
++++ b/src/Makefile
+@@ -2366,6 +2366,7 @@
+ 				 ../../testdir/vimrc.unix \
+ 				 ../../testdir/*.in \
+ 				 ../../testdir/*.vim \
++				 ../../testdir/python* \
+ 				 ../../testdir/test83-tags? \
+ 				 ../../testdir/*.ok .
+ 

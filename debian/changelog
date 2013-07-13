@@ -20,6 +20,8 @@ vim (2:7.4a.012-1) UNRELEASED; urgency=low
         to be POSIX instead of Bourne.  (Closes: #712657, #699172)
       - Correctly highlight text after a "--".  (Closes: #713922)
   * debian/rules: Simplify version handling and bump for the pre-release.
+  * Add shadowdir-fixes.patch, to fix test failures when building in a
+    shadow directory.
 
  -- James McCoy <jamessan@debian.org>  Wed, 05 Jun 2013 21:56:06 -0400
 
