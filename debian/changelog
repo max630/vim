@@ -2,6 +2,7 @@ vim (2:7.4b.004-1) UNRELEASED; urgency=low
 
   * Merge upstream tag v7-4b-004
     + 7.4a.044: Clear window from b_wininfo in win_free().  (Closes: #717529)
+  * debian/rules: Install Japanese translations of man pages.
 
  -- James McCoy <jamessan@debian.org>  Thu, 01 Aug 2013 23:07:27 -0400
 

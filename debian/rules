@@ -155,7 +155,7 @@ VIMCUR:=$(NAME)$(subst .,,$(VERSION))
 EXPORT_DIR ?= ..
 ORIG_SOURCE := $(EXPORT_DIR)/$(NAME)_$(DEB_VERSION_UPSTREAM).orig.tar.gz
 PER_VARIANT_FILES := install postinst prerm links
-LANGS := fr it pl ru
+LANGS := fr it pl ru ja
 
 DOT_IN_DEPS := debian/vim-common.install
 DOT_IN_DEPS += debian/vim-common.links
@@ -332,18 +332,17 @@ install-stamp-vim-basic: build-stamp-vim-basic $(DOT_IN_DEPS)
 	rm -f debian/tmp/usr/bin/vim
 	mv src/vim-basic/vim src/vim-basic/vim.basic
 	
-	# DEBIAN INSTALLATION
-	
-	# Use UTF-8 manpages for all languages and install them simply into
-	# man/$lang
-	rm -rf $(DESTDIR)/usr/share/man/fr.ISO8859-1 $(DESTDIR)/usr/share/man/fr
-	rm -rf $(DESTDIR)/usr/share/man/it.ISO8859-1 $(DESTDIR)/usr/share/man/it
-	rm -rf $(DESTDIR)/usr/share/man/pl.ISO8859-2 $(DESTDIR)/usr/share/man/pl
-	rm -rf $(DESTDIR)/usr/share/man/ru.KOI8-R
-	mv $(DESTDIR)/usr/share/man/fr.UTF-8 $(DESTDIR)/usr/share/man/fr
-	mv $(DESTDIR)/usr/share/man/it.UTF-8 $(DESTDIR)/usr/share/man/it
-	mv $(DESTDIR)/usr/share/man/pl.UTF-8 $(DESTDIR)/usr/share/man/pl
-	mv $(DESTDIR)/usr/share/man/ru.UTF-8 $(DESTDIR)/usr/share/man/ru
+# DEBIAN INSTALLATION
+# Use UTF-8 manpages for all languages.
+# Remove any existing man/$lang directory, move the $lang.UTF-8 directory to $lang,
+# and remove any remaining $lang.* directories.
+	for L in $(LANGS); do \
+	  rm -rf "$(DESTDIR)/usr/share/man/$$L"; \
+	  if [ -d "$(DESTDIR)/usr/share/man/$$L.UTF-8" ]; then \
+	    mv "$(DESTDIR)/usr/share/man/$$L.UTF-8" "$(DESTDIR)/usr/share/man/$$L"; \
+	  fi; \
+	  rm -rf "$(DESTDIR)/usr/share/man/$$L."*; \
+	done
 	
 	# rm stuff handled by alternatives
 	rm -f $(DESTDIR)/usr/bin/ex $(DESTDIR)/usr/bin/view
