@@ -267,6 +267,10 @@ op_shift(oap, curs_top, amount)
     }
 
     changed_lines(oap->start.lnum, 0, oap->end.lnum + 1, 0L);
+#ifdef FEAT_FOLDING
+    /* The cursor line is not in a closed fold */
+    foldOpenCursor();
+#endif
 
 #ifdef FEAT_VISUAL
     if (oap->block_mode)
@@ -2887,7 +2891,7 @@ free_yank_all()
  * register and then concatenate the old and the new one (so we keep the old
  * one in case of out-of-memory).
  *
- * return FAIL for failure, OK otherwise
+ * Return FAIL for failure, OK otherwise.
  */
     int
 op_yank(oap, deleting, mess)
