@@ -2,5 +2,5 @@
 vim source: debhelper-but-no-misc-depends vim-lesstif
 # vim-tiny provides stub help.txt/tags which are diverted when vim-runtime is
 # installed
-vim source: binaries-have-file-conflict vim-runtime vim-tiny usr/share/vim/vim73/doc/help.txt
-vim source: binaries-have-file-conflict vim-runtime vim-tiny usr/share/vim/vim73/doc/tags
+vim source: binaries-have-file-conflict vim-runtime vim-tiny usr/share/vim/vim74b/doc/help.txt
+vim source: binaries-have-file-conflict vim-runtime vim-tiny usr/share/vim/vim74b/doc/tags
