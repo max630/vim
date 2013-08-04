@@ -1,3 +1,11 @@
+vim (2:7.4b.004-2) UNRELEASED; urgency=low
+
+  * Stop providing /usr/share/vim/vimcurrent.  It shouldn't be used by
+    anything, since it's Debian specific, and the Vim packaging hasn't used it
+    (other than documenting the location of debian.vim) for years.
+
+ -- James McCoy <jamessan@debian.org>  Sat, 03 Aug 2013 23:53:06 -0400
+
 vim (2:7.4b.004-1) experimental; urgency=low
 
   * Merge upstream tag v7-4b-004
