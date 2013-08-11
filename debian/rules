@@ -466,6 +466,7 @@ install-stamp-vim-tiny: build-stamp-vim-tiny $(DOT_IN_DEPS_TINY)
 # the other variants only include the binary
 install-stamp-%: export DH_OPTIONS=-p$*
 install-stamp-%: DESTDIR=$(CURDIR)/debian/$*
+install-stamp-%: VARIANT=$(patsubst vim-%,%,$*)
 install-stamp-%: build-stamp-%
 	dh_testdir
 	dh_testroot
@@ -477,17 +478,18 @@ install-stamp-%: build-stamp-%
 	# to be kept in sync with those in "install-stamp-vim-basic" target
 	for x in $(PER_VARIANT_FILES) ; do \
 	  if [ "$*" = "vim-nox" ]; then \
-	    sed -e "s:@PKG@:$*:" -e "s:@VARIANT@:$(patsubst vim-%,%,$*):g" \
+	    sed -e "s:@PKG@:$*:" -e "s:@VARIANT@:$(VARIANT):g" \
 	        -e "s:@COMMON@:vim-common:" \
 	        debian/vim-variant.$$x > debian/$*.$$x ;\
 	  else \
-	    sed -e "s:@PKG@:$*:" -e "s:@VARIANT@:$(patsubst vim-%,%,$*):g" \
+	    sed -e "s:@PKG@:$*:" -e "s:@VARIANT@:$(VARIANT):g" \
 	        -e "s:@COMMON@:vim-gui-common:" \
 	        debian/vim-variant.$$x > debian/$*.$$x ;\
 	  fi \
 	done
-	sed -e "s:@PKG@:$*:;s:@VARIANT@:$(patsubst vim-%,%,$*):" \
+	sed -e "s:@PKG@:$*:;s:@VARIANT@:$(VARIANT):" \
 	    debian/lintian/vim-variant > debian/lintian/$*
+	echo "vim-$(VARIANT): spelling-error-in-binary usr/bin/vim.$(VARIANT) tEH the" >> debian/lintian/$*
 	for L in $(LANGS); do \
 	  sed -e "s:\(.*\)@LANG_ALTS@:\1--slave \$$mandir/$$L/man1/\$$i.1.gz \$$i.$$L.1.gz \$$mandir/$$L/man1/vim.1.gz \\\\\n&:" \
 	      -i debian/$*.postinst; \

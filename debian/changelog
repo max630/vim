@@ -5,6 +5,7 @@ vim (2:7.4.000-1) UNRELEASED; urgency=low
   * Stop providing /usr/share/vim/vimcurrent.  It shouldn't be used by
     anything, since it's Debian specific, and the Vim packaging hasn't used it
     (other than documenting the location of debian.vim) for years.
+  * Override spelling-error-in-binary … tEH the.
 
  -- James McCoy <jamessan@debian.org>  Sat, 03 Aug 2013 23:53:06 -0400
 
