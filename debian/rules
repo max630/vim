@@ -334,11 +334,10 @@ install-stamp-vim-basic: build-stamp-vim-basic $(DOT_IN_DEPS)
 	
 # DEBIAN INSTALLATION
 # Use UTF-8 manpages for all languages.
-# Remove any existing man/$lang directory, move the $lang.UTF-8 directory to $lang,
-# and remove any remaining $lang.* directories.
+# If a .UTF-8 directory doesn't exist, then the $lang directory is already UTF-8.
 	for L in $(LANGS); do \
-	  rm -rf "$(DESTDIR)/usr/share/man/$$L"; \
 	  if [ -d "$(DESTDIR)/usr/share/man/$$L.UTF-8" ]; then \
+	    rm -rf "$(DESTDIR)/usr/share/man/$$L"; \
 	    mv "$(DESTDIR)/usr/share/man/$$L.UTF-8" "$(DESTDIR)/usr/share/man/$$L"; \
 	  fi; \
 	  rm -rf "$(DESTDIR)/usr/share/man/$$L."*; \
