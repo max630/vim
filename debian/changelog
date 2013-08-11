@@ -1,4 +1,4 @@
-vim (2:7.4.000-1) UNRELEASED; urgency=low
+vim (2:7.4.000-1) unstable; urgency=low
 
   * New upstream release.
   * Upload to unstable.
@@ -7,7 +7,7 @@ vim (2:7.4.000-1) UNRELEASED; urgency=low
     (other than documenting the location of debian.vim) for years.
   * Override spelling-error-in-binary … tEH the.
 
- -- James McCoy <jamessan@debian.org>  Sat, 03 Aug 2013 23:53:06 -0400
+ -- James McCoy <jamessan@debian.org>  Sat, 10 Aug 2013 21:24:02 -0400
 
 vim (2:7.4b.004-1) experimental; urgency=low
 
